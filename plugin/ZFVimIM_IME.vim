@@ -15,10 +15,51 @@ if !exists('g:ZFVimIM_symbolMap')
 endif
 
 " ============================================================
+" Auto load default dictionary if zfvimim_dict_path is set or use default
+function! s:ZFVimIM_autoLoadDict()
+    let dictPath = ''
+    
+    " Check if zfvimim_dict_path is set
+    if exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+    else
+        " Use default dictionary
+        let defaultDict = expand('<sfile>:p:h:h') . '/dict/default_pinyin.txt'
+        if filereadable(defaultDict)
+            let dictPath = defaultDict
+        endif
+    endif
+    
+    " Load dictionary if path is valid and file exists
+    if !empty(dictPath) && filereadable(dictPath)
+        if !exists('g:ZFVimIM_db')
+            let g:ZFVimIM_db = []
+        endif
+        
+        " Check if dictionary is already loaded
+        let dictName = fnamemodify(dictPath, ':t:r')
+        let alreadyLoaded = 0
+        for db in g:ZFVimIM_db
+            if get(db, 'name', '') ==# dictName
+                let alreadyLoaded = 1
+                break
+            endif
+        endfor
+        
+        if !alreadyLoaded
+            let db = ZFVimIM_dbInit({
+                        \   'name' : dictName,
+                        \   'priority' : 100,
+                        \ })
+            call ZFVimIM_dbLoad(db, dictPath)
+        endif
+    endif
+endfunction
+
 augroup ZFVimIME_augroup
     autocmd!
 
-    autocmd User ZFVimIM_event_OnDbInit silent
+    autocmd User ZFVimIM_event_OnDbInit call s:ZFVimIM_autoLoadDict()
 
     autocmd User ZFVimIM_event_OnStart silent
 

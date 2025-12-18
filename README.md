@@ -30,12 +30,43 @@
 
 ## 快速使用
 
-1. 在 `lua/config/options.lua` 设置：
+### 默认词库
+
+为防止用户第一次使用时没有词库，本仓库已包含一个简单的默认拼音词库：
+- 位置：`~/.local/share/nvim/lazy/ZFVimIM/dict/default_pinyin.txt`
+- 包含常用汉字和词汇，可直接使用
+
+**自动加载机制**：
+- 如果未设置 `vim.g.zfvimim_dict_path`，插件会自动加载默认词库 `dict/default_pinyin.txt`
+- 如果设置了 `vim.g.zfvimim_dict_path`，则使用指定的词库文件
+
+### 配置步骤
+
+1. **无需配置（推荐首次使用）**：
+   插件会自动使用默认词库，无需任何配置即可开始使用。
+
+2. **使用自定义词库**：
+   在 `lua/config/options.lua` 设置：
    ```lua
    vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
    ```
-2. 词库采用 `拼音<Tab>候选` 的 UTF-8 文本格式，多条同键可重复出现。
-3. Neovim 启动后 `;;` 进入输入状态，`0-9`/空格选词，`Esc` 退出。
+
+3. **显式指定默认词库**（可选）：
+   如果需要显式指定默认词库路径：
+   ```lua
+   vim.g.zfvimim_dict_path = vim.fn.stdpath("data") .. "/lazy/ZFVimIM/dict/default_pinyin.txt"
+   ```
+
+3. **词库格式**：
+   词库采用 `拼音 候选1 候选2 ...` 的 UTF-8 文本格式，多条同键可重复出现。
+   示例：
+   ```
+   a 啊 阿 吖
+   ai 爱 唉 埃
+   ```
+
+4. **使用方法**：
+   Neovim 启动后 `;;` 进入输入状态，`0-9`/空格选词，`Esc` 退出。
 
 ## 升级策略
 
