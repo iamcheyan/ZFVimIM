@@ -302,32 +302,45 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     " found match
     let matchLimit = a:matchLimit
     let keyLen = len(a:key)
-    while index >= 0
-        let dbItem = ZFVimIM_dbItemDecode(a:db['dbMap'][a:key[0]][index])
-        if len(dbItem['wordList']) < matchLimit
-            let numToAdd = len(dbItem['wordList'])
-        else
-            let numToAdd = matchLimit
-        endif
-        let matchLimit -= numToAdd
-        let wordIndex = 0
-        while wordIndex < numToAdd
-            call add(a:ret, {
+    let singleChars = []
+    let multiChars = []
+    
+    " First pass: collect all items, separate single chars and multi chars
+    let tempIndex = index
+    while tempIndex >= 0
+        let dbItem = ZFVimIM_dbItemDecode(a:db['dbMap'][a:key[0]][tempIndex])
+        for word in dbItem['wordList']
+            let item = {
                         \   'dbId' : a:db['dbId'],
                         \   'len' : keyLen,
                         \   'key' : a:key,
-                        \   'word' : dbItem['wordList'][wordIndex],
+                        \   'word' : word,
                         \   'type' : 'match',
-                        \ })
-            let wordIndex += 1
-        endwhile
-        if matchLimit <= 0
-            break
-        endif
-        let index = ZFVimIM_dbSearch(a:db, a:key[0],
+                        \ }
+            if len(word) == 1
+                call add(singleChars, item)
+            else
+                call add(multiChars, item)
+            endif
+        endfor
+        let tempIndex = ZFVimIM_dbSearch(a:db, a:key[0],
                     \ '^' . a:key . g:ZFVimIM_KEY_S_MAIN,
-                    \ index + 1)
+                    \ tempIndex + 1)
     endwhile
+    
+    " Add all single characters first (no limit)
+    call extend(a:ret, singleChars)
+    
+    " Then add multi-character words up to limit
+    let remainingLimit = matchLimit - len(singleChars)
+    if remainingLimit > 0
+        let wordIndex = 0
+        while wordIndex < len(multiChars) && remainingLimit > 0
+            call add(a:ret, multiChars[wordIndex])
+            let wordIndex += 1
+            let remainingLimit -= 1
+        endwhile
+    endif
 endfunction
 
 function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchRet, key, option, db, matchLimit)
@@ -354,13 +367,7 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
 
         " found match
         let dbItem = ZFVimIM_dbItemDecode(a:db['dbMap'][a:key[0]][index])
-        if len(dbItem['wordList']) < matchLimit
-            let numToAdd = len(dbItem['wordList'])
-        else
-            let numToAdd = matchLimit
-        endif
-        let matchLimit -= numToAdd
-
+        
         if p == keyLen
             let ret = a:matchRet
             let type = 'match'
@@ -372,18 +379,44 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
             let ret = a:subMatchRet
             let type = 'subMatch'
         endif
-
-        let wordIndex = 0
-        while wordIndex < numToAdd
-            call add(ret, {
+        
+        " Separate single characters and multi-character words
+        let singleChars = []
+        let multiChars = []
+        for word in dbItem['wordList']
+            let item = {
                         \   'dbId' : a:db['dbId'],
                         \   'len' : p,
                         \   'key' : subKey,
-                        \   'word' : dbItem['wordList'][wordIndex],
+                        \   'word' : word,
                         \   'type' : type,
-                        \ })
-            let wordIndex += 1
-        endwhile
+                        \ }
+            if len(word) == 1
+                call add(singleChars, item)
+            else
+                call add(multiChars, item)
+            endif
+        endfor
+        
+        " Add all single characters first (no limit)
+        call extend(ret, singleChars)
+        
+        " Then add multi-character words up to remaining limit
+        let remainingLimit = matchLimit - len(singleChars)
+        if remainingLimit > 0
+            let wordIndex = 0
+            while wordIndex < len(multiChars) && remainingLimit > 0
+                call add(ret, multiChars[wordIndex])
+                let wordIndex += 1
+                let remainingLimit -= 1
+            endwhile
+        endif
+        
+        " Update matchLimit (only count multi-chars towards limit)
+        let matchLimit -= len(multiChars)
+        if matchLimit < 0
+            let matchLimit = 0
+        endif
 
         let p -= 1
     endwhile
@@ -404,6 +437,42 @@ function! s:removeDuplicate(ret, exists)
         endif
         let i += 1
     endwhile
+endfunction
+
+" Sort function to prioritize single characters (单字)
+function! s:sortSingleCharFirst(item1, item2)
+    let len1 = len(a:item1['word'])
+    let len2 = len(a:item2['word'])
+    " Single character (length == 1) has higher priority
+    if len1 == 1 && len2 != 1
+        return -1
+    elseif len1 != 1 && len2 == 1
+        return 1
+    else
+        " Keep original order for same type
+        return 0
+    endif
+endfunction
+
+" Sort list to prioritize single characters
+function! s:sortSingleCharPriority(ret)
+    if len(a:ret) <= 1
+        return
+    endif
+    " Separate single characters and multi-character words
+    let singleChars = []
+    let multiChars = []
+    for item in a:ret
+        if len(item['word']) == 1
+            call add(singleChars, item)
+        else
+            call add(multiChars, item)
+        endif
+    endfor
+    " Clear and rebuild with single chars first
+    call remove(a:ret, 0, len(a:ret) - 1)
+    call extend(a:ret, singleChars)
+    call extend(a:ret, multiChars)
 endfunction
 " data: {
 "   'sentence' : [],
@@ -452,6 +521,14 @@ function! s:mergeResult(data, key, option, db)
         call extend(tailRet, remove(predictRet, g:ZFVimIM_predictLimitWhenMatch, len(predictRet) - 1))
     endif
 
+    " Sort each list to prioritize single characters
+    call s:sortSingleCharPriority(matchRet)
+    call s:sortSingleCharPriority(sentenceRet)
+    call s:sortSingleCharPriority(subMatchLongestRet)
+    call s:sortSingleCharPriority(subMatchRet)
+    call s:sortSingleCharPriority(predictRet)
+    call s:sortSingleCharPriority(tailRet)
+
     " order:
     "   exact match
     "   sentence
@@ -465,19 +542,25 @@ function! s:mergeResult(data, key, option, db)
     call extend(ret, sentenceRet)
 
     " longer predict should higher than match for smart recommend
+    " But single characters should always be prioritized
     let maxMatchLen = 0
     if !empty(subMatchRet)
         let maxMatchLen = subMatchRet[0]['len']
     endif
+    let longPredictRet = []
+    let shortPredictRet = []
     if maxMatchLen > 0
         let iPredict = 0
         while iPredict < len(predictRet)
             if predictRet[iPredict]['len'] > maxMatchLen
-                call add(ret, remove(predictRet, iPredict))
+                call add(longPredictRet, remove(predictRet, iPredict))
             else
                 let iPredict += 1
             endif
         endwhile
+        " Sort long predict to prioritize single characters
+        call s:sortSingleCharPriority(longPredictRet)
+        call extend(ret, longPredictRet)
     endif
 
     call extend(ret, subMatchLongestRet)
@@ -485,6 +568,8 @@ function! s:mergeResult(data, key, option, db)
     call extend(ret, predictRet)
     call extend(ret, tailRet)
 
+    " Sort crossDb to prioritize single characters
+    call s:sortSingleCharPriority(crossDbRet)
 
     " crossDb should be placed at lower order,
     if g:ZFVimIM_crossDbPos >= len(ret)
