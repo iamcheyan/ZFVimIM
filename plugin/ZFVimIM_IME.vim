@@ -1749,3 +1749,45 @@ endif
 if !exists(':ZFVimIMCacheUpdate')
     command! ZFVimIMCacheUpdate :call ZFVimIM_cacheUpdate()
 endif
+
+" Auto-regenerate cache when dictionary files are modified
+augroup ZFVimIM_autoCacheUpdate_augroup
+    autocmd!
+    " Detect when dictionary files are saved
+    autocmd BufWritePost *.yaml,*.yml,*.txt call s:ZFVimIM_autoCacheUpdate(expand('<afile>:p'))
+augroup END
+
+" Function to check if file is a dictionary file and regenerate cache
+function! s:ZFVimIM_autoCacheUpdate(filePath)
+    " Check if this file is a dictionary file used by ZFVimIM
+    if !filereadable(a:filePath)
+        return
+    endif
+    
+    " Check if file is in a dictionary directory or matches known patterns
+    let isDictFile = 0
+    if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+        for db in g:ZFVimIM_db
+            if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                if db['implData']['dictPath'] ==# a:filePath
+                    let isDictFile = 1
+                    break
+                endif
+            endif
+        endfor
+    endif
+    
+    " Also check if file is in common dictionary directories
+    if !isDictFile
+        let fileDir = fnamemodify(a:filePath, ':h')
+        if fileDir =~# 'dict' || fileDir =~# 'zfvimim'
+            let isDictFile = 1
+        endif
+    endif
+    
+    " Regenerate cache if it's a dictionary file
+    if isDictFile
+        " Regenerate cache in background
+        call ZFVimIM_cacheRegenerateForFile(a:filePath)
+    endif
+endfunction

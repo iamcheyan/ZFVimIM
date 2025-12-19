@@ -493,6 +493,70 @@ function! ZFVimIM_cacheUpdate()
     endif
 endfunction
 
+" Clear cache for a specific dictionary file
+function! ZFVimIM_cacheClearForFile(dictFile)
+    let cacheFile = s:dbLoad_getCacheFile(a:dictFile)
+    if filereadable(cacheFile)
+        if delete(cacheFile) == 0
+            return 1
+        endif
+    endif
+    return 0
+endfunction
+
+" Regenerate cache for a specific dictionary file in background
+function! ZFVimIM_cacheRegenerateForFile(dictFile)
+    if !filereadable(a:dictFile)
+        return
+    endif
+    
+    " Find the database that uses this file
+    let targetDb = {}
+    if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+        for db in g:ZFVimIM_db
+            if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                if db['implData']['dictPath'] ==# a:dictFile
+                    let targetDb = db
+                    break
+                endif
+            endif
+        endfor
+    endif
+    
+    " Clear the cache file
+    call ZFVimIM_cacheClearForFile(a:dictFile)
+    
+    " Regenerate cache in background using timer
+    if has('timers')
+        " Use timer to regenerate cache asynchronously
+        call timer_start(100, {-> s:cacheRegenerateAsync(a:dictFile, targetDb)})
+    else
+        " Fallback: regenerate synchronously
+        if !empty(targetDb)
+            call ZFVimIM_dbSearchCacheClear(targetDb)
+            call ZFVimIM_dbLoad(targetDb, a:dictFile)
+        endif
+    endif
+endfunction
+
+" Async cache regeneration function
+function! s:cacheRegenerateAsync(dictFile, db)
+    try
+        if !empty(a:db)
+            " Clear search cache
+            call ZFVimIM_dbSearchCacheClear(a:db)
+            " Reload dictionary (this will regenerate cache)
+            call ZFVimIM_dbLoad(a:db, a:dictFile)
+        else
+            " If database not found, just clear the cache
+            " It will be regenerated on next load
+            call ZFVimIM_cacheClearForFile(a:dictFile)
+        endif
+    catch
+        " Silently fail if there's an error
+    endtry
+endfunction
+
 
 " ============================================================
 " Helper function to check if file is YAML format
