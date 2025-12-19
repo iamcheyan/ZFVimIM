@@ -566,6 +566,7 @@ endfunction
 
 " Helper function to parse YAML line
 " Returns: [key, wordList] or [] if invalid
+" Supports both YAML format (key: [word1, word2]) and TXT format (key word1 word2)
 function! s:parseYamlLine(line)
     " Remove leading/trailing whitespace
     let line = substitute(a:line, '^\s*\(.\{-}\)\s*$', '\1', '')
@@ -573,13 +574,44 @@ function! s:parseYamlLine(line)
     if empty(line) || line[0] ==# '#'
         return []
     endif
-    " Match pattern: key: [word1, word2, ...] or key: word
+    " First try YAML format: key: [word1, word2, ...] or key: word
     let match = matchlist(line, '^\([a-z]\+\):\s*\(.*\)$')
-    if empty(match)
+    if !empty(match)
+        let key = match[1]
+        let value = match[2]
+    else
+        " Try TXT format: key word1 word2 ...
+        " Check if line starts with a key (lowercase letters) followed by space and words
+        let txtMatch = matchlist(line, '^\([a-z]\+\)\s\+\(.*\)$')
+        if !empty(txtMatch)
+            let key = txtMatch[1]
+            let value = txtMatch[2]
+            " Parse as space-separated words
+            let wordList = []
+            if match(value, '\\ ') >= 0
+                " Handle escaped spaces
+                let wordListTmp = split(substitute(value, '\\ ', '_ZFVimIM_space_', 'g'))
+                for word in wordListTmp
+                    let word = substitute(word, '_ZFVimIM_space_', ' ', 'g')
+                    if !empty(word)
+                        call add(wordList, word)
+                    endif
+                endfor
+            else
+                " Regular space-separated words
+                let words = split(value)
+                for word in words
+                    if !empty(word)
+                        call add(wordList, word)
+                    endif
+                endfor
+            endif
+            if !empty(wordList)
+                return [key, wordList]
+            endif
+        endif
         return []
     endif
-    let key = match[1]
-    let value = match[2]
     " Parse value: could be [word1, word2] or just word
     let wordList = []
     if value =~# '^\[.*\]$'

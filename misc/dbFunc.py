@@ -128,21 +128,89 @@ def dbLoadPy(dbFile, dbCountFile):
     isYaml = dbFile.endswith('.yaml') or dbFile.endswith('.yml')
     
     if isYaml and HAS_YAML:
-        # Load from YAML format
+        # Load from YAML format, but also support TXT format lines mixed in
+        # Process line by line to handle mixed formats
         with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
-            yamlData = yaml.safe_load(dbFilePtr)
-            if yamlData and isinstance(yamlData, dict):
-                for key, wordList in yamlData.items():
-                    if not isinstance(wordList, list):
-                        wordList = [wordList]
-                    if len(wordList) > 0:
+            for line in dbFilePtr:
+                line = line.rstrip('\n')
+                line_stripped = line.strip()
+                # Skip empty lines and comments
+                if not line_stripped or line_stripped[0] == '#':
+                    continue
+                
+                # Check if line is YAML format (key: [word1, word2] or key: word)
+                if ':' in line_stripped:
+                    parts = line_stripped.split(':', 1)
+                    if len(parts) == 2:
+                        key_part = parts[0].strip()
+                        value_part = parts[1].strip()
+                        # Check if key is valid (lowercase letters only)
+                        if key_part and key_part.islower() and key_part.isalpha():
+                            # Check if value is YAML format (starts with [ or is a single word without spaces)
+                            if value_part.startswith('[') or (not ' ' in value_part and len(value_part) > 0):
+                                # Parse as YAML format
+                                try:
+                                    # Try to parse as YAML
+                                    yaml_line = key_part + ': ' + value_part
+                                    yaml_data = yaml.safe_load(yaml_line)
+                                    if yaml_data and isinstance(yaml_data, dict):
+                                        for key, wordList in yaml_data.items():
+                                            if not isinstance(wordList, list):
+                                                wordList = [wordList]
+                                            if len(wordList) > 0:
+                                                if key[0] not in pyMap:
+                                                    pyMap[key[0]] = {}
+                                                # Merge with existing entries if key already exists
+                                                if key in pyMap[key[0]]:
+                                                    existingItem = dbItemDecode(pyMap[key[0]][key])
+                                                    for word in wordList:
+                                                        if word not in existingItem['wordList']:
+                                                            existingItem['wordList'].append(word)
+                                                            existingItem['countList'].append(0)
+                                                    pyMap[key[0]][key] = dbItemEncode(existingItem)
+                                                else:
+                                                    pyMap[key[0]][key] = dbItemEncode({
+                                                        'key' : key,
+                                                        'wordList' : wordList,
+                                                        'countList' : [],
+                                                    })
+                                except:
+                                    # If YAML parsing fails, try as TXT format
+                                    pass
+                
+                # Try to parse as TXT format: key word1 word2 ...
+                # Only if line doesn't look like YAML format
+                if ':' not in line_stripped or (':' in line_stripped and ' ' in line_stripped.split(':', 1)[1]):
+                    if line.find('\\ ') >= 0:
+                        wordListTmp = line.replace('\\ ', '_ZFVimIM_space_').split(' ')
+                        if len(wordListTmp) > 0:
+                            key = wordListTmp[0]
+                            del wordListTmp[0]
+                        wordList = []
+                        for word in wordListTmp:
+                            wordList.append(word.replace('_ZFVimIM_space_', ' '))
+                    else:
+                        wordList = line_stripped.split(' ')
+                        if len(wordList) > 0:
+                            key = wordList[0]
+                            del wordList[0]
+                    if len(wordList) > 0 and key and key[0].islower() and key.isalpha():
                         if key[0] not in pyMap:
                             pyMap[key[0]] = {}
-                        pyMap[key[0]][key] = dbItemEncode({
-                            'key' : key,
-                            'wordList' : wordList,
-                            'countList' : [],
-                        })
+                        # Merge with existing entries if key already exists
+                        if key in pyMap[key[0]]:
+                            existingItem = dbItemDecode(pyMap[key[0]][key])
+                            for word in wordList:
+                                if word not in existingItem['wordList']:
+                                    existingItem['wordList'].append(word)
+                                    existingItem['countList'].append(0)
+                            pyMap[key[0]][key] = dbItemEncode(existingItem)
+                        else:
+                            pyMap[key[0]][key] = dbItemEncode({
+                                'key' : key,
+                                'wordList' : wordList,
+                                'countList' : [],
+                            })
     else:
         # Load from TXT format (backward compatibility)
         with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
