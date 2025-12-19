@@ -1654,7 +1654,9 @@ augroup END
 
 " ============================================================
 " Reload plugin function for development
-function! ZFVimIM_reload()
+" Define function only if it doesn't exist, to avoid redefinition errors during reload
+if !exists('*ZFVimIM_reload')
+function ZFVimIM_reload()
     " Stop IME if running
     if exists('*ZFVimIME_stop')
         call ZFVimIME_stop()
@@ -1717,13 +1719,22 @@ function! ZFVimIM_reload()
     " Clear all buffer-local keymaps that might have been created
     silent! lmapclear
     
+    " Delete the command first to avoid redefinition errors
+    if exists(':ZFVimIMReload')
+        delcommand ZFVimIMReload
+    endif
+    
     " Reload plugin via Lazy
+    " Use feedkeys to defer the reload, so this function can finish executing first
+    " This avoids the "function in use" error when the plugin tries to redefine this function
     if exists(':Lazy') == 2
-        Lazy reload ZFVimIM
+        " Defer the reload command to avoid redefinition errors
+        call feedkeys(":Lazy reload ZFVimIM\<cr>", 'nt')
     else
         echo "Warning: Lazy plugin manager not found. Please restart Neovim to reload ZFVimIM."
     endif
 endfunction
+endif
 
 " Create user command for reloading
 if !exists(':ZFVimIMReload')
