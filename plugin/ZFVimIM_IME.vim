@@ -37,13 +37,17 @@ function! s:ZFVimIM_autoLoadDict()
     " If zfvimim_default_dict_name is set, use it; otherwise use default_pinyin
     if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
         let defaultDictName = g:zfvimim_default_dict_name
-        " Add .txt extension if not present
-        if defaultDictName !~ '\.txt$'
-            let defaultDictName = defaultDictName . '.txt'
+        " Add .yaml extension if not present
+        if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
+            let defaultDictName = defaultDictName . '.yaml'
         endif
         let defaultDict = dictDir . '/' . defaultDictName
     else
-        let defaultDict = dictDir . '/default_pinyin.txt'
+        let defaultDict = dictDir . '/default_pinyin.yaml'
+        " Fallback to .txt if .yaml doesn't exist
+        if !filereadable(defaultDict)
+            let defaultDict = dictDir . '/default_pinyin.txt'
+        endif
     endif
     
     " Check if zfvimim_dict_path is set
@@ -668,7 +672,10 @@ endfunction
 
 function! s:IME_start()
     let &iminsert = 1
+    let cloudInitMode = get(g:, 'ZFVimIM_cloudInitMode', '')
+    let g:ZFVimIM_cloudInitMode = 'preferSync'
     call ZFVimIME_init()
+    let g:ZFVimIM_cloudInitMode = cloudInitMode
 
     call s:vimrcSave()
     call s:vimrcSetup()
@@ -1367,14 +1374,22 @@ function! s:removeWord(dbId, key, word)
         
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
-            if defaultDictName !~ '\.txt$'
-                let defaultDictName = defaultDictName . '.txt'
+            if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
+                let defaultDictName = defaultDictName . '.yaml'
             endif
             let dictPath = dictDir . '/' . defaultDictName
+            " Fallback to .txt if .yaml doesn't exist
+            if !filereadable(dictPath) && defaultDictName =~ '\.yaml$'
+                let dictPath = dictDir . '/' . substitute(defaultDictName, '\.yaml$', '.txt', '')
+            endif
         elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
             let dictPath = expand(g:zfvimim_dict_path)
         else
-            let dictPath = dictDir . '/default_pinyin.txt'
+            let dictPath = dictDir . '/default_pinyin.yaml'
+            " Fallback to .txt if .yaml doesn't exist
+            if !filereadable(dictPath)
+                let dictPath = dictDir . '/default_pinyin.txt'
+            endif
         endif
     endif
     
@@ -1663,7 +1678,17 @@ function! ZFVimIM_reload()
     endtry
     
     try
+        augroup! ZFVimIM_cloud_sync_augroup
+    catch
+    endtry
+    
+    try
         augroup! ZFVimIM_autoDisable_augroup
+    catch
+    endtry
+    
+    try
+        augroup! ZFVimIM_cloud_async_augroup
     catch
     endtry
     

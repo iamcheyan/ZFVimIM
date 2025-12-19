@@ -3,6 +3,11 @@ import os
 import re
 import shutil
 import sys
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
 
 
 ZFVimIM_KEY_S_MAIN = '#'
@@ -119,30 +124,51 @@ def dbItemEncode(dbItem):
 def dbLoadPy(dbFile, dbCountFile):
     pyMap = {}
     # load db
-    with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
-        for line in dbFilePtr:
-            line = line.rstrip('\n')
-            if line.find('\\ ') >= 0:
-                wordListTmp = line.replace('\\ ', '_ZFVimIM_space_').split(' ')
-                if len(wordListTmp) > 0:
-                    key = wordListTmp[0]
-                    del wordListTmp[0]
-                wordList = []
-                for word in wordListTmp:
-                    wordList.append(word.replace('_ZFVimIM_space_', ' '))
-            else:
-                wordList = line.split(' ')
+    # Check if file is YAML format
+    isYaml = dbFile.endswith('.yaml') or dbFile.endswith('.yml')
+    
+    if isYaml and HAS_YAML:
+        # Load from YAML format
+        with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
+            yamlData = yaml.safe_load(dbFilePtr)
+            if yamlData and isinstance(yamlData, dict):
+                for key, wordList in yamlData.items():
+                    if not isinstance(wordList, list):
+                        wordList = [wordList]
+                    if len(wordList) > 0:
+                        if key[0] not in pyMap:
+                            pyMap[key[0]] = {}
+                        pyMap[key[0]][key] = dbItemEncode({
+                            'key' : key,
+                            'wordList' : wordList,
+                            'countList' : [],
+                        })
+    else:
+        # Load from TXT format (backward compatibility)
+        with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
+            for line in dbFilePtr:
+                line = line.rstrip('\n')
+                if line.find('\\ ') >= 0:
+                    wordListTmp = line.replace('\\ ', '_ZFVimIM_space_').split(' ')
+                    if len(wordListTmp) > 0:
+                        key = wordListTmp[0]
+                        del wordListTmp[0]
+                    wordList = []
+                    for word in wordListTmp:
+                        wordList.append(word.replace('_ZFVimIM_space_', ' '))
+                else:
+                    wordList = line.split(' ')
+                    if len(wordList) > 0:
+                        key = wordList[0]
+                        del wordList[0]
                 if len(wordList) > 0:
-                    key = wordList[0]
-                    del wordList[0]
-            if len(wordList) > 0:
-                if key[0] not in pyMap:
-                    pyMap[key[0]] = {}
-                pyMap[key[0]][key] = dbItemEncode({
-                    'key' : key,
-                    'wordList' : wordList,
-                    'countList' : [],
-                })
+                    if key[0] not in pyMap:
+                        pyMap[key[0]] = {}
+                    pyMap[key[0]][key] = dbItemEncode({
+                        'key' : key,
+                        'wordList' : wordList,
+                        'countList' : [],
+                    })
     # load word count
     if len(dbCountFile) > 0 and os.path.isfile(dbCountFile) and os.access(dbCountFile, os.R_OK):
         with io.open(dbCountFile, 'r', encoding='utf-8') as dbCountFilePtr:
@@ -179,98 +205,171 @@ def dbLoadPy(dbFile, dbCountFile):
 def dbLoadNormalizePy(dbFile):
     pyMap = {}
     # load db
-    with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
-        for line in dbFilePtr:
-            line = line.rstrip('\n')
-            if line.find('\\ ') >= 0:
-                wordListTmp = line.replace('\\ ', '_ZFVimIM_space_').split(' ')
-                if len(wordListTmp) > 0:
-                    key = wordListTmp[0]
-                    del wordListTmp[0]
-                wordList = []
-                for word in wordListTmp:
-                    wordList.append(word.replace('_ZFVimIM_space_', ' '))
-            else:
-                wordList = line.split(' ')
-                if len(wordList) > 0:
-                    key = wordList[0]
-                    del wordList[0]
-            if len(wordList) <= 0:
-                continue
-            key = re.sub('[^a-z]', '', key)
-            if key == '':
-                continue
-            if key[0] not in pyMap:
-                pyMap[key[0]] = {}
-            if key in pyMap[key[0]]:
-                dbItem = dbItemDecode(pyMap[key[0]][key])
-                for word in wordList:
-                    if word not in dbItem['wordList']:
-                        dbItem['wordList'].append(word)
-            else:
-                dbItem = {
-                    'key' : key,
-                    'wordList' : wordList,
-                    'countList' : [],
-                }
-            pyMap[key[0]][key] = dbItemEncode(dbItem)
+    # Check if file is YAML format
+    isYaml = dbFile.endswith('.yaml') or dbFile.endswith('.yml')
+    
+    if isYaml and HAS_YAML:
+        # Load from YAML format
+        with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
+            yamlData = yaml.safe_load(dbFilePtr)
+            if yamlData and isinstance(yamlData, dict):
+                for key, wordList in yamlData.items():
+                    if not isinstance(wordList, list):
+                        wordList = [wordList]
+                    if len(wordList) <= 0:
+                        continue
+                    key = re.sub('[^a-z]', '', key)
+                    if key == '':
+                        continue
+                    if key[0] not in pyMap:
+                        pyMap[key[0]] = {}
+                    if key in pyMap[key[0]]:
+                        dbItem = dbItemDecode(pyMap[key[0]][key])
+                        for word in wordList:
+                            if word not in dbItem['wordList']:
+                                dbItem['wordList'].append(word)
+                    else:
+                        dbItem = {
+                            'key' : key,
+                            'wordList' : wordList,
+                            'countList' : [],
+                        }
+                    pyMap[key[0]][key] = dbItemEncode(dbItem)
+    else:
+        # Load from TXT format (backward compatibility)
+        with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
+            for line in dbFilePtr:
+                line = line.rstrip('\n')
+                if line.find('\\ ') >= 0:
+                    wordListTmp = line.replace('\\ ', '_ZFVimIM_space_').split(' ')
+                    if len(wordListTmp) > 0:
+                        key = wordListTmp[0]
+                        del wordListTmp[0]
+                    wordList = []
+                    for word in wordListTmp:
+                        wordList.append(word.replace('_ZFVimIM_space_', ' '))
+                else:
+                    wordList = line.split(' ')
+                    if len(wordList) > 0:
+                        key = wordList[0]
+                        del wordList[0]
+                if len(wordList) <= 0:
+                    continue
+                key = re.sub('[^a-z]', '', key)
+                if key == '':
+                    continue
+                if key[0] not in pyMap:
+                    pyMap[key[0]] = {}
+                if key in pyMap[key[0]]:
+                    dbItem = dbItemDecode(pyMap[key[0]][key])
+                    for word in wordList:
+                        if word not in dbItem['wordList']:
+                            dbItem['wordList'].append(word)
+                else:
+                    dbItem = {
+                        'key' : key,
+                        'wordList' : wordList,
+                        'countList' : [],
+                    }
+                pyMap[key[0]][key] = dbItemEncode(dbItem)
     return pyMap
     # end of dbLoadNormalizePy
 
 
 def dbSavePy(pyMap, dbFile, dbCountFile, cachePath):
-    lines = []
-    if len(dbCountFile) == 0:
-        dbFilePtr = io.open(cachePath + '/dbFileTmp', 'wb')
+    # Check if file should be saved as YAML format
+    isYaml = dbFile.endswith('.yaml') or dbFile.endswith('.yml')
+    
+    if isYaml and HAS_YAML:
+        # Save as YAML format
+        yamlData = {}
         for c in pyMap.keys():
             for key, dbItemEncoded in sorted(dbMapIter(pyMap[c])):
                 dbItem = dbItemDecode(dbItemEncoded)
-                line = dbItem['key']
-                for word in dbItem['wordList']:
-                    line += ' '
-                    line += word.replace(' ', '\\ ')
-                lines.append(line)
-                if len(lines) >= DB_FILE_LINE_BUFFER:
-                    dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
-                    lines = []
-        if len(lines) > 0:
-            dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
-        dbFilePtr.close()
-        shutil.move(cachePath + '/dbFileTmp', dbFile)
+                yamlData[dbItem['key']] = dbItem['wordList']
+        
+        # Write to temporary file first
+        tmpFile = cachePath + '/dbFileTmp'
+        with io.open(tmpFile, 'w', encoding='utf-8') as dbFilePtr:
+            yaml.dump(yamlData, dbFilePtr, allow_unicode=True, default_flow_style=False, sort_keys=True)
+        shutil.move(tmpFile, dbFile)
+        
+        # Save count file if needed (still as text format for compatibility)
+        if len(dbCountFile) > 0:
+            dbCountFilePtr = io.open(cachePath + '/dbCountFileTmp', 'wb')
+            countLines = []
+            for c in pyMap.keys():
+                for key, dbItemEncoded in sorted(dbMapIter(pyMap[c])):
+                    dbItem = dbItemDecode(dbItemEncoded)
+                    countLine = dbItem['key']
+                    for cnt in dbItem['countList']:
+                        if cnt <= 0:
+                            break
+                        countLine += ' '
+                        countLine += str(cnt)
+                    if countLine != key:
+                        countLines.append(countLine)
+                    if len(countLines) >= DB_FILE_LINE_BUFFER:
+                        dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
+                        countLines = []
+            if len(countLines) > 0:
+                dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
+            dbCountFilePtr.close()
+            shutil.move(cachePath + '/dbCountFileTmp', dbCountFile)
     else:
-        dbFilePtr = io.open(cachePath + '/dbFileTmp', 'wb')
-        dbCountFilePtr = io.open(cachePath + '/dbCountFileTmp', 'wb')
-        countLines = []
-        for c in pyMap.keys():
-            for key, dbItemEncoded in sorted(dbMapIter(pyMap[c])):
-                dbItem = dbItemDecode(dbItemEncoded)
-                line = dbItem['key']
-                countLine = dbItem['key']
-                for word in dbItem['wordList']:
-                    line += ' '
-                    line += word.replace(' ', '\\ ')
-                lines.append(line)
-                if len(lines) >= DB_FILE_LINE_BUFFER:
-                    dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
-                    lines = []
-                for cnt in dbItem['countList']:
-                    if cnt <= 0:
-                        break
-                    countLine += ' '
-                    countLine += str(cnt)
-                if countLine != key:
-                    countLines.append(countLine)
-                if len(countLines) >= DB_FILE_LINE_BUFFER:
-                    dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
-                    countLines = []
-        if len(lines) > 0:
-            dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
-        if len(countLines) > 0:
-            dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
-        dbFilePtr.close()
-        shutil.move(cachePath + '/dbFileTmp', dbFile)
-        dbCountFilePtr.close()
-        shutil.move(cachePath + '/dbCountFileTmp', dbCountFile)
+        # Save as TXT format (backward compatibility)
+        lines = []
+        if len(dbCountFile) == 0:
+            dbFilePtr = io.open(cachePath + '/dbFileTmp', 'wb')
+            for c in pyMap.keys():
+                for key, dbItemEncoded in sorted(dbMapIter(pyMap[c])):
+                    dbItem = dbItemDecode(dbItemEncoded)
+                    line = dbItem['key']
+                    for word in dbItem['wordList']:
+                        line += ' '
+                        line += word.replace(' ', '\\ ')
+                    lines.append(line)
+                    if len(lines) >= DB_FILE_LINE_BUFFER:
+                        dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
+                        lines = []
+            if len(lines) > 0:
+                dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
+            dbFilePtr.close()
+            shutil.move(cachePath + '/dbFileTmp', dbFile)
+        else:
+            dbFilePtr = io.open(cachePath + '/dbFileTmp', 'wb')
+            dbCountFilePtr = io.open(cachePath + '/dbCountFileTmp', 'wb')
+            countLines = []
+            for c in pyMap.keys():
+                for key, dbItemEncoded in sorted(dbMapIter(pyMap[c])):
+                    dbItem = dbItemDecode(dbItemEncoded)
+                    line = dbItem['key']
+                    countLine = dbItem['key']
+                    for word in dbItem['wordList']:
+                        line += ' '
+                        line += word.replace(' ', '\\ ')
+                    lines.append(line)
+                    if len(lines) >= DB_FILE_LINE_BUFFER:
+                        dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
+                        lines = []
+                    for cnt in dbItem['countList']:
+                        if cnt <= 0:
+                            break
+                        countLine += ' '
+                        countLine += str(cnt)
+                    if countLine != key:
+                        countLines.append(countLine)
+                    if len(countLines) >= DB_FILE_LINE_BUFFER:
+                        dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
+                        countLines = []
+            if len(lines) > 0:
+                dbFilePtr.write(('\n'.join(lines) + '\n').encode('utf-8'))
+            if len(countLines) > 0:
+                dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
+            dbFilePtr.close()
+            shutil.move(cachePath + '/dbFileTmp', dbFile)
+            dbCountFilePtr.close()
+            shutil.move(cachePath + '/dbCountFileTmp', dbCountFile)
     # end of dbSavePy
 
 

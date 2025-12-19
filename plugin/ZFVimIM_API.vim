@@ -439,71 +439,6 @@ function! ZFVimIM_dbSearchCacheClear(db)
     let a:db['dbSearchCacheKeys'] = []
 endfunction
 
-" ============================================================
-" Compatibility function for cloud sync (disabled)
-" This function is provided for backward compatibility
-" It only registers local dictionary without cloud sync
-function! ZFVimIM_cloudRegister(cloudOption)
-    " Extract local dictionary path from cloudOption
-    if !has_key(a:cloudOption, 'dbId')
-        echomsg '[ZFVimIM] ZFVimIM_cloudRegister: "dbId" is required'
-        return
-    endif
-    
-    " Get dictionary file path
-    let dbFile = ''
-    if has_key(a:cloudOption, 'dbFile')
-        if has_key(a:cloudOption, 'repoPath')
-            let dbFile = a:cloudOption['repoPath'] . '/' . a:cloudOption['dbFile']
-        else
-            let dbFile = a:cloudOption['dbFile']
-        endif
-        let dbFile = expand(dbFile)
-    endif
-    
-    if empty(dbFile) || !filereadable(dbFile)
-        echomsg '[ZFVimIM] ZFVimIM_cloudRegister: invalid dbFile: ' . get(a:cloudOption, 'dbFile', '')
-        return
-    endif
-    
-    " Register as local dictionary (no cloud sync)
-    let db = ZFVimIM_dbForId(a:cloudOption['dbId'])
-    if empty(db)
-        " Create new database
-        let dbName = get(a:cloudOption, 'name', fnamemodify(dbFile, ':t:r'))
-        let db = ZFVimIM_dbInit({
-                    \   'name' : dbName,
-                    \   'priority' : get(a:cloudOption, 'priority', 100),
-                    \ })
-        let db['dbId'] = a:cloudOption['dbId']
-    endif
-    
-    " Load dictionary
-    let dbCountFile = ''
-    if has_key(a:cloudOption, 'dbCountFile')
-        if has_key(a:cloudOption, 'repoPath')
-            let dbCountFile = a:cloudOption['repoPath'] . '/' . a:cloudOption['dbCountFile']
-        else
-            let dbCountFile = a:cloudOption['dbCountFile']
-        endif
-        let dbCountFile = expand(dbCountFile)
-        if !filereadable(dbCountFile)
-            let dbCountFile = ''
-        endif
-    endif
-    
-    call ZFVimIM_dbLoad(db, dbFile, dbCountFile)
-    
-    " Store paths in implData
-    if !has_key(db, 'implData')
-        let db['implData'] = {}
-    endif
-    let db['implData']['dictPath'] = dbFile
-    if !empty(dbCountFile)
-        let db['implData']['dbCountFile'] = dbCountFile
-    endif
-endfunction
-
 " Clear all cache files for all dictionaries
 function! ZFVimIM_cacheClearAll()
     let cachePath = ZFVimIM_cachePath()
@@ -560,6 +495,83 @@ endfunction
 
 
 " ============================================================
+" Helper function to check if file is YAML format
+function! s:isYamlFile(filePath)
+    return a:filePath =~# '\.yaml$' || a:filePath =~# '\.yml$'
+endfunction
+
+" Helper function to parse YAML line
+" Returns: [key, wordList] or [] if invalid
+function! s:parseYamlLine(line)
+    " Remove leading/trailing whitespace
+    let line = substitute(a:line, '^\s*\(.\{-}\)\s*$', '\1', '')
+    " Skip empty lines and comments
+    if empty(line) || line[0] ==# '#'
+        return []
+    endif
+    " Match pattern: key: [word1, word2, ...] or key: word
+    let match = matchlist(line, '^\([a-z]\+\):\s*\(.*\)$')
+    if empty(match)
+        return []
+    endif
+    let key = match[1]
+    let value = match[2]
+    " Parse value: could be [word1, word2] or just word
+    let wordList = []
+    if value =~# '^\[.*\]$'
+        " Array format: [word1, word2, ...]
+        let value = substitute(value, '^\[\(.*\)\]$', '\1', '')
+        " Handle quoted strings and unquoted strings
+        let inQuotes = 0
+        let quoteChar = ''
+        let currentWord = ''
+        let i = 0
+        while i < len(value)
+            let char = value[i]
+            if char ==# '"' || char ==# "'"
+                if !inQuotes
+                    let inQuotes = 1
+                    let quoteChar = char
+                elseif char ==# quoteChar
+                    let inQuotes = 0
+                    let quoteChar = ''
+                else
+                    let currentWord .= char
+                endif
+            elseif char ==# ',' && !inQuotes
+                " End of word
+                let word = substitute(currentWord, '^\s*\(.\{-}\)\s*$', '\1', '')
+                if !empty(word)
+                    call add(wordList, word)
+                endif
+                let currentWord = ''
+            else
+                let currentWord .= char
+            endif
+            let i += 1
+        endwhile
+        " Add last word
+        if !empty(currentWord)
+            let word = substitute(currentWord, '^\s*\(.\{-}\)\s*$', '\1', '')
+            if !empty(word)
+                call add(wordList, word)
+            endif
+        endif
+    else
+        " Single word format
+        let value = substitute(value, '^\s*\(.\{-}\)\s*$', '\1', '')
+        " Remove quotes if present
+        let value = substitute(value, '^[''"]\(.*\)[''"]$', '\1', '')
+        if !empty(value)
+            call add(wordList, value)
+        endif
+    endif
+    if empty(wordList)
+        return []
+    endif
+    return [key, wordList]
+endfunction
+
 function! s:dbLoad(db, dbFile, ...)
     call ZFVimIM_dbSearchCacheClear(a:db)
 
@@ -573,17 +585,11 @@ function! s:dbLoad(db, dbFile, ...)
     let cacheFile = s:dbLoad_getCacheFile(a:dbFile)
     if s:dbLoad_tryLoadFromCache(dbMap, a:dbFile, cacheFile)
         " Successfully loaded from cache
-        " Record when we loaded this file (from cache, so use source file mtime)
-        if !has_key(a:db, 'implData')
-            let a:db['implData'] = {}
-        endif
-        if filereadable(a:dbFile)
-            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
-        endif
         call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
     else
         " Load from source file and create cache
         call ZFVimIM_DEBUG_profileStart('dbLoadFile')
+        let isYaml = s:isYamlFile(a:dbFile)
         let lines = readfile(a:dbFile)
         call ZFVimIM_DEBUG_profileStop()
         if empty(lines)
@@ -591,46 +597,58 @@ function! s:dbLoad(db, dbFile, ...)
         endif
 
         call ZFVimIM_DEBUG_profileStart('dbLoad')
-        for line in lines
-            if match(line, '\\ ') >= 0
-                let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
-                if !empty(wordListTmp)
-                    let key = remove(wordListTmp, 0)
+        if isYaml
+            " Load from YAML format
+            for line in lines
+                let parsed = s:parseYamlLine(line)
+                if !empty(parsed)
+                    let key = parsed[0]
+                    let wordList = parsed[1]
+                    if !exists('dbMap[key[0]]')
+                        let dbMap[key[0]] = []
+                    endif
+                    call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
+                                \   'key' : key,
+                                \   'wordList' : wordList,
+                                \   'countList' : [],
+                                \ }))
                 endif
+            endfor
+        else
+            " Load from TXT format (backward compatibility)
+            for line in lines
+                if match(line, '\\ ') >= 0
+                    let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
+                    if !empty(wordListTmp)
+                        let key = remove(wordListTmp, 0)
+                    endif
 
-                let wordList = []
-                for word in wordListTmp
-                    call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
-                endfor
-            else
-                let wordList = split(line)
+                    let wordList = []
+                    for word in wordListTmp
+                        call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
+                    endfor
+                else
+                    let wordList = split(line)
+                    if !empty(wordList)
+                        let key = remove(wordList, 0)
+                    endif
+                endif
                 if !empty(wordList)
-                    let key = remove(wordList, 0)
+                    if !exists('dbMap[key[0]]')
+                        let dbMap[key[0]] = []
+                    endif
+                    call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
+                                \   'key' : key,
+                                \   'wordList' : wordList,
+                                \   'countList' : [],
+                                \ }))
                 endif
-            endif
-            if !empty(wordList)
-                if !exists('dbMap[key[0]]')
-                    let dbMap[key[0]] = []
-                endif
-                call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
-                            \   'key' : key,
-                            \   'wordList' : wordList,
-                            \   'countList' : [],
-                            \ }))
-            endif
-        endfor
+            endfor
+        endif
         call ZFVimIM_DEBUG_profileStop()
         
         " Save to cache for next time
         call s:dbLoad_saveToCache(dbMap, cacheFile)
-        
-        " Record when we loaded this file
-        if !has_key(a:db, 'implData')
-            let a:db['implData'] = {}
-        endif
-        if filereadable(a:dbFile)
-            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
-        endif
     endif
 
     let dbCountFile = get(a:, 1, '')
@@ -764,91 +782,137 @@ endfunction
 function! s:dbSave(db, dbFile, ...)
     let dbCountFile = get(a:, 1, '')
 
-    " Check if source file has been modified externally
-    " If source file is newer than when we last loaded, reload it first
-    if filereadable(a:dbFile)
-        let sourceMtime = getftime(a:dbFile)
-        if sourceMtime >= 0
-            " Check if we have a record of when we last loaded this file
-            if !has_key(a:db['implData'], 'lastLoadTime')
-                let a:db['implData']['lastLoadTime'] = sourceMtime
-            endif
-            
-            " If source file is newer than when we last loaded, reload it first
-            " This prevents overwriting manual edits made to the dictionary file
-            if sourceMtime > a:db['implData']['lastLoadTime']
-                " Source file has been modified externally, reload it first
-                call ZFVimIM_dbLoad(a:db, a:dbFile, dbCountFile)
-                " Update last load time
-                let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
-            endif
-        endif
-    endif
-
     let dbMap = a:db['dbMap']
-    let lines = []
+    let isYaml = s:isYamlFile(a:dbFile)
+    
     " do not use `filewritable()`, since a not exist file is not treated `writable`
-    if empty(dbCountFile)
+    if isYaml
+        " Save as YAML format
         call ZFVimIM_DEBUG_profileStart('dbSave')
+        let yamlLines = []
+        " Sort keys for consistent output
+        let sortedKeys = []
         for c in keys(dbMap)
             for dbItemEncoded in dbMap[c]
                 let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
-                let line = dbItem['key']
-                for word in dbItem['wordList']
-                    let line .= ' '
-                    let line .= substitute(word, ' ', '\\ ', 'g')
-                endfor
-                call add(lines, line)
+                call add(sortedKeys, dbItem['key'])
             endfor
         endfor
-        call ZFVimIM_DEBUG_profileStop()
-
-        call ZFVimIM_DEBUG_profileStart('dbSaveFile')
-        call writefile(lines, a:dbFile)
-        call ZFVimIM_DEBUG_profileStop()
+        call sort(sortedKeys)
         
-        " Update last load time after saving
-        if filereadable(a:dbFile)
-            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
-        endif
-    else
-        let countLines = []
-        call ZFVimIM_DEBUG_profileStart('dbSave')
-        for c in keys(dbMap)
-            for dbItemEncoded in dbMap[c]
-                let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
-                let line = dbItem['key']
-                let countLine = dbItem['key']
-                for word in dbItem['wordList']
-                    let line .= ' '
-                    let line .= substitute(word, ' ', '\\ ', 'g')
-                endfor
-                call add(lines, line)
-                for cnt in dbItem['countList']
-                    if cnt <= 0
+        for key in sortedKeys
+            " Find the item
+            let found = 0
+            for c in keys(dbMap)
+                for dbItemEncoded in dbMap[c]
+                    let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
+                    if dbItem['key'] ==# key
+                        let found = 1
+                        " Format: key: [word1, word2, ...]
+                        let line = key . ': ['
+                        let wordParts = []
+                        for word in dbItem['wordList']
+                            " Escape quotes in words
+                            let escapedWord = substitute(word, '"', '\\"', 'g')
+                            call add(wordParts, '"' . escapedWord . '"')
+                        endfor
+                        let line .= join(wordParts, ', ') . ']'
+                        call add(yamlLines, line)
                         break
                     endif
-                    let countLine .= ' '
-                    let countLine .= cnt
                 endfor
-                if countLine != dbItem['key']
-                    call add(countLines, countLine)
+                if found
+                    break
                 endif
             endfor
         endfor
         call ZFVimIM_DEBUG_profileStop()
 
         call ZFVimIM_DEBUG_profileStart('dbSaveFile')
-        call writefile(lines, a:dbFile)
-        call ZFVimIM_DEBUG_profileStop()
-
-        call ZFVimIM_DEBUG_profileStart('dbSaveCountFile')
-        call writefile(countLines, dbCountFile)
+        call writefile(yamlLines, a:dbFile)
         call ZFVimIM_DEBUG_profileStop()
         
-        " Update last load time after saving
-        if filereadable(a:dbFile)
-            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
+        " Save count file if needed (still as text format for compatibility)
+        if !empty(dbCountFile)
+            let countLines = []
+            call ZFVimIM_DEBUG_profileStart('dbSaveCount')
+            for c in keys(dbMap)
+                for dbItemEncoded in dbMap[c]
+                    let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
+                    let countLine = dbItem['key']
+                    for cnt in dbItem['countList']
+                        if cnt <= 0
+                            break
+                        endif
+                        let countLine .= ' '
+                        let countLine .= cnt
+                    endfor
+                    if countLine != dbItem['key']
+                        call add(countLines, countLine)
+                    endif
+                endfor
+            endfor
+            call ZFVimIM_DEBUG_profileStop()
+
+            call ZFVimIM_DEBUG_profileStart('dbSaveCountFile')
+            call writefile(countLines, dbCountFile)
+            call ZFVimIM_DEBUG_profileStop()
+        endif
+    else
+        " Save as TXT format (backward compatibility)
+        let lines = []
+        if empty(dbCountFile)
+            call ZFVimIM_DEBUG_profileStart('dbSave')
+            for c in keys(dbMap)
+                for dbItemEncoded in dbMap[c]
+                    let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
+                    let line = dbItem['key']
+                    for word in dbItem['wordList']
+                        let line .= ' '
+                        let line .= substitute(word, ' ', '\\ ', 'g')
+                    endfor
+                    call add(lines, line)
+                endfor
+            endfor
+            call ZFVimIM_DEBUG_profileStop()
+
+            call ZFVimIM_DEBUG_profileStart('dbSaveFile')
+            call writefile(lines, a:dbFile)
+            call ZFVimIM_DEBUG_profileStop()
+        else
+            let countLines = []
+            call ZFVimIM_DEBUG_profileStart('dbSave')
+            for c in keys(dbMap)
+                for dbItemEncoded in dbMap[c]
+                    let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
+                    let line = dbItem['key']
+                    let countLine = dbItem['key']
+                    for word in dbItem['wordList']
+                        let line .= ' '
+                        let line .= substitute(word, ' ', '\\ ', 'g')
+                    endfor
+                    call add(lines, line)
+                    for cnt in dbItem['countList']
+                        if cnt <= 0
+                            break
+                        endif
+                        let countLine .= ' '
+                        let countLine .= cnt
+                    endfor
+                    if countLine != dbItem['key']
+                        call add(countLines, countLine)
+                    endif
+                endfor
+            endfor
+            call ZFVimIM_DEBUG_profileStop()
+
+            call ZFVimIM_DEBUG_profileStart('dbSaveFile')
+            call writefile(lines, a:dbFile)
+            call ZFVimIM_DEBUG_profileStop()
+
+            call ZFVimIM_DEBUG_profileStart('dbSaveCountFile')
+            call writefile(countLines, dbCountFile)
+            call ZFVimIM_DEBUG_profileStop()
         endif
     endif
 endfunction

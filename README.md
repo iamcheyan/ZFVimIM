@@ -6,7 +6,7 @@
 
 做了以下最小化改动，便于与本地词库配合：
 
-- 通过 `vim.g.zfvimim_dict_path` 指定词库位置（默认读取 `~/.dotfiles/config/nvim/zfvimim_db/sbzr.userdb.txt`）。
+- 通过 `vim.g.zfvimim_dict_path` 指定词库位置（默认读取 `~/.dotfiles/config/nvim/zfvimim_db/sbzr.userdb.yaml`）。
 - 词库作为本地文件使用 `local` 模式注册，不依赖 GitHub 同步。
 - 其它 Vim 脚本保持与 upstream 一致，便于后续合并更新。
 
@@ -31,12 +31,12 @@
 ### 默认词库
 
 为防止用户第一次使用时没有词库，本仓库已包含一个简单的默认拼音词库：
-- 位置：`~/.local/share/nvim/lazy/ZFVimIM/dict/default_pinyin.txt`
+- 位置：`~/.local/share/nvim/lazy/ZFVimIM/dict/default_pinyin.yaml`
 - 包含常用汉字和词汇，可直接使用
 
 **自动加载机制**：
-- 如果未设置 `vim.g.zfvimim_dict_path`，插件会自动加载默认词库 `dict/default_pinyin.txt`
-- 如果设置了 `vim.g.zfvimim_dict_path`，则使用指定的词库文件
+- 如果未设置 `vim.g.zfvimim_dict_path`，插件会自动加载默认词库 `dict/default_pinyin.yaml`（如果不存在则回退到 `.txt` 格式）
+- 如果设置了 `vim.g.zfvimim_dict_path`，则使用指定的词库文件（支持 `.yaml`、`.yml` 和 `.txt` 格式）
 
 ### 配置步骤
 
@@ -46,18 +46,25 @@
 2. **使用自定义词库**：
    在 `lua/config/options.lua` 设置：
    ```lua
-   vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
+   vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
    ```
 
 3. **显式指定默认词库**（可选）：
    如果需要显式指定默认词库路径：
    ```lua
-   vim.g.zfvimim_dict_path = vim.fn.stdpath("data") .. "/lazy/ZFVimIM/dict/default_pinyin.txt"
+   vim.g.zfvimim_dict_path = vim.fn.stdpath("data") .. "/lazy/ZFVimIM/dict/default_pinyin.yaml"
    ```
 
-3. **词库格式**：
-   词库采用 `拼音 候选1 候选2 ...` 的 UTF-8 文本格式，多条同键可重复出现。
-   示例：
+4. **词库格式**：
+   词库支持 YAML 格式（推荐）和 TXT 格式（向后兼容）。
+   
+   **YAML 格式**（推荐）：
+   ```yaml
+   a: [啊, 阿, 吖]
+   ai: [爱, 唉, 埃]
+   ```
+   
+   **TXT 格式**（向后兼容）：
    ```
    a 啊 阿 吖
    ai 爱 唉 埃
@@ -151,11 +158,11 @@
 
 #### 辞書設定
 ```lua
--- デフォルト辞書名（拡張子なし、.txt が自動追加）
+-- デフォルト辞書名（拡張子なし、.yaml が自動追加、.txt にフォールバック）
 vim.g.zfvimim_default_dict_name = "sbzr.userdb"
 
--- カスタム辞書パス（絶対パスまたは相対パス）
-vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
+-- カスタム辞書パス（絶対パスまたは相対パス、.yaml/.yml/.txt をサポート）
+vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
 ```
 
 #### 補完設定
@@ -345,7 +352,7 @@ g:ZFVimIM_db = [
     'dbEdit': [],                 -- 編集履歴
     'dbSearchCache': {},          -- 検索キャッシュ
     'implData': {                 -- 実装データ
-      'dictPath': '/path/to/dict.txt',
+      'dictPath': '/path/to/dict.yaml',  -- .yaml/.yml/.txt をサポート
     },
   },
 ]
