@@ -418,7 +418,8 @@ function! ZFVimIME_pageUp(key, ...)
         return ''
     endif
     let s:pageup_pagedown = -1
-    call s:updateCandidates()
+    " Use feedkeys to defer the update to avoid "Not allowed to change text" error
+    silent call feedkeys("\<c-r>=ZFVimIME_updatePage()\<cr>", 'nt')
     return ''
 endfunction
 function! ZFVimIME_pageDown(key, ...)
@@ -427,7 +428,15 @@ function! ZFVimIME_pageDown(key, ...)
         return ''
     endif
     let s:pageup_pagedown = 1
-    call s:updateCandidates()
+    " Use feedkeys to defer the update to avoid "Not allowed to change text" error
+    silent call feedkeys("\<c-r>=ZFVimIME_updatePage()\<cr>", 'nt')
+    return ''
+endfunction
+function! ZFVimIME_updatePage()
+    " This function is called via feedkeys to defer updateCandidates execution
+    if mode() == 'i' && s:floatVisible()
+        call s:updateCandidates()
+    endif
     return ''
 endfunction
 
@@ -815,13 +824,13 @@ function! s:setupKeymap()
         execute 'lnoremap <buffer><expr><silent> ' . c . ' ZFVimIME_input("' . escape(c, '"\') . '")'
     endfor
 
-    for c in get(g:, 'ZFVimIM_key_pageUp', ['-'])
+    for c in get(g:, 'ZFVimIM_key_pageUp', ['-', ','])
         if c !~ s:all_keys
             let mapped[c] = 1
             execute 'lnoremap <buffer><expr><silent> ' . c . ' ZFVimIME_pageUp("' . escape(c, '"\') . '")'
         endif
     endfor
-    for c in get(g:, 'ZFVimIM_key_pageDown', ['='])
+    for c in get(g:, 'ZFVimIM_key_pageDown', ['=', '.'])
         if c !~ s:all_keys
             let mapped[c] = 1
             execute 'lnoremap <buffer><expr><silent> ' . c . ' ZFVimIME_pageDown("' . escape(c, '"\') . '")'

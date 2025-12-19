@@ -150,7 +150,7 @@
 - `<Esc>` - 入力をキャンセルして候補メニューを閉じる
 - `<Backspace>` - 1文字削除（候補メニュー表示中は候補を更新）
 - `<Tab>` / `<S-Tab>` - 候補を上下に移動
-- `-` / `=` - 候補ページを上下に移動（`g:ZFVimIM_key_pageUp/Down` で変更可能）
+- `-` / `=` または `,` / `.` - 候補ページを上下に移動（`g:ZFVimIM_key_pageUp/Down` で変更可能）
 - `[` / `]` - 左/右に分割して確定（`g:ZFVimIM_key_chooseL/R` で変更可能）
 - `<C-d>` - 現在選択中の候補を辞書から削除（`g:ZFVimIM_key_deleteWord` で変更可能）
 
@@ -206,8 +206,8 @@ vim.g.ZFVimIM_autoAddWordChecker = []
 vim.g.ZFVimIM_keymap = 1
 
 -- カスタムキーマッピング（デフォルト値）
-vim.g.ZFVimIM_key_pageUp = ['-']      -- ページアップ
-vim.g.ZFVimIM_key_pageDown = ['=']    -- ページダウン
+vim.g.ZFVimIM_key_pageUp = ['-', ',']      -- ページアップ（- または ,）
+vim.g.ZFVimIM_key_pageDown = ['=', '.']   -- ページダウン（= または .）
 vim.g.ZFVimIM_key_chooseL = ['[']     -- 左に分割
 vim.g.ZFVimIM_key_chooseR = [']']     -- 右に分割
 vim.g.ZFVimIM_key_backspace = ['<bs>'] -- バックスペース
