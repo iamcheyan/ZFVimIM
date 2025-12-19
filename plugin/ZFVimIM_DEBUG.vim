@@ -5,7 +5,6 @@ function! ZFVimIM_DEBUG_checkHealth()
     echom '    vim version: ' . v:version
     echom '    vim job: ' . has('job')
     echom '    nvim job: ' . exists('*jobstart')
-    echom '    fallback: ' . get(g:, 'ZFVimIM_cloudAsync_jobFallback', 0)
     echom 'python: ' . (executable('python') || executable('python3'))
     echom '    python: ' . executable('python') . ' ' . (exists('*exepath') ? exepath('python') : 'NA')
     if executable('python')
@@ -145,8 +144,6 @@ function! ZFVimIM_DEBUG_stop()
     silent echo '==================== profileInfo ===================='
     silent call ZFVimIM_DEBUG_profileInfo()
 
-    silent echo '==================== cloud log ===================='
-    silent IMCloudLog
 
     if exists('*ZFGroupJobTaskMap')
         silent echo '==================== jobs ===================='

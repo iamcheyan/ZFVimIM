@@ -439,6 +439,125 @@ function! ZFVimIM_dbSearchCacheClear(db)
     let a:db['dbSearchCacheKeys'] = []
 endfunction
 
+" ============================================================
+" Compatibility function for cloud sync (disabled)
+" This function is provided for backward compatibility
+" It only registers local dictionary without cloud sync
+function! ZFVimIM_cloudRegister(cloudOption)
+    " Extract local dictionary path from cloudOption
+    if !has_key(a:cloudOption, 'dbId')
+        echomsg '[ZFVimIM] ZFVimIM_cloudRegister: "dbId" is required'
+        return
+    endif
+    
+    " Get dictionary file path
+    let dbFile = ''
+    if has_key(a:cloudOption, 'dbFile')
+        if has_key(a:cloudOption, 'repoPath')
+            let dbFile = a:cloudOption['repoPath'] . '/' . a:cloudOption['dbFile']
+        else
+            let dbFile = a:cloudOption['dbFile']
+        endif
+        let dbFile = expand(dbFile)
+    endif
+    
+    if empty(dbFile) || !filereadable(dbFile)
+        echomsg '[ZFVimIM] ZFVimIM_cloudRegister: invalid dbFile: ' . get(a:cloudOption, 'dbFile', '')
+        return
+    endif
+    
+    " Register as local dictionary (no cloud sync)
+    let db = ZFVimIM_dbForId(a:cloudOption['dbId'])
+    if empty(db)
+        " Create new database
+        let dbName = get(a:cloudOption, 'name', fnamemodify(dbFile, ':t:r'))
+        let db = ZFVimIM_dbInit({
+                    \   'name' : dbName,
+                    \   'priority' : get(a:cloudOption, 'priority', 100),
+                    \ })
+        let db['dbId'] = a:cloudOption['dbId']
+    endif
+    
+    " Load dictionary
+    let dbCountFile = ''
+    if has_key(a:cloudOption, 'dbCountFile')
+        if has_key(a:cloudOption, 'repoPath')
+            let dbCountFile = a:cloudOption['repoPath'] . '/' . a:cloudOption['dbCountFile']
+        else
+            let dbCountFile = a:cloudOption['dbCountFile']
+        endif
+        let dbCountFile = expand(dbCountFile)
+        if !filereadable(dbCountFile)
+            let dbCountFile = ''
+        endif
+    endif
+    
+    call ZFVimIM_dbLoad(db, dbFile, dbCountFile)
+    
+    " Store paths in implData
+    if !has_key(db, 'implData')
+        let db['implData'] = {}
+    endif
+    let db['implData']['dictPath'] = dbFile
+    if !empty(dbCountFile)
+        let db['implData']['dbCountFile'] = dbCountFile
+    endif
+endfunction
+
+" Clear all cache files for all dictionaries
+function! ZFVimIM_cacheClearAll()
+    let cachePath = ZFVimIM_cachePath()
+    if !isdirectory(cachePath)
+        echo "キャッシュディレクトリが存在しません: " . cachePath
+        return
+    endif
+    
+    let cacheFiles = glob(cachePath . '/dbCache_*.vim', 0, 1)
+    let deletedCount = 0
+    for cacheFile in cacheFiles
+        if delete(cacheFile) == 0
+            let deletedCount = deletedCount + 1
+        endif
+    endfor
+    
+    if deletedCount > 0
+        echo "キャッシュファイル " . deletedCount . " 個を削除しました"
+    else
+        echo "削除するキャッシュファイルが見つかりませんでした"
+    endif
+endfunction
+
+" Clear cache and reload all dictionaries
+function! ZFVimIM_cacheUpdate()
+    " Clear all cache files
+    call ZFVimIM_cacheClearAll()
+    
+    " Reload all dictionaries
+    if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+        let reloadedCount = 0
+        for db in g:ZFVimIM_db
+            if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                let dictPath = db['implData']['dictPath']
+                if filereadable(dictPath)
+                    " Clear search cache
+                    call ZFVimIM_dbSearchCacheClear(db)
+                    " Reload dictionary (this will regenerate cache)
+                    call ZFVimIM_dbLoad(db, dictPath)
+                    let reloadedCount = reloadedCount + 1
+                endif
+            endif
+        endfor
+        
+        if reloadedCount > 0
+            echo "辞書 " . reloadedCount . " 個を再読み込みし、キャッシュを更新しました"
+        else
+            echo "再読み込みする辞書が見つかりませんでした。Vimを再起動してください。"
+        endif
+    else
+        echo "辞書がまだ読み込まれていません。Vimを再起動するか、:ZFVimIMReload を実行してください。"
+    endif
+endfunction
+
 
 " ============================================================
 function! s:dbLoad(db, dbFile, ...)
@@ -449,43 +568,70 @@ function! s:dbLoad(db, dbFile, ...)
     let a:db['dbEdit'] = []
 
     let dbMap = a:db['dbMap']
-    call ZFVimIM_DEBUG_profileStart('dbLoadFile')
-    let lines = readfile(a:dbFile)
-    call ZFVimIM_DEBUG_profileStop()
-    if empty(lines)
-        return
-    endif
+    
+    " Try to load from cache first
+    let cacheFile = s:dbLoad_getCacheFile(a:dbFile)
+    if s:dbLoad_tryLoadFromCache(dbMap, a:dbFile, cacheFile)
+        " Successfully loaded from cache
+        " Record when we loaded this file (from cache, so use source file mtime)
+        if !has_key(a:db, 'implData')
+            let a:db['implData'] = {}
+        endif
+        if filereadable(a:dbFile)
+            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
+        endif
+        call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
+    else
+        " Load from source file and create cache
+        call ZFVimIM_DEBUG_profileStart('dbLoadFile')
+        let lines = readfile(a:dbFile)
+        call ZFVimIM_DEBUG_profileStop()
+        if empty(lines)
+            return
+        endif
 
-    call ZFVimIM_DEBUG_profileStart('dbLoad')
-    for line in lines
-        if match(line, '\\ ') >= 0
-            let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
-            if !empty(wordListTmp)
-                let key = remove(wordListTmp, 0)
+        call ZFVimIM_DEBUG_profileStart('dbLoad')
+        for line in lines
+            if match(line, '\\ ') >= 0
+                let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
+                if !empty(wordListTmp)
+                    let key = remove(wordListTmp, 0)
+                endif
+
+                let wordList = []
+                for word in wordListTmp
+                    call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
+                endfor
+            else
+                let wordList = split(line)
+                if !empty(wordList)
+                    let key = remove(wordList, 0)
+                endif
             endif
-
-            let wordList = []
-            for word in wordListTmp
-                call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
-            endfor
-        else
-            let wordList = split(line)
             if !empty(wordList)
-                let key = remove(wordList, 0)
+                if !exists('dbMap[key[0]]')
+                    let dbMap[key[0]] = []
+                endif
+                call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
+                            \   'key' : key,
+                            \   'wordList' : wordList,
+                            \   'countList' : [],
+                            \ }))
             endif
+        endfor
+        call ZFVimIM_DEBUG_profileStop()
+        
+        " Save to cache for next time
+        call s:dbLoad_saveToCache(dbMap, cacheFile)
+        
+        " Record when we loaded this file
+        if !has_key(a:db, 'implData')
+            let a:db['implData'] = {}
         endif
-        if !empty(wordList)
-            if !exists('dbMap[key[0]]')
-                let dbMap[key[0]] = []
-            endif
-            call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
-                        \   'key' : key,
-                        \   'wordList' : wordList,
-                        \   'countList' : [],
-                        \ }))
+        if filereadable(a:dbFile)
+            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
         endif
-    endfor
-    call ZFVimIM_DEBUG_profileStop()
+    endif
 
     let dbCountFile = get(a:, 1, '')
     if filereadable(dbCountFile)
@@ -519,8 +665,125 @@ function! s:dbLoad(db, dbFile, ...)
     endif
 endfunction
 
+" Get cache file path for a dictionary file
+function! s:dbLoad_getCacheFile(dbFile)
+    " Use MD5 hash of file path as cache file name to avoid conflicts
+    " For simplicity, use a hash of the file path
+    let fileHash = substitute(a:dbFile, '[^a-zA-Z0-9]', '_', 'g')
+    " Limit hash length to avoid filename issues
+    if len(fileHash) > 100
+        let fileHash = strpart(fileHash, 0, 100)
+    endif
+    let cacheFile = ZFVimIM_cachePath() . '/dbCache_' . fileHash . '.vim'
+    return cacheFile
+endfunction
+
+" Try to load dbMap from cache file
+" Returns 1 if successful, 0 otherwise
+function! s:dbLoad_tryLoadFromCache(dbMap, dbFile, cacheFile)
+    " Check if cache file exists and is newer than source file
+    if !filereadable(a:cacheFile) || !filereadable(a:dbFile)
+        return 0
+    endif
+    
+    " Check if cache is newer than source file
+    let cacheMtime = getftime(a:cacheFile)
+    let sourceMtime = getftime(a:dbFile)
+    if cacheMtime < 0 || sourceMtime < 0 || cacheMtime < sourceMtime
+        return 0
+    endif
+    
+    " Try to load from cache file
+    " Cache format: each line is a char prefix, followed by encoded items
+    try
+        call ZFVimIM_DEBUG_profileStart('dbLoadCache')
+        let lines = readfile(a:cacheFile)
+        if empty(lines)
+            return 0
+        endif
+        
+        " Parse cache file
+        " Format: "CHAR|item1|item2|..."
+        let currentChar = ''
+        let currentItems = []
+        for line in lines
+            if line =~# '^[a-z]$'
+                " New character prefix
+                if !empty(currentChar)
+                    let a:dbMap[currentChar] = currentItems
+                endif
+                let currentChar = line
+                let currentItems = []
+            elseif !empty(currentChar) && line =~# '^|'
+                " Item for current character (starts with | to escape special chars)
+                let item = strpart(line, 1)
+                call add(currentItems, item)
+            endif
+        endfor
+        " Don't forget the last character
+        if !empty(currentChar)
+            let a:dbMap[currentChar] = currentItems
+        endif
+        
+        call ZFVimIM_DEBUG_profileStop()
+        return 1
+    catch
+        " If anything fails, fall back to loading from source
+        return 0
+    endtry
+endfunction
+
+" Save dbMap to cache file
+function! s:dbLoad_saveToCache(dbMap, cacheFile)
+    try
+        let cacheDir = fnamemodify(a:cacheFile, ':h')
+        if !isdirectory(cacheDir)
+            call mkdir(cacheDir, 'p')
+        endif
+        
+        call ZFVimIM_DEBUG_profileStart('dbSaveCache')
+        let lines = []
+        " Write cache file in format: "CHAR" followed by items prefixed with "|"
+        for c in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+            if has_key(a:dbMap, c) && !empty(a:dbMap[c])
+                call add(lines, c)
+                for item in a:dbMap[c]
+                    " Prefix with | to escape and identify as item line
+                    call add(lines, '|' . item)
+                endfor
+            endif
+        endfor
+        
+        call writefile(lines, a:cacheFile)
+        call ZFVimIM_DEBUG_profileStop()
+    catch
+        " Silently fail if cache saving doesn't work
+    endtry
+endfunction
+
 function! s:dbSave(db, dbFile, ...)
     let dbCountFile = get(a:, 1, '')
+
+    " Check if source file has been modified externally
+    " If source file is newer than when we last loaded, reload it first
+    if filereadable(a:dbFile)
+        let sourceMtime = getftime(a:dbFile)
+        if sourceMtime >= 0
+            " Check if we have a record of when we last loaded this file
+            if !has_key(a:db['implData'], 'lastLoadTime')
+                let a:db['implData']['lastLoadTime'] = sourceMtime
+            endif
+            
+            " If source file is newer than when we last loaded, reload it first
+            " This prevents overwriting manual edits made to the dictionary file
+            if sourceMtime > a:db['implData']['lastLoadTime']
+                " Source file has been modified externally, reload it first
+                call ZFVimIM_dbLoad(a:db, a:dbFile, dbCountFile)
+                " Update last load time
+                let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
+            endif
+        endif
+    endif
 
     let dbMap = a:db['dbMap']
     let lines = []
@@ -543,6 +806,11 @@ function! s:dbSave(db, dbFile, ...)
         call ZFVimIM_DEBUG_profileStart('dbSaveFile')
         call writefile(lines, a:dbFile)
         call ZFVimIM_DEBUG_profileStop()
+        
+        " Update last load time after saving
+        if filereadable(a:dbFile)
+            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
+        endif
     else
         let countLines = []
         call ZFVimIM_DEBUG_profileStart('dbSave')
@@ -577,6 +845,11 @@ function! s:dbSave(db, dbFile, ...)
         call ZFVimIM_DEBUG_profileStart('dbSaveCountFile')
         call writefile(countLines, dbCountFile)
         call ZFVimIM_DEBUG_profileStop()
+        
+        " Update last load time after saving
+        if filereadable(a:dbFile)
+            let a:db['implData']['lastLoadTime'] = getftime(a:dbFile)
+        endif
     endif
 endfunction
 

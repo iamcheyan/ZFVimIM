@@ -233,8 +233,12 @@ function! s:complete_predict(ret, key, option, db)
         return
     endif
 
-    let p = len(a:key)
+    let keyLen = len(a:key)
+    let p = keyLen
     while p > 0
+        if keyLen == 2 && p < keyLen
+            break
+        endif
         " try to find
         let subKey = strpart(a:key, 0, p)
         let subMatchIndex = ZFVimIM_dbSearch(a:db, a:key[0],
@@ -309,11 +313,13 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     let tempIndex = index
     while tempIndex >= 0
         let dbItem = ZFVimIM_dbItemDecode(a:db['dbMap'][a:key[0]][tempIndex])
+        " Get the actual key from database
+        let dbItemKey = dbItem['key']
         for word in dbItem['wordList']
             let item = {
                         \   'dbId' : a:db['dbId'],
                         \   'len' : keyLen,
-                        \   'key' : a:key,
+                        \   'key' : dbItemKey,
                         \   'word' : word,
                         \   'type' : 'match',
                         \ }
@@ -327,6 +333,9 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
                     \ '^' . a:key . g:ZFVimIM_KEY_S_MAIN,
                     \ tempIndex + 1)
     endwhile
+    
+    " Extract common first character from multi-chars - DISABLED in intermediate stages
+    " Only extract in mergeResult to avoid duplicate extraction
     
     " Add all single characters first (no limit)
     call extend(a:ret, singleChars)
@@ -349,6 +358,9 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
     let p = keyLen
     let subMatchLongestFlag = 1
     while p > 0 && matchLimit > 0
+        if keyLen == 2 && p < keyLen
+            break
+        endif
         let subKey = strpart(a:key, 0, p)
         let index = ZFVimIM_dbSearch(a:db, a:key[0],
                     \ '^' . subKey,
@@ -383,11 +395,13 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
         " Separate single characters and multi-character words
         let singleChars = []
         let multiChars = []
+        " Get the actual key from database
+        let dbItemKey = dbItem['key']
         for word in dbItem['wordList']
             let item = {
                         \   'dbId' : a:db['dbId'],
                         \   'len' : p,
-                        \   'key' : subKey,
+                        \   'key' : dbItemKey,
                         \   'word' : word,
                         \   'type' : type,
                         \ }
@@ -397,6 +411,9 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
                 call add(multiChars, item)
             endif
         endfor
+        
+        " Extract common first character - DISABLED in intermediate stages
+        " Only extract in mergeResult to avoid duplicate extraction
         
         " Add all single characters first (no limit)
         call extend(ret, singleChars)
@@ -420,6 +437,79 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
 
         let p -= 1
     endwhile
+endfunction
+
+" Extract common first character from multi-chars if they share first 2 key chars
+" Example: When input is 'gz', and we have [{'key':'gzcu','word':'给出'}, {'key':'gzli','word':'给力'}, {'key':'gznn','word':'给您'}]
+" These keys all start with 'gz' (first 2 chars), so extract '给' with key 'gz'
+" Only extract when currentKey has exactly 2 characters, and only from keys that start with currentKey
+" Returns: List of extracted items [{'dbId':'...', 'len':2, 'key':'gz', 'word':'给', 'type':'match'}, ...]
+function! s:extractCommonFirstChar(multiChars, currentKey, db)
+    let extractedItems = []
+    
+    " Only extract when currentKey has exactly 2 characters (e.g., 'gz', not 'g')
+    if len(a:currentKey) != 2
+        return extractedItems
+    endif
+    
+    if empty(a:multiChars) || len(a:multiChars) < 2
+        return extractedItems
+    endif
+    
+    let currentKeyPrefix = a:currentKey  " e.g., 'gz'
+    
+    " Group multi-chars by their key prefix, but ONLY if key starts with currentKeyPrefix
+    let keyPrefixGroups = {}
+    for item in a:multiChars
+        let key = item['key']
+        " Only process if key has at least 2 characters and starts with currentKeyPrefix
+        if len(key) >= 2
+            let prefix = strpart(key, 0, 2)
+            " ONLY process keys that exactly match currentKeyPrefix (e.g., 'gz')
+            if prefix ==# currentKeyPrefix
+                if !has_key(keyPrefixGroups, prefix)
+                    let keyPrefixGroups[prefix] = []
+                endif
+                call add(keyPrefixGroups[prefix], item)
+            endif
+        endif
+    endfor
+    
+    " Find prefix group with 2+ items and extract common first char
+    for prefix in keys(keyPrefixGroups)
+        let group = keyPrefixGroups[prefix]
+        if len(group) >= 2
+            " Extract first character from all words in this group
+            let firstChars = {}
+            for item in group
+                let word = item['word']
+                if len(word) > 0
+                    let firstChar = strcharpart(word, 0, 1)
+                    if !has_key(firstChars, firstChar)
+                        let firstChars[firstChar] = 0
+                    endif
+                    let firstChars[firstChar] += 1
+                endif
+            endfor
+            
+            " Extract all first chars that appear in at least 2 words
+            for char in keys(firstChars)
+                if firstChars[char] >= 2
+                    " Create new item with extracted char
+                    let newItem = {
+                                \   'dbId' : group[0]['dbId'],
+                                \   'len' : 2,
+                                \   'key' : currentKeyPrefix,
+                                \   'word' : char,
+                                \   'type' : 'match',
+                                \ }
+                    call add(extractedItems, newItem)
+                endif
+            endfor
+        endif
+    endfor
+    
+    return extractedItems
 endfunction
 
 function! s:removeDuplicate(ret, exists)
@@ -474,6 +564,61 @@ function! s:sortSingleCharPriority(ret)
     call extend(a:ret, singleChars)
     call extend(a:ret, multiChars)
 endfunction
+
+" Sort function with frequency support
+" This function sorts items by frequency (higher frequency first)
+function! s:sortByFrequency(item1, item2)
+    " Get word frequency if available
+    let freq1 = 0
+    let freq2 = 0
+    
+    " Try to get frequency from global function
+    if exists('*ZFVimIM_getWordFrequency')
+        let freq1 = ZFVimIM_getWordFrequency(a:item1['key'], a:item1['word'])
+        let freq2 = ZFVimIM_getWordFrequency(a:item2['key'], a:item2['word'])
+    endif
+    
+    " Sort by frequency (higher frequency first)
+    if freq1 > freq2
+        return -1
+    elseif freq1 < freq2
+        return 1
+    else
+        " If frequency is same, keep original order
+        return 0
+    endif
+endfunction
+
+" Sort list by frequency (used words first) within single char priority groups
+function! s:sortByFrequencyPriority(ret)
+    if len(a:ret) <= 1
+        return
+    endif
+    
+    " First separate single chars and multi-chars
+    let singleChars = []
+    let multiChars = []
+    for item in a:ret
+        if len(item['word']) == 1
+            call add(singleChars, item)
+        else
+            call add(multiChars, item)
+        endif
+    endfor
+    
+    " Sort each group by frequency
+    if len(singleChars) > 1
+        call sort(singleChars, function('s:sortByFrequency'))
+    endif
+    if len(multiChars) > 1
+        call sort(multiChars, function('s:sortByFrequency'))
+    endif
+    
+    " Rebuild with single chars first, sorted by frequency
+    call remove(a:ret, 0, len(a:ret) - 1)
+    call extend(a:ret, singleChars)
+    call extend(a:ret, multiChars)
+endfunction
 " data: {
 "   'sentence' : [],
 "   'crossDb' : [],
@@ -521,13 +666,13 @@ function! s:mergeResult(data, key, option, db)
         call extend(tailRet, remove(predictRet, g:ZFVimIM_predictLimitWhenMatch, len(predictRet) - 1))
     endif
 
-    " Sort each list to prioritize single characters
-    call s:sortSingleCharPriority(matchRet)
-    call s:sortSingleCharPriority(sentenceRet)
-    call s:sortSingleCharPriority(subMatchLongestRet)
-    call s:sortSingleCharPriority(subMatchRet)
-    call s:sortSingleCharPriority(predictRet)
-    call s:sortSingleCharPriority(tailRet)
+    " Sort each list to prioritize single characters, then by frequency
+    call s:sortByFrequencyPriority(matchRet)
+    call s:sortByFrequencyPriority(sentenceRet)
+    call s:sortByFrequencyPriority(subMatchLongestRet)
+    call s:sortByFrequencyPriority(subMatchRet)
+    call s:sortByFrequencyPriority(predictRet)
+    call s:sortByFrequencyPriority(tailRet)
 
     " order:
     "   exact match
@@ -558,8 +703,8 @@ function! s:mergeResult(data, key, option, db)
                 let iPredict += 1
             endif
         endwhile
-        " Sort long predict to prioritize single characters
-        call s:sortSingleCharPriority(longPredictRet)
+        " Sort long predict to prioritize single characters, then by frequency
+        call s:sortByFrequencyPriority(longPredictRet)
         call extend(ret, longPredictRet)
     endif
 
@@ -595,6 +740,63 @@ function! s:mergeResult(data, key, option, db)
         endwhile
     endif
 
-    return ret
-endfunction
+    " Extract common first character from multi-chars ONLY when key length is exactly 2
+    " Only extract from multi-chars whose key matches the user input prefix exactly
+    if len(a:key) == 2
+        let allMultiChars = []
+        let currentKeyPrefix = a:key  " e.g., 'gz'
+        
+        " Collect only multi-chars that match the current key prefix exactly
+        for item in ret
+            " Only include multi-chars whose key starts with currentKeyPrefix
+            if len(item['word']) > 1 && len(item['key']) >= 2
+                let itemPrefix = strpart(item['key'], 0, 2)
+                if itemPrefix ==# currentKeyPrefix
+                    call add(allMultiChars, item)
+                endif
+            endif
+        endfor
+        
+        if len(allMultiChars) >= 2
+            let extractedChars = s:extractCommonFirstChar(allMultiChars, a:key, a:db)
+            for extractedChar in extractedChars
+                " Check if this single char already exists to avoid duplicate
+                let alreadyExists = 0
+                for item in ret
+                    if item['word'] ==# extractedChar['word'] && item['key'] ==# extractedChar['key']
+                        let alreadyExists = 1
+                        break
+                    endif
+                endfor
+                if !alreadyExists
+                    " Insert at the beginning
+                    call insert(ret, extractedChar, 0)
+                endif
+            endfor
+        endif
+    endif
 
+    " For 2-letter input, keep only items whose key matches the input prefix
+    if len(a:key) == 2
+        let filteredRet = []
+        for item in ret
+            if len(get(item, 'key', '')) >= 2 && strpart(item['key'], 0, 2) ==# a:key
+                call add(filteredRet, item)
+            endif
+        endfor
+        let ret = filteredRet
+    endif
+
+    " Final deduplication: remove duplicates from the final result
+    let finalExists = {}
+    let finalRet = []
+    for item in ret
+        let hash = item['key'] . "\t" . item['word']
+        if !has_key(finalExists, hash)
+            let finalExists[hash] = 1
+            call add(finalRet, item)
+        endif
+    endfor
+
+    return finalRet
+endfunction

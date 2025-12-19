@@ -14,17 +14,52 @@ if !exists('g:ZFVimIM_symbolMap')
     let g:ZFVimIM_symbolMap = {}
 endif
 
+" 退出插入模式时自动停止输入法
+if !exists('g:ZFVimIME_autoStopOnInsertLeave')
+    let g:ZFVimIME_autoStopOnInsertLeave = 1
+endif
+
 " ============================================================
 " Auto load default dictionary if zfvimim_dict_path is set or use default
 function! s:ZFVimIM_autoLoadDict()
     let dictPath = ''
     
+    " Get plugin directory - use stdpath for reliability in LazyVim
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    " Try <sfile> method first, fallback to stdpath
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    " Determine default dictionary name
+    " If zfvimim_default_dict_name is set, use it; otherwise use default_pinyin
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        " Add .txt extension if not present
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
+        endif
+        let defaultDict = dictDir . '/' . defaultDictName
+    else
+        let defaultDict = dictDir . '/default_pinyin.txt'
+    endif
+    
     " Check if zfvimim_dict_path is set
     if exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
-        let dictPath = expand(g:zfvimim_dict_path)
+        let customDictPath = expand(g:zfvimim_dict_path)
+        " If custom dict path is set, check if file exists
+        if filereadable(customDictPath)
+            let dictPath = customDictPath
+        else
+            " Custom dict file doesn't exist, fallback to default
+            if filereadable(defaultDict)
+                let dictPath = defaultDict
+            endif
+        endif
     else
-        " Use default dictionary
-        let defaultDict = expand('<sfile>:p:h:h') . '/dict/default_pinyin.txt'
+        " Use default dictionary if zfvimim_dict_path is not set
         if filereadable(defaultDict)
             let dictPath = defaultDict
         endif
@@ -52,6 +87,22 @@ function! s:ZFVimIM_autoLoadDict()
                         \   'priority' : 100,
                         \ })
             call ZFVimIM_dbLoad(db, dictPath)
+            " Store dictPath in implData for saving after deletion
+            if !has_key(db, 'implData')
+                let db['implData'] = {}
+            endif
+            let db['implData']['dictPath'] = dictPath
+        else
+            " Update dictPath for already loaded dictionary
+            for db in g:ZFVimIM_db
+                if get(db, 'name', '') ==# dictName
+                    if !has_key(db, 'implData')
+                        let db['implData'] = {}
+                    endif
+                    let db['implData']['dictPath'] = dictPath
+                    break
+                endif
+            endfor
         endif
     endif
 endfunction
@@ -209,8 +260,8 @@ function! ZFVimIME_keymap_update_i()
     if s:updateDisabled()
         return ''
     endif
-    if pumvisible()
-        silent call feedkeys("\<c-e>", 'nt')
+    if s:floatVisible()
+        call s:floatClose()
     endif
     call s:resetAfterInsert()
     silent call feedkeys("\<c-r>=ZFVimIME_callOmni()\<cr>", 'nt')
@@ -332,19 +383,19 @@ endfunction
 
 " ============================================================
 function! ZFVimIME_esc(...)
-    if mode() != 'i' || !pumvisible()
+    if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, '<esc>'))
         return ''
     endif
     let range = col('.') - s:start_column
-    let key = "\<c-e>" . repeat("\<bs>", range)
+    let key = repeat("\<bs>", range)
     call s:resetAfterInsert()
     silent call feedkeys(key, 'nt')
     return ''
 endfunction
 
 function! ZFVimIME_label(n, ...)
-    if mode() != 'i' || !pumvisible()
+    if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, a:n))
         return ''
     endif
@@ -353,35 +404,63 @@ function! ZFVimIME_label(n, ...)
     if n >= len(curPage)
         return ''
     endif
-    let key = repeat("\<down>", n) . "\<c-y>\<c-r>=ZFVimIME_callOmni()\<cr>"
-
-    let s:confirmFlag = 1
-    if !s:completeItemAvailable
-        call s:didChoose(curPage[n])
-    endif
-    call s:resetAfterInsert()
-    silent call feedkeys(key, 'nt')
+    call s:chooseItem(curPage[n])
     return ''
 endfunction
 
 function! ZFVimIME_pageUp(key, ...)
-    if mode() != 'i' || !pumvisible()
+    if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, a:key))
         return ''
     endif
-    let key = "\<c-e>\<c-r>=ZFVimIME_callOmni()\<cr>"
     let s:pageup_pagedown = -1
-    silent call feedkeys(key, 'nt')
+    call s:updateCandidates()
     return ''
 endfunction
 function! ZFVimIME_pageDown(key, ...)
-    if mode() != 'i' || !pumvisible()
+    if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, a:key))
         return ''
     endif
-    let key = "\<c-e>\<c-r>=ZFVimIME_callOmni()\<cr>"
     let s:pageup_pagedown = 1
-    silent call feedkeys(key, 'nt')
+    call s:updateCandidates()
+    return ''
+endfunction
+
+function! ZFVimIME_tabNext(...)
+    if mode() != 'i' || !s:floatVisible()
+        " If popup is not visible, insert tab normally
+        call s:symbolForward(get(a:, 1, "\<tab>"))
+        return ''
+    endif
+    call s:floatMove(1)
+    return ''
+endfunction
+
+function! ZFVimIME_tabPrev(...)
+    if mode() != 'i' || !s:floatVisible()
+        " If popup is not visible, do nothing (Shift+Tab in terminal may not work)
+        return ''
+    endif
+    call s:floatMove(-1)
+    return ''
+endfunction
+
+function! ZFVimIME_popupNext(key, ...)
+    if mode() != 'i' || !s:floatVisible()
+        call s:symbolForward(get(a:, 1, a:key))
+        return ''
+    endif
+    call s:floatMove(1)
+    return ''
+endfunction
+
+function! ZFVimIME_popupPrev(key, ...)
+    if mode() != 'i' || !s:floatVisible()
+        call s:symbolForward(get(a:, 1, a:key))
+        return ''
+    endif
+    call s:floatMove(-1)
     return ''
 endfunction
 
@@ -392,41 +471,34 @@ function! ZFVimIME_choose_fix(offset)
     return repeat("\<bs>", len(words) - a:offset)
 endfunction
 function! ZFVimIME_chooseL(key, ...)
-    if mode() != 'i' || !pumvisible()
+    if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, a:key))
         return ''
     endif
-    let key = "\<c-y>\<c-r>=ZFVimIME_choose_fix(1)\<cr>"
-    call s:resetAfterInsert()
-    silent call feedkeys(key, 'nt')
+    if s:float_index < len(s:float_items)
+        call s:chooseItem(s:float_items[s:float_index])
+    endif
     return ''
 endfunction
 function! ZFVimIME_chooseR(key, ...)
-    if mode() != 'i' || !pumvisible()
+    if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, a:key))
         return ''
     endif
-    let key = "\<c-y>\<left>\<c-r>=ZFVimIME_choose_fix(0)\<cr>\<right>"
-    call s:resetAfterInsert()
-    silent call feedkeys(key, 'nt')
+    if s:float_index < len(s:float_items)
+        call s:chooseItem(s:float_items[s:float_index])
+    endif
     return ''
 endfunction
 
 function! ZFVimIME_space(...)
-    if mode() != 'i' || !pumvisible()
+    if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, '<space>'))
         return ''
     endif
-    let s:confirmFlag = 1
-    let key = "\<c-y>\<c-r>=ZFVimIME_callOmni()\<cr>"
-    if !s:completeItemAvailable
-        " treat as selected first item
-        " would break if use <down> and <space> to choose
-        " but there seems no other way to detect the choosed index
-        call s:didChoose(s:match_list[s:page * &pumheight])
+    if s:float_index < len(s:float_items)
+        call s:chooseItem(s:float_items[s:float_index])
     endif
-    call s:resetAfterInsert()
-    silent call feedkeys(key, 'nt')
     return ''
 endfunction
 
@@ -435,8 +507,9 @@ function! ZFVimIME_enter(...)
         call s:symbolForward(get(a:, 1, '<cr>'))
         return ''
     endif
-    if pumvisible()
-        let key = "\<c-e>"
+    if s:floatVisible()
+        call s:floatClose()
+        let key = ''
     else
         if s:enter_to_confirm
             let s:enter_to_confirm = 0
@@ -456,8 +529,8 @@ function! ZFVimIME_backspace(...)
         call s:symbolForward(get(a:, 1, '<bs>'))
         return ''
     endif
-    if pumvisible()
-        let key = "\<c-e>\<bs>\<c-r>=ZFVimIME_callOmni()\<cr>"
+    if s:floatVisible()
+        let key = "\<bs>\<c-r>=ZFVimIME_callOmni()\<cr>"
     else
         let key = "\<bs>"
     endif
@@ -523,15 +596,16 @@ endfunction
 
 function! ZFVimIME_callOmni()
     let s:keyboard = (s:pageup_pagedown == 0) ? '' : s:keyboard
-    let key = s:hasLeftChar() ? "\<c-x>\<c-o>\<c-r>=ZFVimIME_fixOmni()\<cr>" : ''
-    echo ''
-    execute 'return "' . key . '"'
+    if s:hasLeftChar()
+        call s:updateCandidates()
+    else
+        call s:floatClose()
+    endif
+    return ''
 endfunction
 
 function! ZFVimIME_fixOmni()
-    let key = pumvisible() ? "\<c-p>\<down>" : ''
-    echo ''
-    execute 'return "' . key . '"'
+    return ''
 endfunction
 
 augroup ZFVimIME_impl_toggle_augroup
@@ -594,10 +668,7 @@ endfunction
 
 function! s:IME_start()
     let &iminsert = 1
-    let cloudInitMode = get(g:, 'ZFVimIM_cloudInitMode', '')
-    let g:ZFVimIM_cloudInitMode = 'preferSync'
     call ZFVimIME_init()
-    let g:ZFVimIM_cloudInitMode = cloudInitMode
 
     call s:vimrcSave()
     call s:vimrcSetup()
@@ -652,6 +723,7 @@ augroup ZFVimIME_impl_enabledStateUpdate_augroup
     autocmd!
     autocmd InsertEnter * call s:IME_enableStateUpdate(1)
     autocmd InsertLeave * call s:IME_enableStateUpdate(0)
+    autocmd InsertLeave * if g:ZFVimIME_autoStopOnInsertLeave && ZFVimIME_started() | call ZFVimIME_stop() | endif
 augroup END
 
 function! s:IME_syncBuffer_delay(...)
@@ -706,6 +778,7 @@ function! s:vimrcSave()
     let s:saved_completeopt = &completeopt
     let s:saved_shortmess   = &shortmess
     let s:saved_pumheight   = &pumheight
+    let s:saved_pumwidth    = &pumwidth
 endfunction
 
 function! s:vimrcSetup()
@@ -716,6 +789,7 @@ function! s:vimrcSetup()
         silent! set shortmess+=c
     endtry
     set pumheight=10
+    set pumwidth=0
 endfunction
 
 function! s:vimrcRestore()
@@ -723,6 +797,7 @@ function! s:vimrcRestore()
     let &completeopt = s:saved_completeopt
     let &shortmess   = s:saved_shortmess
     let &pumheight   = s:saved_pumheight
+    let &pumwidth    = s:saved_pumwidth
 endfunction
 
 function! s:setupKeymap()
@@ -792,6 +867,31 @@ function! s:setupKeymap()
         endif
     endfor
 
+    " Tab and Shift+Tab for candidate selection
+    for c in get(g:, 'ZFVimIM_key_tabNext', ['<tab>'])
+        if c !~ s:all_keys
+            let mapped[c] = 1
+            execute 'lnoremap <buffer><expr><silent> ' . c . ' ZFVimIME_tabNext("' . escape(c, '"\') . '")'
+        endif
+    endfor
+    for c in get(g:, 'ZFVimIM_key_tabPrev', ['<s-tab>'])
+        if c !~ s:all_keys
+            let mapped[c] = 1
+            execute 'lnoremap <buffer><expr><silent> ' . c . ' ZFVimIME_tabPrev("' . escape(c, '"\') . '")'
+        endif
+    endfor
+
+    execute 'lnoremap <buffer><expr><silent> <down> ZFVimIME_popupNext("<down>")'
+    execute 'lnoremap <buffer><expr><silent> <up> ZFVimIME_popupPrev("<up>")'
+
+    " Delete word from dictionary (default: Ctrl+D)
+    for c in get(g:, 'ZFVimIM_key_deleteWord', ['<c-d>'])
+        if c !~ s:all_keys
+            let mapped[c] = 1
+            execute 'lnoremap <buffer><expr><silent> ' . c . ' ZFVimIME_removeCurrentWord()'
+        endif
+    endfor
+
     let candidates = get(g:, 'ZFVimIM_key_candidates', [])
     let iCandidate = 0
     while iCandidate < len(candidates)
@@ -829,6 +929,20 @@ function! s:resetAfterInsert()
     let s:page = 0
     let s:pageup_pagedown = 0
     let s:enter_to_confirm = 0
+    call s:floatClose()
+endfunction
+
+function! s:filterMatchListByPrefix(list, key)
+    if len(a:key) != 2
+        return a:list
+    endif
+    let filtered = []
+    for item in a:list
+        if len(get(item, 'key', '')) >= 2 && strpart(item['key'], 0, 2) ==# a:key
+            call add(filtered, item)
+        endif
+    endfor
+    return filtered
 endfunction
 
 function! s:curPage()
@@ -843,6 +957,215 @@ function! s:curPage()
     else
         return []
     endif
+endfunction
+
+let s:float_winid = -1
+let s:float_bufnr = -1
+let s:float_index = 0
+let s:float_items = []
+let s:float_ns = -1
+let s:float_label_widths = []
+let s:float_hl_inited = 0
+let s:pending_left_len = 0
+
+function! s:floatVisible()
+    return s:float_winid > 0 && nvim_win_is_valid(s:float_winid)
+endfunction
+
+function! s:floatCloseNow(...)
+    if s:floatVisible()
+        call nvim_win_close(s:float_winid, v:true)
+    endif
+    let s:float_winid = -1
+    let s:float_bufnr = -1
+    let s:float_index = 0
+    let s:float_items = []
+    let s:float_label_widths = []
+endfunction
+
+function! s:floatClose()
+    if !s:floatVisible()
+        return
+    endif
+    try
+        call s:floatCloseNow()
+    catch /^Vim\%((\a\+)\)\=:E5555/
+        if exists('*timer_start')
+            call timer_start(0, function('s:floatCloseNow'))
+        endif
+    endtry
+endfunction
+
+function! s:floatEnsure(lines)
+    if s:float_ns < 0
+        let s:float_ns = nvim_create_namespace('ZFVimIMFloat')
+    endif
+    if !s:float_hl_inited
+        silent! highlight default link ZFVimIMFloatLabel PmenuSbar
+        let s:float_hl_inited = 1
+    endif
+    if s:float_bufnr <= 0 || !nvim_buf_is_valid(s:float_bufnr)
+        let s:float_bufnr = nvim_create_buf(v:false, v:true)
+        call nvim_buf_set_option(s:float_bufnr, 'buftype', 'nofile')
+        call nvim_buf_set_option(s:float_bufnr, 'bufhidden', 'wipe')
+        call nvim_buf_set_option(s:float_bufnr, 'swapfile', v:false)
+    endif
+    let width = 1
+    for line in a:lines
+        let width = max([width, strdisplaywidth(line)])
+    endfor
+    let height = len(a:lines)
+    if height <= 0
+        call s:floatClose()
+        return
+    endif
+    let config = {
+                \ 'relative' : 'cursor',
+                \ 'row' : 1,
+                \ 'col' : 0,
+                \ 'width' : width,
+                \ 'height' : height,
+                \ 'style' : 'minimal',
+                \ 'focusable' : v:false,
+                \ 'zindex' : 200,
+                \ }
+    if s:floatVisible()
+        call nvim_win_set_config(s:float_winid, config)
+    else
+        let s:float_winid = nvim_open_win(s:float_bufnr, v:false, config)
+        call nvim_win_set_option(s:float_winid, 'winhl', 'Normal:Pmenu,FloatBorder:Pmenu')
+    endif
+endfunction
+
+function! s:floatRender(list)
+    if empty(a:list)
+        call s:floatClose()
+        return
+    endif
+    let label = 1
+    let lines = []
+    let labelWidths = []
+    for item in a:list
+        if get(g:, 'ZFVimIM_freeScroll', 0)
+            let labelstring = printf('%2d', label == 10 ? 0 : label)
+        else
+            if label >= 1 && label <= 9
+                let labelstring = label
+            elseif label == 10
+                let labelstring = '0'
+            else
+                let labelstring = '?'
+            endif
+        endif
+        let left = strpart(s:keyboard, item['len'])
+        let labelcell = ' ' . labelstring . ' '
+        let content = ' ' . item['word'] . left . ' '
+        call add(labelWidths, strdisplaywidth(labelcell))
+        call add(lines, labelcell . content)
+        let label += 1
+    endfor
+    call s:floatEnsure(lines)
+    call nvim_buf_set_option(s:float_bufnr, 'modifiable', v:true)
+    call nvim_buf_set_lines(s:float_bufnr, 0, -1, v:true, lines)
+    call nvim_buf_set_option(s:float_bufnr, 'modifiable', v:false)
+    let s:float_items = a:list
+    let s:float_label_widths = labelWidths
+    if s:float_index >= len(lines)
+        let s:float_index = 0
+    endif
+    call nvim_buf_clear_namespace(s:float_bufnr, s:float_ns, 0, -1)
+    let i = 0
+    while i < len(lines)
+        let lw = s:float_label_widths[i]
+        if i != s:float_index
+            call nvim_buf_add_highlight(s:float_bufnr, s:float_ns, 'ZFVimIMFloatLabel', i, 0, lw)
+        endif
+        let i += 1
+    endwhile
+    if s:float_index >= 0 && s:float_index < len(lines)
+        " ウィンドウのCursorLineを設定して行全体の背景色を変更（深い色、行全体の幅）
+        if s:floatVisible()
+            call nvim_win_set_option(s:float_winid, 'cursorline', v:true)
+            call nvim_win_set_cursor(s:float_winid, [s:float_index + 1, 0])
+        endif
+    endif
+endfunction
+
+function! s:floatMove(delta)
+    if empty(s:float_items)
+        return
+    endif
+    let s:float_index += a:delta
+    if s:float_index < 0
+        let s:float_index = len(s:float_items) - 1
+    elseif s:float_index >= len(s:float_items)
+        let s:float_index = 0
+    endif
+    call nvim_buf_clear_namespace(s:float_bufnr, s:float_ns, 0, -1)
+    let i = 0
+    let lineCount = len(s:float_label_widths)
+    while i < lineCount
+        let lw = s:float_label_widths[i]
+        if i != s:float_index
+            call nvim_buf_add_highlight(s:float_bufnr, s:float_ns, 'ZFVimIMFloatLabel', i, 0, lw)
+        endif
+        let i += 1
+    endwhile
+    if s:float_index >= 0 && s:float_index < len(s:float_label_widths)
+        " ウィンドウのCursorLineを設定して行全体の背景色を変更（深い色、行全体の幅）
+        if s:floatVisible()
+            call nvim_win_set_option(s:float_winid, 'cursorline', v:true)
+            call nvim_win_set_cursor(s:float_winid, [s:float_index + 1, 0])
+        endif
+    endif
+endfunction
+
+function! s:chooseItem(item)
+    let left = strpart(s:keyboard, a:item['len'])
+    let bsCount = strchars(s:keyboard)
+    let s:confirmFlag = 1
+    call s:didChoose(a:item)
+    
+    " 確定された単語だけを挿入
+    let replace = a:item['word']
+    let key = repeat("\<bs>", bsCount) . replace
+    
+    " 残りの入力がある場合、続けてマッチングを行う
+    if !empty(left)
+        let s:pending_left_len = strchars(left)
+        " 確定された単語を挿入後、残りの入力を処理
+        " resetAfterInsert()を呼ばずに、状態だけをリセット
+        let s:match_list = []
+        let s:page = 0
+        let s:pageup_pagedown = 0
+        let s:enter_to_confirm = 0
+        " 候補ボックスは閉じない（残りの入力でマッチングを続けるため）
+        " 確定された単語と残りの入力を一度に挿入
+        let key = key . left
+        silent call feedkeys(key, 'nt')
+        " feedkeysは非同期なので、タイマーを使ってupdateCandidates()を呼び出す
+        " カーソル位置が更新された後にマッチングを続ける
+        " タイマーの遅延を50msに設定して、feedkeysの処理が完了するまで待つ
+        call timer_start(50, {-> s:continueMatchingAfterInsert()})
+    else
+        let s:pending_left_len = 0
+        " 残りの入力がない場合、通常通りリセット
+        call s:resetAfterInsert()
+        call s:floatClose()
+        silent call feedkeys(key, 'nt')
+    endif
+endfunction
+
+function! s:continueMatchingAfterInsert()
+    " 残りの入力でマッチングを続ける
+    " updateKeyboardFromCursor()がカーソル位置からキーボード入力を取得する
+    if s:pending_left_len > 0
+        let pos = getpos('.')
+        let pos[2] = max([1, pos[2] - s:pending_left_len])
+        let s:seamless_positions = pos
+        let s:pending_left_len = 0
+    endif
+    call s:updateCandidates()
 endfunction
 
 function! s:getSeamless(cursor_positions)
@@ -877,49 +1200,68 @@ function! s:hasLeftChar()
     endif
 endfunction
 
+function! s:updateKeyboardFromCursor()
+    let cursor_positions = getpos('.')
+    let start_column = cursor_positions[2]
+    let current_line = getline(cursor_positions[1])
+    let seamless_column = s:getSeamless(cursor_positions)
+    if seamless_column <= 0
+        let seamless_column = 1
+    endif
+    if start_column <= seamless_column
+        return 0
+    endif
+    while start_column > seamless_column && current_line[(start_column-1) - 1] =~# s:input_keys
+        let start_column -= 1
+    endwhile
+    let len = cursor_positions[2] - start_column
+    if len <= 0
+        return 0
+    endif
+    let keyboard = strpart(current_line, (start_column - 1), len)
+    let s:keyboard = keyboard
+    let s:start_column = start_column
+    return 1
+endfunction
+
+function! s:updateCandidates()
+    let s:enter_to_confirm = 1
+    let s:hasInput = 1
+    if !s:updateKeyboardFromCursor()
+        call s:floatClose()
+        return
+    endif
+    if s:pageup_pagedown != 0 && !empty(s:match_list) && &pumheight > 0
+        let length = len(s:match_list)
+        let pageCount = (length-1) / &pumheight + 1
+        let s:page += s:pageup_pagedown
+        if s:page >= pageCount
+            let s:page = pageCount - 1
+        endif
+        if s:page < 0
+            let s:page = 0
+        endif
+    else
+        let s:match_list = ZFVimIM_complete(s:keyboard)
+        let s:match_list = s:filterMatchListByPrefix(s:match_list, s:keyboard)
+        let s:page = 0
+    endif
+    let s:pageup_pagedown = 0
+    call s:floatRender(s:curPage())
+    doautocmd User ZFVimIM_event_OnUpdateOmni
+endfunction
+
 function! s:omnifunc(start, keyboard)
     let s:enter_to_confirm = 1
     let s:hasInput = 1
     if a:start
-        let cursor_positions = getpos('.')
-        let start_column = cursor_positions[2]
-        let current_line = getline(cursor_positions[1])
-        let seamless_column = s:getSeamless(cursor_positions)
-        if seamless_column <= 0
-            let seamless_column = 1
-        endif
-        if start_column <= seamless_column
+        if !s:updateKeyboardFromCursor()
             return -3
         endif
-        while start_column > seamless_column && current_line[(start_column-1) - 1] =~# s:input_keys
-            let start_column -= 1
-        endwhile
-        let len = cursor_positions[2] - start_column
-        if len <= 0
-            return -3
-        endif
-        let keyboard = strpart(current_line, (start_column - 1), len)
-        let s:keyboard = keyboard
-        let s:start_column = start_column
-        return start_column - 1
+        return s:start_column - 1
     else
-        if s:pageup_pagedown != 0 && !empty(s:match_list) && &pumheight > 0
-            let length = len(s:match_list)
-            let pageCount = (length-1) / &pumheight + 1
-            let s:page += s:pageup_pagedown
-            if s:page >= pageCount
-                let s:page = pageCount - 1
-            endif
-            if s:page < 0
-                let s:page = 0
-            endif
-        else
-            let s:match_list = ZFVimIM_complete(s:keyboard)
-            let s:page = 0
-        endif
-        let ret = s:popupMenuList(s:curPage())
-        doautocmd User ZFVimIM_event_OnUpdateOmni
-        return ret
+        call s:updateCandidates()
+        return []
     endif
 endfunction
 
@@ -944,54 +1286,11 @@ function! s:popupMenuList(complete)
             endif
         endif
         let left = strpart(s:keyboard, item['len'])
-        let complete_items['abbr'] = labelstring . ' ' . item['word'] . ' ' . left
-        let complete_items['menu'] = ''
-        let showKeyHint = get(g:, 'ZFVimIM_showKeyHint', 16)
-        if showKeyHint
-            if item['type'] == 'sentence' && !empty(get(item, 'sentenceList'))
-                let menu = ''
-                for word in item['sentenceList']
-                    if !empty(menu)
-                        let menu .= ' '
-                    endif
-                    let menu .= word['key']
-                endfor
-                let menuWordKey = menu
-            else
-                let menuWordKey = item['key']
-            endif
-
-            if showKeyHint > 1 && len(menuWordKey) > showKeyHint - 2
-                if showKeyHint < 3
-                    let menuWordKey = menuWordKey[0] . '..'
-                else
-                    let menuWordKey = strpart(menuWordKey, 0, showKeyHint - 2) . '..'
-                endif
-            endif
-            let complete_items['menu'] .= ' '
-            let complete_items['menu'] .= menuWordKey
-        endif
-
-        let db = ZFVimIM_dbForId(item['dbId'])
-        if type(get(db, 'menuLabel', 0)) == type(0)
-            if get(g:, 'ZFVimIM_showCrossDbHint', 1)
-                        \ && item['dbId'] != g:ZFVimIM_db[g:ZFVimIM_dbIndex]['dbId']
-                let complete_items['menu'] .= '  <' . db['name'] . '>'
-            endif
-        else
-            if type(db['menuLabel']) == type('')
-                let complete_items['menu'] .= db['menuLabel']
-            elseif ZFVimIM_funcCallable(db['menuLabel'])
-                let complete_items['menu'] .= ZFVimIM_funcCall(db['menuLabel'], [item])
-            endif
-        endif
-
-        if get(g:, 'ZFVimIME_DEBUG', 0)
-            let complete_items['menu'] .= printf('  (%s) <%s> %s', item['type'], db['name'], strpart(item['key'], 0, item['len']))
-        endif
+        let complete_items['abbr'] = item['word']
+        let complete_items['word'] = item['word']
 
         let complete_items['dup'] = 1
-        let complete_items['word'] = item['word'] . left
+        let complete_items['word'] .= left
         if s:completeItemAvailable
             let complete_items['info'] = ZFVimIM_json_encode(item)
         endif
@@ -1045,6 +1344,96 @@ function! s:addWord(dbId, key, word)
     doautocmd User ZFVimIM_event_OnAddWord
 endfunction
 
+function! s:removeWord(dbId, key, word)
+    " Remove word from dictionary
+    let dbIndex = ZFVimIM_dbIndexForId(a:dbId)
+    if dbIndex < 0
+        return 0
+    endif
+    let db = g:ZFVimIM_db[dbIndex]
+    
+    " Get dictionary file path for saving
+    let dictPath = ''
+    if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+        let dictPath = db['implData']['dictPath']
+    else
+        " Try to get from autoLoadDict logic
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/dict')
+            let pluginDir = sfileDir
+        endif
+        let dictDir = pluginDir . '/dict'
+        
+        if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+            let defaultDictName = g:zfvimim_default_dict_name
+            if defaultDictName !~ '\.txt$'
+                let defaultDictName = defaultDictName . '.txt'
+            endif
+            let dictPath = dictDir . '/' . defaultDictName
+        elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+            let dictPath = expand(g:zfvimim_dict_path)
+        else
+            let dictPath = dictDir . '/default_pinyin.txt'
+        endif
+    endif
+    
+    " Remove the word
+    call ZFVimIM_wordRemove(db, a:word, a:key)
+    
+    " Also remove from frequency tracking
+    let freqKey = a:key . "\t" . a:word
+    if has_key(s:word_frequency, freqKey)
+        call remove(s:word_frequency, freqKey)
+    endif
+    
+    " Save to file if path is valid and file exists
+    if !empty(dictPath) && filereadable(dictPath)
+        try
+            call ZFVimIM_dbSave(db, dictPath)
+            " Store dictPath in implData for future use
+            if !has_key(db, 'implData')
+                let db['implData'] = {}
+            endif
+            let db['implData']['dictPath'] = dictPath
+        catch
+            " Silently ignore save errors
+        endtry
+    endif
+    
+    return 1
+endfunction
+
+function! ZFVimIME_removeCurrentWord()
+    " Remove the currently highlighted word in popup menu
+    if mode() != 'i' || !s:floatVisible()
+        return ''
+    endif
+    
+    let item = {}
+    if s:float_index >= 0 && s:float_index < len(s:float_items)
+        let item = s:float_items[s:float_index]
+    endif
+    
+    if !empty(item) && has_key(item, 'key') && has_key(item, 'word') && has_key(item, 'dbId')
+        let key = item['key']
+        let word = item['word']
+        let dbId = item['dbId']
+        
+        " Remove the word
+        if s:removeWord(dbId, key, word)
+            echo "已删除: " . word . " (" . key . ")"
+            call s:updateCandidates()
+        else
+            echo "删除失败: " . word . " (" . key . ")"
+        endif
+    else
+        echo "无法获取当前选中的词"
+    endif
+    
+    return ''
+endfunction
+
 let s:completeItemAvailable = (exists('v:completed_item') && ZFVimIM_json_available())
 let s:confirmFlag = 0
 function! s:OnCompleteDone()
@@ -1075,9 +1464,14 @@ function! s:didChoose(item)
 
     let s:seamless_positions[2] = s:start_column + len(a:item['word'])
 
+    " Record word usage for frequency-based sorting
+    call s:recordWordUsage(a:item['key'], a:item['word'])
+
     if a:item['type'] == 'sentence'
         for word in get(a:item, 'sentenceList', [])
             call s:addWord(a:item['dbId'], word['key'], word['word'])
+            " Also record sentence word usage
+            call s:recordWordUsage(word['key'], word['word'])
         endfor
         let s:userWord = []
         return
@@ -1134,3 +1528,179 @@ endfunction
 call s:init()
 call s:resetState()
 
+" ============================================================
+" Word frequency tracking for smart sorting
+let s:word_frequency = {}
+let s:freq_file_path = ''
+
+function! s:initWordFrequency()
+    " Initialize frequency file path
+    if empty(s:freq_file_path)
+        let s:freq_file_path = stdpath('data') . '/ZFVimIM_word_freq.txt'
+        " Fallback to plugin directory if stdpath doesn't work
+        if !isdirectory(stdpath('data'))
+            let s:freq_file_path = expand('<sfile>:p:h:h') . '/word_freq.txt'
+        endif
+    endif
+    
+    " Load frequency data
+    if filereadable(s:freq_file_path)
+        for line in readfile(s:freq_file_path)
+            let parts = split(line, "\t")
+            if len(parts) >= 2
+                let key = parts[0]
+                let word = parts[1]
+                let freq = len(parts) >= 3 ? str2nr(parts[2]) : 1
+                let s:word_frequency[key . "\t" . word] = freq
+            endif
+        endfor
+    endif
+endfunction
+
+function! s:recordWordUsage(key, word)
+    " Record word usage (key + word as unique identifier)
+    let key = a:key . "\t" . a:word
+    if !has_key(s:word_frequency, key)
+        let s:word_frequency[key] = 0
+    endif
+    let s:word_frequency[key] += 1
+    
+    " Save to file (limit frequency to prevent overflow)
+    if s:word_frequency[key] > 1000
+        let s:word_frequency[key] = 1000
+    endif
+    
+    " Auto-save frequency data (every 10 uses)
+    if s:word_frequency[key] % 10 == 0
+        call s:saveWordFrequency()
+    endif
+endfunction
+
+function! s:saveWordFrequency()
+    " Save frequency data to file
+    if empty(s:freq_file_path)
+        return
+    endif
+    
+    let lines = []
+    for key in keys(s:word_frequency)
+        let freq = s:word_frequency[key]
+        if freq > 0
+            call add(lines, key . "\t" . freq)
+        endif
+    endfor
+    
+    " Sort by frequency (descending) and keep top 10000 entries
+    call sort(lines, function('s:sortFreqDesc'))
+    if len(lines) > 10000
+        let lines = lines[0:9999]
+    endif
+    
+    call writefile(lines, s:freq_file_path)
+endfunction
+
+function! s:sortFreqDesc(line1, line2)
+    let parts1 = split(a:line1, "\t")
+    let parts2 = split(a:line2, "\t")
+    let freq1 = len(parts1) >= 3 ? str2nr(parts1[2]) : 0
+    let freq2 = len(parts2) >= 3 ? str2nr(parts2[2]) : 0
+    return freq2 - freq1
+endfunction
+
+function! s:getWordFrequency(key, word)
+    " Get word frequency (0 if not found)
+    let key = a:key . "\t" . a:word
+    return get(s:word_frequency, key, 0)
+endfunction
+
+" Global function to get word frequency (for use in other files)
+function! ZFVimIM_getWordFrequency(key, word)
+    let key = a:key . "\t" . a:word
+    return get(s:word_frequency, key, 0)
+endfunction
+
+" Initialize word frequency on plugin load (after init)
+call s:initWordFrequency()
+
+" Save frequency on exit
+augroup ZFVimIM_frequency
+    autocmd!
+    autocmd VimLeavePre * call s:saveWordFrequency()
+augroup END
+
+" ============================================================
+" Reload plugin function for development
+function! ZFVimIM_reload()
+    " Stop IME if running
+    if exists('*ZFVimIME_stop')
+        call ZFVimIME_stop()
+    endif
+    
+    " Clear autocommands
+    try
+        augroup! ZFVimIME_augroup
+    catch
+    endtry
+    
+    try
+        augroup! ZFVimIME_impl_toggle_augroup
+    catch
+    endtry
+    
+    try
+        augroup! ZFVimIME_impl_augroup
+    catch
+    endtry
+    
+    try
+        augroup! ZFVimIME_impl_enabledStateUpdate_augroup
+    catch
+    endtry
+    
+    try
+        augroup! ZFVimIME_impl_syncBuffer_augroup
+    catch
+    endtry
+    
+    try
+        augroup! ZFVimIM_autoDisable_augroup
+    catch
+    endtry
+    
+    try
+        augroup! ZFVimIM_event_OnUpdateDb_augroup
+    catch
+    endtry
+    
+    " Clear keymaps - both global and buffer-local
+    if get(g:, 'ZFVimIM_keymap', 1)
+        silent! nunmap ;;
+        silent! iunmap ;;
+        silent! vunmap ;;
+        silent! xnoremap ;;
+    endif
+    
+    " Clear all buffer-local keymaps that might have been created
+    silent! lmapclear
+    
+    " Reload plugin via Lazy
+    if exists(':Lazy') == 2
+        Lazy reload ZFVimIM
+    else
+        echo "Warning: Lazy plugin manager not found. Please restart Neovim to reload ZFVimIM."
+    endif
+endfunction
+
+" Create user command for reloading
+if !exists(':ZFVimIMReload')
+    command! ZFVimIMReload :call ZFVimIM_reload()
+endif
+
+" Create user command for cache management
+if !exists(':ZFVimIMCacheClear')
+    command! ZFVimIMCacheClear :call ZFVimIM_cacheClearAll()
+endif
+
+if !exists(':ZFVimIMCacheUpdate')
+    command! ZFVimIMCacheUpdate :call ZFVimIM_cacheUpdate()
+endif
