@@ -268,95 +268,83 @@ function! ZFVimIM_wordReorder(db, word, ...)
 endfunction
 
 function! IMAdd(bang, db, key, word)
-    if a:bang == '!'
-        let g:ZFVimIM_dbEditApplyFlag += 1
+    " Get dictionary file path
+    let dictPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
+        endif
+        let dictPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+    else
+        let dictPath = dictDir . '/default_pinyin.txt'
     endif
     
-    " Initialize database if not already loaded
-    if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
-        " Trigger initialization event to load dictionary
-        if exists('*ZFVimIME_init')
-            call ZFVimIME_init()
-        else
-            " Fallback: manually trigger the autocommand
-            doautocmd User ZFVimIM_event_OnDbInit
-        endif
-    endif
-    
-    " Use current database if db is empty
-    let db = a:db
-    if empty(db)
-        if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
-            echom '[ZFVimIM] Error: No database available. Please start input method first (press ;;)'
-            return
-        endif
-        if !exists('g:ZFVimIM_dbIndex')
-            let g:ZFVimIM_dbIndex = 0
-        endif
-        if g:ZFVimIM_dbIndex < len(g:ZFVimIM_db)
-            let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
-        else
-            " Try first database if index is out of range
-            if len(g:ZFVimIM_db) > 0
-                let db = g:ZFVimIM_db[0]
-            else
-                echom '[ZFVimIM] Error: No database available. Please start input method first (press ;;)'
-                return
-            endif
-        endif
-    endif
-    
-    if empty(db)
-        echom '[ZFVimIM] Error: No database available. Please start input method first (press ;;)'
+    if empty(dictPath) || !filereadable(dictPath)
+        echom '[ZFVimIM] Error: Dictionary file not found: ' . dictPath
         return
     endif
     
-    call ZFVimIM_wordAdd(db, a:word, a:key)
-    if a:bang == '!'
-        let g:ZFVimIM_dbEditApplyFlag -= 1
+    " Simply append the line to the end of the file
+    " Format: key word (user input as-is)
+    let line = a:key . ' ' . a:word
+    
+    " Use Python to append to file (simple and fast)
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        " Fallback: use Vim's writefile
+        let lines = readfile(dictPath)
+        call add(lines, line)
+        call writefile(lines, dictPath)
+        echom '[ZFVimIM] Word added to dictionary file: ' . line
+        return
     endif
     
-    " Save to file if path is valid and file exists
-    if !empty(db)
-        let dictPath = ''
-        if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
-            let dictPath = db['implData']['dictPath']
-        else
-            " Try to get from autoLoadDict logic
-            let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
-            let sfileDir = expand('<sfile>:p:h:h')
-            if isdirectory(sfileDir . '/dict')
-                let pluginDir = sfileDir
-            endif
-            let dictDir = pluginDir . '/dict'
-            
-            " Default dictionary is default_pinyin.txt
-            if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
-                let defaultDictName = g:zfvimim_default_dict_name
-                if defaultDictName !~ '\.txt$'
-                    let defaultDictName = defaultDictName . '.txt'
-                endif
-                let dictPath = dictDir . '/' . defaultDictName
-            elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
-                let dictPath = expand(g:zfvimim_dict_path)
-            else
-                " Default dictionary: default_pinyin.txt
-                let dictPath = dictDir . '/default_pinyin.txt'
-            endif
-        endif
-        
-        if !empty(dictPath) && filereadable(dictPath)
-            try
-                call ZFVimIM_dbSave(db, dictPath)
-                " Store dictPath in implData for future use
-                if !has_key(db, 'implData')
-                    let db['implData'] = {}
-                endif
-                let db['implData']['dictPath'] = dictPath
-            catch
-                " Silently ignore save errors
-            endtry
-        endif
+    " Use Python to append (faster for large files)
+    let tmpScript = ZFVimIM_cachePath() . '/append_to_dict.py'
+    let scriptContent = [
+                \ '#!/usr/bin/env python3',
+                \ '# -*- coding: utf-8 -*-',
+                \ 'import sys',
+                \ '',
+                \ 'dictFile = sys.argv[1]',
+                \ 'line = sys.argv[2]',
+                \ '',
+                \ '# Append line to file',
+                \ 'with open(dictFile, "a", encoding="utf-8") as f:',
+                \ '    f.write(line + "\n")',
+                \ '',
+                \ 'print("OK")',
+                \ ]
+    
+    " Write script file
+    if type(scriptContent) == type([])
+        call writefile(scriptContent, tmpScript)
+    else
+        call writefile(split(scriptContent, "\n", 1), tmpScript)
+    endif
+    
+    " Execute Python script
+    let cmd = pythonCmd . ' "' . tmpScript . '" "' . dictPath . '" "' . line . '"'
+    let result = system(cmd)
+    let result = substitute(result, '[\r\n]', '', 'g')
+    
+    " Clean up
+    call delete(tmpScript)
+    
+    if result ==# 'OK'
+        echom '[ZFVimIM] Word added to dictionary file: ' . line
+    else
+        echom '[ZFVimIM] Error: ' . result
     endif
 endfunction
 function! IMRemove(bang, db, word, ...)
@@ -364,7 +352,13 @@ function! IMRemove(bang, db, word, ...)
         let g:ZFVimIM_dbEditApplyFlag += 1
     endif
     
-    let word = a:word
+    " Collect all words to remove (support multiple words)
+    let wordsToRemove = [a:word]
+    if a:0 > 0
+        for i in range(1, a:0)
+            call add(wordsToRemove, a:{i})
+        endfor
+    endif
     
     " Get dictionary file path
     let dictPath = ''
@@ -397,27 +391,27 @@ function! IMRemove(bang, db, word, ...)
         return
     endif
     
-    " Use Python to directly replace word with empty string in file
+    " Use Python to directly remove multiple words from file
     let pythonCmd = executable('python3') ? 'python3' : 'python'
     if !executable(pythonCmd)
         echom '[ZFVimIM] Error: Python not found. Cannot edit dictionary file directly.'
         return
     endif
     
-    " Create a simple Python script to replace word in file
-    let tmpScript = ZFVimIM_cachePath() . '/direct_remove_word.py'
-    " Use join() to avoid string escaping issues
+    " Create a Python script to remove multiple words
+    let tmpScript = ZFVimIM_cachePath() . '/direct_remove_words.py'
     let scriptLines = [
                 \ '#!/usr/bin/env python3',
                 \ '# -*- coding: utf-8 -*-',
                 \ 'import sys',
                 \ '',
                 \ 'dictFile = sys.argv[1]',
-                \ 'word = sys.argv[2]',
+                \ 'wordsToRemove = sys.argv[2:]',
                 \ '',
                 \ '# Read file line by line',
                 \ 'modified = False',
                 \ 'newLines = []',
+                \ 'removedCount = {}',
                 \ '',
                 \ 'with open(dictFile, "r", encoding="utf-8") as f:',
                 \ '    for line in f:',
@@ -434,17 +428,18 @@ function! IMRemove(bang, db, word, ...)
                 \ '            # Only key, no words, skip this line',
                 \ '            continue',
                 \ '        ',
-                \ '        # Remove the word if it exists',
+                \ '        # Remove words if they exist',
                 \ '        newParts = [parts[0]]  # Keep the key',
-                \ '        found = False',
+                \ '        foundAny = False',
                 \ '        for w in parts[1:]:',
                 \ '            # Restore spaces and compare',
                 \ '            wRestored = w.replace("_ZFVimIM_space_", " ")',
-                \ '            if wRestored != word:',
+                \ '            if wRestored not in wordsToRemove:',
                 \ '                newParts.append(w)',
                 \ '            else:',
-                \ '                found = True',
+                \ '                foundAny = True',
                 \ '                modified = True',
+                \ '                removedCount[wRestored] = removedCount.get(wRestored, 0) + 1',
                 \ '        ',
                 \ '        # If line still has words after removal, keep it',
                 \ '        if len(newParts) > 1:',
@@ -460,29 +455,41 @@ function! IMRemove(bang, db, word, ...)
                 \ '    with open(dictFile, "w", encoding="utf-8") as f:',
                 \ '        for line in newLines:',
                 \ '            f.write(line + "\n")',
-                \ '    print("OK")',
+                \ '    # Print removed words count',
+                \ '    result = []',
+                \ '    for word in wordsToRemove:',
+                \ '        count = removedCount.get(word, 0)',
+                \ '        if count > 0:',
+                \ '            result.append(word + "(" + str(count) + ")")',
+                \ '        else:',
+                \ '            result.append(word + "(0)")',
+                \ '    print("OK:" + ":".join(result))',
                 \ 'else:',
                 \ '    print("NOT_FOUND")',
                 \ ]
     let scriptContent = join(scriptLines, "\n") . "\n"
     
-    " Write script file using writefile (expects list) or direct write
+    " Write script file
     if type(scriptContent) == type([])
         call writefile(scriptContent, tmpScript)
     else
-        " If it's a string, convert to list
         call writefile(split(scriptContent, "\n", 1), tmpScript)
     endif
     
+    " Build command with all words as arguments
+    let cmd = pythonCmd . ' "' . tmpScript . '" "' . dictPath . '"'
+    for word in wordsToRemove
+        let cmd = cmd . ' "' . word . '"'
+    endfor
+    
     " Execute Python script
-    let cmd = pythonCmd . ' "' . tmpScript . '" "' . dictPath . '" "' . word . '"'
     let result = system(cmd)
     let result = substitute(result, '[\r\n]', '', 'g')
     
     " Clean up
     call delete(tmpScript)
     
-    if result ==# 'OK'
+    if result =~# '^OK:'
         " File modification time will automatically invalidate cache
         " Just clear in-memory search cache if database is loaded
         if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
@@ -495,9 +502,17 @@ function! IMRemove(bang, db, word, ...)
                 endif
             endfor
         endif
-        echom '[ZFVimIM] Word removed from dictionary file: ' . word
+        
+        " Parse result and show removed words
+        let resultParts = split(result, ':')
+        if len(resultParts) > 1
+            let removedInfo = join(resultParts[1:], ':')
+            echom '[ZFVimIM] Removed words: ' . removedInfo
+        else
+            echom '[ZFVimIM] Words removed from dictionary file'
+        endif
     elseif result ==# 'NOT_FOUND'
-        echom '[ZFVimIM] Word "' . word . '" not found in dictionary'
+        echom '[ZFVimIM] None of the words found in dictionary'
     else
         echom '[ZFVimIM] Error: ' . result
     endif
@@ -528,11 +543,25 @@ endfunction
 
 function! s:IMRemoveWrapper(bang, ...)
     if a:0 < 1
-        echom '[ZFVimIM] Error: Usage: IMRemove <word>'
+        echom '[ZFVimIM] Error: Usage: IMRemove <word1> [word2] [word3] ...'
+        echom '[ZFVimIM] Example: IMRemove 词1 词2 词3'
         return
     endif
-    let word = join(a:000, ' ')
-    call IMRemove(a:bang, {}, word)
+    " Call IMRemove with first word and remaining words as additional arguments
+    " Build function call dynamically
+    let firstWord = a:1
+    if a:0 == 1
+        " Only one word
+        call IMRemove(a:bang, {}, firstWord)
+    else
+        " Multiple words - need to call with all arguments
+        " Use call() function to pass variable number of arguments
+        let args = [a:bang, {}, firstWord]
+        for i in range(2, a:0)
+            call add(args, a:{i})
+        endfor
+        call call('IMRemove', args)
+    endif
 endfunction
 
 command! -nargs=+ -bang IMAdd :call s:IMAddWrapper(<q-bang>, <f-args>)

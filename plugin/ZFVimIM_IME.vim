@@ -1815,7 +1815,82 @@ call s:initWordFrequency()
 augroup ZFVimIM_frequency
     autocmd!
     autocmd VimLeavePre * call s:saveWordFrequency()
+    autocmd VimLeavePre * call s:cleanupDictionaryOnExit()
 augroup END
+
+" Cleanup dictionary on exit
+function! s:cleanupDictionaryOnExit()
+    " Get dictionary file path
+    let dictPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
+        endif
+        let dictPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+    else
+        let dictPath = dictDir . '/default_pinyin.txt'
+    endif
+    
+    if empty(dictPath) || !filereadable(dictPath)
+        return
+    endif
+    
+    " Get script path
+    let scriptPath = pluginDir . '/misc/dbCleanup.py'
+    if !filereadable(scriptPath)
+        " Try sfileDir
+        let scriptPath = sfileDir . '/misc/dbCleanup.py'
+        if !filereadable(scriptPath)
+            return
+        endif
+    endif
+    
+    " Get cache path
+    let cachePath = ZFVimIM_cachePath()
+    
+    " Execute cleanup script (non-blocking, but wait a bit for it to start)
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if executable(pythonCmd)
+        " Use timer to run asynchronously (non-blocking exit)
+        if has('timers')
+            " Run cleanup in background using timer
+            call timer_start(0, {-> s:runCleanupScript(pythonCmd, scriptPath, dictPath, cachePath)})
+        else
+            " Fallback: run synchronously but quickly (script should be fast)
+            try
+                silent! call system('"' . pythonCmd . '" "' . scriptPath . '" "' . dictPath . '" "' . cachePath . '"')
+            catch
+                " Ignore errors
+            endtry
+        endif
+    endif
+endfunction
+
+" Run cleanup script (called by timer)
+function! s:runCleanupScript(pythonCmd, scriptPath, dictPath, cachePath)
+    try
+        " Run in background (non-blocking)
+        if has('win32') || has('win64')
+            " Windows: use start command
+            silent! call system('start /b "' . a:pythonCmd . '" "' . a:scriptPath . '" "' . a:dictPath . '" "' . a:cachePath . '"')
+        else
+            " Unix: redirect output and run in background
+            silent! call system('"' . a:pythonCmd . '" "' . a:scriptPath . '" "' . a:dictPath . '" "' . a:cachePath . '" > /dev/null 2>&1 &')
+        endif
+    catch
+        " Ignore errors
+    endtry
+endfunction
 
 " ============================================================
 " Reload plugin function for development
