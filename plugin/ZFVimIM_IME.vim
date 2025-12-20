@@ -1606,6 +1606,13 @@ function! ZFVimIME_removeCurrentWord()
     
     if !empty(item) && has_key(item, 'word')
         let word = item['word']
+        
+        " Protect single character words - do not allow deletion
+        if strchars(word) == 1
+            " Silently ignore - don't delete single character words
+            return ''
+        endif
+        
         let key = get(item, 'key', '')
         let dbId = get(item, 'dbId', '')
         
