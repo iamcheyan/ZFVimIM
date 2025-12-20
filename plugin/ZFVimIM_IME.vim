@@ -1604,23 +1604,104 @@ function! ZFVimIME_removeCurrentWord()
         let item = s:float_items[s:float_index]
     endif
     
-    if !empty(item) && has_key(item, 'key') && has_key(item, 'word') && has_key(item, 'dbId')
-        let key = item['key']
+    if !empty(item) && has_key(item, 'word')
         let word = item['word']
-        let dbId = item['dbId']
+        let key = get(item, 'key', '')
+        let dbId = get(item, 'dbId', '')
         
-        " Remove the word
-        if s:removeWord(dbId, key, word)
-            echo "已删除: " . word . " (" . key . ")"
-            call s:updateCandidates()
+        " Get database
+        let db = {}
+        let dictPath = ''
+        if !empty(dbId) && exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+            let dbIndex = ZFVimIM_dbIndexForId(dbId)
+            if dbIndex >= 0 && dbIndex < len(g:ZFVimIM_db)
+                let db = g:ZFVimIM_db[dbIndex]
+                if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                    let dictPath = db['implData']['dictPath']
+                endif
+            endif
+        endif
+        
+        " Remove from file using IMRemove
+        call IMRemove('', {}, word)
+        
+        " Also remove from memory database if we have the key
+        let removedFromMemory = 0
+        if !empty(db) && !empty(key)
+            try
+                call ZFVimIM_wordRemove(db, word, key)
+                call ZFVimIM_dbSearchCacheClear(db)
+                let removedFromMemory = 1
+            catch
+                " Ignore errors
+            endtry
+        endif
+        
+        " Clear cache and refresh candidates
+        " If removed from memory successfully, no need to reload file
+        " Use timer to defer update to avoid API errors
+        if has('timers')
+            call timer_start(100, {-> s:refreshAfterRemove(dictPath, db, removedFromMemory)})
         else
-            echo "删除失败: " . word . " (" . key . ")"
+            " Fallback: try to refresh immediately
+            try
+                call s:refreshAfterRemove(dictPath, db, removedFromMemory)
+            catch
+                " Ignore errors
+            endtry
         endif
     else
         echo "无法获取当前选中的词"
     endif
     
     return ''
+endfunction
+
+" Refresh candidates after removing a word
+function! s:refreshAfterRemove(dictPath, db, removedFromMemory)
+    try
+        " Clear file cache if path is known
+        if !empty(a:dictPath) && filereadable(a:dictPath)
+            call ZFVimIM_cacheClearForFile(a:dictPath)
+        endif
+        
+        " Clear search cache for the database
+        if !empty(a:db)
+            call ZFVimIM_dbSearchCacheClear(a:db)
+        endif
+        
+        " Only reload dictionary file if we couldn't remove from memory
+        " This avoids slow reload for large dictionaries (62万行)
+        if !a:removedFromMemory && !empty(a:dictPath) && filereadable(a:dictPath) && !empty(a:db)
+            " Reload dictionary file (this updates dbMap in memory)
+            " Use async reload to avoid blocking
+            if has('timers')
+                call timer_start(0, {-> s:asyncReloadDict(a:db, a:dictPath)})
+            else
+                call ZFVimIM_dbLoad(a:db, a:dictPath)
+            endif
+        endif
+        
+        " Update candidates if still in insert mode and float is visible
+        if mode() == 'i' && s:floatVisible()
+            call s:updateCandidates()
+        endif
+    catch
+        " Ignore errors
+    endtry
+endfunction
+
+" Async reload dictionary to avoid blocking
+function! s:asyncReloadDict(db, dictPath)
+    try
+        call ZFVimIM_dbLoad(a:db, a:dictPath)
+        " Update candidates after reload
+        if mode() == 'i' && s:floatVisible()
+            call s:updateCandidates()
+        endif
+    catch
+        " Ignore errors
+    endtry
 endfunction
 
 let s:completeItemAvailable = (exists('v:completed_item') && ZFVimIM_json_available())
