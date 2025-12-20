@@ -465,6 +465,12 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
             let remainingLimit -= 1
         endwhile
     endif
+    
+    " Also try alias match for 4-character keys (3-word abbreviation)
+    " This allows abbreviations like "srfa" to match "surufa" (输入法)
+    if len(a:key) == 4 && remainingLimit > 0
+        let aliasAdded = s:complete_match_alias(a:ret, a:key, a:db, remainingLimit)
+    endif
 endfunction
 
 function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchRet, key, option, db, matchLimit)
@@ -506,6 +512,13 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
         if p == keyLen
             let ret = a:matchRet
             let type = 'match'
+            " Try alias match for 4-character keys (3-word abbreviation)
+            " This allows abbreviations like "srfa" to match "surufa" (输入法)
+            if len(a:key) == 4 && !aliasTried
+                let aliasAdded = s:complete_match_alias(a:matchRet, a:key, a:db, matchLimit)
+                let aliasTried = 1
+                " If alias match added items, we still continue to add exact matches
+            endif
         elseif subMatchLongestFlag
             let ret = a:subMatchLongestRet
             let type = 'subMatchLongest'
