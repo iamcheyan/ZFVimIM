@@ -542,10 +542,9 @@ function! ZFVimIME_backspace(...)
         call s:symbolForward(get(a:, 1, '<bs>'))
         return ''
     endif
-    if s:floatVisible()
-        let key = "\<bs>\<c-r>=ZFVimIME_callOmni()\<cr>"
-    else
-        let key = "\<bs>"
+    let key = "\<bs>"
+    if s:candidateVisible()
+        let key .= "\<c-r>=ZFVimIME_callOmni()\<cr>"
     endif
     if !empty(s:seamless_positions)
         let line = getline('.')
@@ -562,7 +561,19 @@ function! ZFVimIME_backspace(...)
             let s:seamless_positions[2] = pos
         endif
     endif
-    call s:resetAfterInsert()
+    silent call feedkeys(key, 'nt')
+    return ''
+endfunction
+
+function! ZFVimIME_delete(...)
+    if mode() != 'i'
+        call s:symbolForward(get(a:, 1, '<del>'))
+        return ''
+    endif
+    let key = "\<del>"
+    if s:candidateVisible()
+        let key .= "\<c-r>=ZFVimIME_callOmni()\<cr>"
+    endif
     silent call feedkeys(key, 'nt')
     return ''
 endfunction
@@ -862,6 +873,13 @@ function! s:setupKeymap()
         endif
     endfor
 
+    for c in get(g:, 'ZFVimIM_key_delete', ['<del>'])
+        if c !~ s:all_keys
+            let mapped[c] = 1
+            execute 'lnoremap <buffer><expr><silent> ' . c . ' ZFVimIME_delete("' . escape(c, '"\') . '")'
+        endif
+    endfor
+
     for c in get(g:, 'ZFVimIM_key_esc', ['<esc>'])
         if c !~ s:all_keys
             let mapped[c] = 1
@@ -899,6 +917,8 @@ function! s:setupKeymap()
 
     execute 'lnoremap <buffer><expr><silent> <down> ZFVimIME_popupNext("<down>")'
     execute 'lnoremap <buffer><expr><silent> <up> ZFVimIME_popupPrev("<up>")'
+    execute 'lnoremap <buffer><expr><silent> <left> ZFVimIME_pageUp("<left>")'
+    execute 'lnoremap <buffer><expr><silent> <right> ZFVimIME_pageDown("<right>")'
 
     " Delete word from dictionary (default: Ctrl+D)
     for c in get(g:, 'ZFVimIM_key_deleteWord', ['<c-d>'])
@@ -1007,6 +1027,10 @@ let s:pending_left_len = 0
 
 function! s:floatVisible()
     return s:float_winid > 0 && nvim_win_is_valid(s:float_winid)
+endfunction
+
+function! s:candidateVisible()
+    return s:floatVisible()
 endfunction
 
 function! s:floatCloseNow(...)
