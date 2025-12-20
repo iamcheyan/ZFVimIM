@@ -117,6 +117,10 @@ ceshi: [测试, 测时]
    - 按 `-`/`=` 或 `,`/`.` 翻页
 4. **退出输入法**：按 `;;` 再次切换，或按 `<Esc>` 取消当前输入
 
+**演示操作：**
+
+![](assast/preview.gif)
+
 ## 配置说明
 
 ### 词库路径配置
@@ -180,6 +184,11 @@ vim.g.ZFVimIM_sentence = 1
 -- 跨数据库搜索（默认: 2）
 -- 0: 禁用, 1: 仅完全匹配, 2: 包含预测, 3: 包含部分匹配
 vim.g.ZFVimIM_crossable = 2
+```
+
+**跨数据库搜索演示：**
+
+![](assast/preview_crossdb.gif)
 ```
 
 ### 按键映射设置
@@ -299,7 +308,7 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
   ==========================================
   ```
 
-  ![](assets/2025-12-20-23-13-34.png)
+  ![](assast/2025-12-20-23-13-34.png)
 
 ### 字典编辑
 
@@ -693,5 +702,3 @@ ceshi 测试 测时 侧视
 
 - 原项目：[ZSaberLv0/ZFVimIM](https://github.com/ZSaberLv0/ZFVimIM)
 - 适配版本：[iamcheyan/ZFVimIM](https://github.com/iamcheyan/ZFVimIM)
-
-![](assets/2025-12-20-23-13-34.png)
