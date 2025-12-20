@@ -961,6 +961,26 @@ function! s:filterMatchListByPrefix(list, key)
     return filtered
 endfunction
 
+" Remove duplicate candidates based on word (and optionally key)
+" Keeps the first occurrence of each unique word
+function! s:deduplicateCandidates(list)
+    if empty(a:list)
+        return []
+    endif
+    let seen = {}
+    let deduplicated = []
+    for item in a:list
+        " Use word as the unique identifier for deduplication
+        " If same word appears with different keys, keep the first one
+        let word = get(item, 'word', '')
+        if !has_key(seen, word)
+            let seen[word] = 1
+            call add(deduplicated, item)
+        endif
+    endfor
+    return deduplicated
+endfunction
+
 function! s:curPage()
     if !empty(s:match_list) && &pumheight > 0
         if s:completeItemAvailable && get(g:, 'ZFVimIM_freeScroll', 0)
@@ -1260,6 +1280,8 @@ function! s:updateCandidates()
     else
         let s:match_list = ZFVimIM_complete(s:keyboard)
         let s:match_list = s:filterMatchListByPrefix(s:match_list, s:keyboard)
+        " Remove duplicate candidates based on word
+        let s:match_list = s:deduplicateCandidates(s:match_list)
         let s:page = 0
     endif
     let s:pageup_pagedown = 0
