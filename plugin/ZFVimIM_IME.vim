@@ -690,10 +690,7 @@ endfunction
 
 function! s:IME_start()
     let &iminsert = 1
-    let cloudInitMode = get(g:, 'ZFVimIM_cloudInitMode', '')
-    let g:ZFVimIM_cloudInitMode = 'preferSync'
     call ZFVimIME_init()
-    let g:ZFVimIM_cloudInitMode = cloudInitMode
 
     call s:vimrcSave()
     call s:vimrcSetup()
@@ -1338,10 +1335,23 @@ function! s:updateCandidates()
         let s:match_list = s:filterMatchListByPrefix(s:match_list, s:keyboard)
         " Remove duplicate candidates based on word
         let s:match_list = s:deduplicateCandidates(s:match_list)
+        " Ensure pumheight is set correctly
+        if &pumheight <= 0 || &pumheight < 10
+            set pumheight=10
+        endif
         let s:page = 0
     endif
     let s:pageup_pagedown = 0
-    call s:floatRender(s:curPage())
+    " Debug: check if pumheight is limiting candidates
+    if &pumheight <= 0 || &pumheight < 10
+        set pumheight=10
+    endif
+    " Use full match_list for floatRender instead of curPage() which limits by pumheight
+    if get(g:, 'ZFVimIM_freeScroll', 0)
+        call s:floatRender(s:match_list)
+    else
+        call s:floatRender(s:curPage())
+    endif
     doautocmd User ZFVimIM_event_OnUpdateOmni
 endfunction
 
@@ -1761,17 +1771,7 @@ function ZFVimIM_reload()
     endtry
     
     try
-        augroup! ZFVimIM_cloud_sync_augroup
-    catch
-    endtry
-    
-    try
         augroup! ZFVimIM_autoDisable_augroup
-    catch
-    endtry
-    
-    try
-        augroup! ZFVimIM_cloud_async_augroup
     catch
     endtry
     
