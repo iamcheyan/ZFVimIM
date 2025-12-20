@@ -466,8 +466,11 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
         endwhile
     endif
     
-    " Also try alias match for 4-character keys (3-word abbreviation)
-    " This allows abbreviations like "srfa" to match "surufa" (输入法)
+    " Also try alias match for 4-character keys
+    " This allows abbreviations like:
+    " - "srfa" to match "surufa" (输入法, 3-word: 首+二+尾)
+    " - "srfs" to match "surufashi" (4-word: 首+二+三+尾)
+    " - And longer words (首+二+三+尾)
     if len(a:key) == 4 && remainingLimit > 0
         let aliasAdded = s:complete_match_alias(a:ret, a:key, a:db, remainingLimit)
     endif
