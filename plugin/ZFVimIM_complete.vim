@@ -37,6 +37,100 @@ function! ZFVimIM_completeDefault(key, ...)
     return ret
 endfunction
 
+function! s:complete_match_alias(ret, key, db, matchLimit)
+    if len(a:key) != 4 || a:matchLimit <= 0
+        return
+    endif
+    let bucket = get(a:db['dbMap'], a:key[0], [])
+    if empty(bucket)
+        return
+    endif
+    let added = 0
+    for dbItemEncoded in bucket
+        if added >= a:matchLimit
+            break
+        endif
+        let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
+        let dbItemKey = dbItem['key']
+        for word in dbItem['wordList']
+            let wordLen = strchars(word)
+            if wordLen == 3
+                if s:aliasMatchThree(dbItemKey, a:key)
+                    call add(a:ret, {
+                                \   'dbId' : a:db['dbId'],
+                                \   'len' : len(a:key),
+                                \   'key' : dbItemKey,
+                                \   'word' : word,
+                                \   'type' : 'match',
+                                \ })
+                    let added += 1
+                endif
+            elseif wordLen >= 4
+                if s:aliasMatchLong(dbItemKey, a:key, wordLen)
+                    call add(a:ret, {
+                                \   'dbId' : a:db['dbId'],
+                                \   'len' : len(a:key),
+                                \   'key' : dbItemKey,
+                                \   'word' : word,
+                                \   'type' : 'match',
+                                \ })
+                    let added += 1
+                endif
+            endif
+            if added >= a:matchLimit
+                break
+            endif
+        endfor
+    endfor
+endfunction
+
+function! s:aliasMatchThree(fullKey, aliasKey)
+    if len(a:aliasKey) != 4
+        return 0
+    endif
+    let keyLen = strlen(a:fullKey)
+    if keyLen < 6
+        return 0
+    endif
+    if a:fullKey[0] !=# a:aliasKey[0]
+        return 0
+    endif
+    if a:fullKey[2] !=# a:aliasKey[1]
+        return 0
+    endif
+    if strpart(a:fullKey, keyLen - 2, 2) !=# strpart(a:aliasKey, 2, 2)
+        return 0
+    endif
+    return 1
+endfunction
+
+function! s:aliasMatchLong(fullKey, aliasKey, wordLen)
+    if len(a:aliasKey) != 4
+        return 0
+    endif
+    let keyLen = strlen(a:fullKey)
+    if keyLen < a:wordLen * 2
+        return 0
+    endif
+    if a:fullKey[0] !=# a:aliasKey[0]
+        return 0
+    endif
+    if a:fullKey[2] !=# a:aliasKey[1]
+        return 0
+    endif
+    if a:fullKey[4] !=# a:aliasKey[2]
+        return 0
+    endif
+    let lastIndex = (a:wordLen - 1) * 2
+    if lastIndex >= keyLen
+        return 0
+    endif
+    if a:fullKey[lastIndex] !=# a:aliasKey[3]
+        return 0
+    endif
+    return 1
+endfunction
+
 function! s:completeDefault(key, ...)
     let option = get(a:, 1, {})
     let db = get(option, 'db', {})
@@ -294,12 +388,14 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
                 \ '^' . a:key,
                 \ 0)
     if index < 0
+        call s:complete_match_alias(a:ret, a:key, a:db, a:matchLimit)
         return
     endif
     let index = ZFVimIM_dbSearch(a:db, a:key[0],
                 \ '^' . a:key . g:ZFVimIM_KEY_S_MAIN,
                 \ 0)
     if index < 0
+        call s:complete_match_alias(a:ret, a:key, a:db, a:matchLimit)
         return
     endif
 
