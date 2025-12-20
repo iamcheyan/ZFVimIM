@@ -1,17 +1,430 @@
-# 单字编码表（共 2565 个单字）
+# 单字编码表（共 2565 个单字，按编码数量从多到少排序）
 # 格式：汉字 编码1 编码2 ...
 # 提取自：dict/sbzr.userdb.txt
 # 说明：每个编码都是2个字母（双拼）
 
+前 qm
+嗯 en 
+跨 ky
+路 lu
+那 na
+项 xd
+骨 gu
+亲 qn
+会 hv
+兑 dv
+六 lq
+冷 lg
+包 bk
+哪 na
+喊 hj
+培 pb
+外 wa
+学 xt
+屈 qt
+年 nm
+扶 fu
+抱 bk
+捷 ju
+月 yt
+校 jc
+格 ge
+楼 lb
+混 hp
+渐 jr
+渴 ke
+片 pm
+猫 mk
+率 sy
+百 bl
+累 lz
+红 hs
+艾 ai
+苞 bk
+苦 ku
+行 xy
+被 bz
+调 dc
+费 fu
+赶 gj
+趁 cf
+跳 tc
+逢 fg
+钥 yb
+钩 gb
+铁 dg
+险 xr
+露 lu
+青 qy
+顽 wj
+鲍 bk
+鸡 ji
+乐 le
+乔 qc
+九 ji
+仅 jn
+介 jx
+仓 cd
+件 jr
+价 jw
+任 rf
+仿 fh
+传 cr
+伯 bo
+伴 bj
+佛 fo
+佬 lk
+例 li
+侨 qc
+促 cu
+俊 jp
+俩 ld
+倍 bz
+假 jw
+催 cv
+儿 vr
+兄 xs
+兴 xy
+其 qi
+内 na
+决 jt
+凉 ld
+刀 dk
+刃 rf
+切 qx
+刻 ke
+务 wu
+劳 lk
+勒 le
+勤 qi
+化 hw
+区 qu
+十 si
+半 bj
+南 na
+卜 bu
+卡 ka
+卢 lu
+却 qt
+原 yr
+句 ju
+可 ke
+右 yu
+吃 ci
+合 he
+吓 ha
+否 fb
+吧 ba
+吨 dp
+吩 ff
+听 yt
+吭 hh
+吵 ck
+味 wi
+呵 ha
+咐 fu
+咖 ka
+咬 yk
+咳 hl
+咽 ye
+哈 ha
+哦 ou
+唆 so
+唔 en
+啊 ao
+喷 pf
+回 hv
+团 qq
+囤 tp
+圈 qr
+土 tu
+地 di
+坏 hv
+坑 kg
+坚 jr
+埔 pu
+堂 th
+增 cg
+夏 xw
+天 tm
+夺 do
+奔 ff
+奥 ao
+她 ta
+好 ho
+婚 hp
+宅 zl
+安 an
+完 yr
+客 ke
+害 he
+宿 su
+小 xi
+少 sk
+岸 an
+己 ji
+巷 xd
+师 si
+帮 bg
+幕 mu
+平 py
+床 cd
+底 di
+度 du
+弹 dj
+强 qd
+归 gv
+得 de
+忙 mh
+快 ky
+恁 nf
+恐 kb
+恒 hg
+想 wx
+惹 re
+愁 cb
+感 hj
+慢 mj
+戎 rs
+我 wo
+房 fh
+扒 pa
+扭 nq
+扳 bj
+找 hw
+技 qi
+把 ba
+投 tb
+折 ze
+抹 mo
+担 dj
+拌 bj
+拍 pl
+拗 ao
+招 qc
+拽 zy
+挎 ku
+挑 tc
+挥 hv
+挫 co
+捶 cv
+掀 xm
+控 ks
+描 mc
+揣 cy
+援 yr
+搞 gk
+摩 mo
+改 gl
+放 fh
+敌 di
+敞 ch
+数 su
+方 fh
+旧 jq
+旬 jp
+昂 ah
+昆 hp
+明 mg
+是 sh
+暴 pu
+曾 cg
+望 wg
+朝 ck
+本 bf
+杂 do
+杜 du
+极 ji
+构 gg
+果 go
+架 jw
+柏 bo
+柜 ju
+树 ss
+核 he
+棍 gp
+楚 cu
+模 mo
+横 hg
+武 wu
+比 bi
+气 qi
+汤 th
+汽 qi
+没 mo
+泊 bo
+活 ho
+派 pl
+浅 jr
+济 qi
+浩 hk
+涮 sr
+渠 qu
+游 yb
+满 mj
+滨 bn
+漆 qi
+演 yr
+灌 hr
+灯 dg
+灿 cj
+炉 lu
+炎 yj
+烈 gd
+烙 lk
+烟 yj
+烦 fa
+焦 jc
+焰 yj
+爱 ai
+犯 fa
+狂 kd
+狼 lh
+现 xm
+球 qu
+琳 ly
+瓦 wa
+疑 yi
+病 by
+白 bl
+的 di
+皇 hr
+盛 sg
+目 mu
+盼 pj
+省 sg
+看 kh
+眠 mn
+着 ze
+短 du
+窗 cd
+笔 pi
+筒 ts
+简 jr
+管 gp
+篇 pc
+篮 ls
+粉 ff
+粗 cu
+系 xi
+纠 jq
+结 ji
+给 gz
+络 lo
+绳 sg
+绿 lv
+罢 ba
+耐 ng
+耳 rg
+聊 lc
+肉 ru
+肯 kf
+背 bz
+胖 ph
+胞 pk
+胡 hu
+能 nl
+脱 to
+脾 bi
+航 hh
+般 pj
+良 lh
+色 se
+芦 lu
+芭 pa
+苗 mc
+若 re
+范 fj
+莲 lv
+萌 mg
+落 lo
+葫 hu
+蓝 lj
+蓬 pg
+藏 zh
+虎 hu
+虹 hs
+虾 ha
+蜜 mi
+袭 xi
+装 zd
+要 yk
+见 jr
+角 jt
+解 jx
+证 zg
+说 so
+诶 ai
+请 qy
+读 du
+谊 yi
+谋 mb
+谱 pu
+豹 pi
+贫 pn
+贬 pr
+赌 du
+越 qu
+跌 dx
+距 ju
+踢 ti
+轩 xr
+返 fj
+还 hr
+这 ze
+连 lv
+追 dv
+选 xr
+逛 kd
+避 bi
+部 bu
+都 du
+酷 ku
+钓 do
+钱 qr
+锐 rv
+镑 ph
+长 zh
+闪 sj
+闭 pi
+防 ph
+际 ji
+陆 lu
+隔 rs
+雀 qt
+集 ju
+雕 do
+零 lv
+需 xu
+顾 hv
+顿 du
+预 yu
+颈 jy
+颗 kr
+题 ti
+饥 ji
+饭 fj
+饱 lo
+驱 qu
+骄 jc
+验 yr
+骑 jt
+高 gk
+鲁 lu
+鸟 qt
+鹿 lv
+麦 ml
+黑 hz
+鼻 bi
 一 yi
 丁 dy
 七 qi
 万 wj
 丈 zh
-三 sa 
-上 sh 
+三 sa
+上 sh
 下 xw
-不 bu 
+不 bu
 与 yu
 丑 cb
 专 zr
@@ -27,11 +440,11 @@
 丢 dq
 两 ld
 严 yj
-个 ge 
+个 ge
 丫 ya
 中 zs
 丰 fg
-串 cr 
+串 cr
 临 ln
 丸 wj
 丹 dj
@@ -48,13 +461,10 @@
 乍 za
 乎 hu
 乏 fa
-乐 le lo
 乒 py
-乔 jc qc
 乖 gy
 乘 cg
 乙 yi
-九 ji jq
 乞 qi
 也 ye
 习 xi
@@ -84,18 +494,14 @@
 京 jy
 亭 ty
 亮 ld
-亲 qd qn qy
 人 rf
 亿 yi
-仅 jn nu
 仆 pu
 仇 cb
 今 jn
-介 ge jx
 仍 rg
 从 cs
 仑 lp
-仓 cd ch
 仔 zl
 他 ta
 仗 zh
@@ -108,11 +514,7 @@
 们 mf
 仰 ah
 仲 zs
-件 jr mb
-价 jw jx
-任 ln rf
 份 ff
-仿 fh ph
 企 qi
 伊 yi
 伍 wu
@@ -121,13 +523,9 @@
 众 zs
 优 qv
 伙 ho
-会 hv ko vh
 伞 sj
-传 cr zr
 伤 sh
 伦 lp
-伯 bl bo
-伴 bj pj
 伸 sf
 似 si
 但 dj
@@ -138,37 +536,29 @@
 体 ti
 何 he
 余 yu
-佛 fo fu
 作 zo
 你 ni
 佣 ys
 佩 pz
-佬 lc lk
 佳 jw
 使 si
-例 li lx
 供 gs
 依 yi
 侠 xw
 侥 jc
 侧 ce
-侨 jc qc
 侮 wu
 侯 hb
 侵 qn
 便 bm
-促 cu io
-俊 dp jp
 俏 qc
 俗 su
 保 bk
 信 xn
-俩 ld lw
 俭 jr
 修 xq
 俺 an
 倆 lw
-倍 bz pz
 倒 dk
 候 hb
 倚 yi
@@ -179,7 +569,6 @@
 倪 nx
 债 zl
 倾 qy
-假 jw jx
 偌 ro
 偏 pr
 做 zo
@@ -189,20 +578,16 @@
 偷 tb
 傍 bg
 储 cu
-催 cg cv
 傲 ao
 傻 sa
 像 xd
-儿 rf vr
 元 yr
-兄 kd xs
 充 cs
 兆 zk
 先 xr
 光 gd
 克 ke
 免 mm
-兑 do dv rv
 兔 tu
 党 dh
 兜 db
@@ -210,19 +595,15 @@
 全 qr
 八 ba
 公 gs
-六 li lq lu
 兰 lj
 共 gs
 关 gr
-兴 xo xy
 兵 by
-其 ji qi
 具 ju
 典 dm
 养 yh
 兼 jr
 兽 sb
-内 na nz
 冈 gh
 冉 rj
 册 ce
@@ -235,11 +616,8 @@
 冬 ds
 冰 by
 冲 cs
-决 jt qt
-冷 le lg ly
 冻 ds
 准 zp
-凉 ld ll
 凌 ly
 减 jr
 凑 cb
@@ -250,10 +628,7 @@
 凶 xs
 凹 ao
 出 cu
-刀 dc dk
-刃 ra rf
 分 ff
-切 qi qx
 刊 kj
 刑 xy
 划 hw
@@ -271,11 +646,9 @@
 刷 sw
 刹 ca
 刺 ci
-刻 ke kz
 剁 do
 削 qc
 剌 la
-前 an jr qm qr
 剑 jr
 剖 pb
 剧 ju
@@ -288,51 +661,37 @@
 办 bj
 功 gs
 加 jw
-务 mk wu
 劢 ml
 劣 lx
 动 ds
 努 nu
 励 li
 劲 jn
-劳 lc lk
 势 si
 勉 mr
-勒 le lz
 勘 kj
 募 mu
-勤 qi qn
 勾 gb
 勿 wu
 匀 jp
-包 bk fu pk
-化 ho hw
 北 bz
 匠 jd
 匪 ff
 匮 kv
 匹 pi
-区 qq qu
 医 yi
-十 si sl
 千 qr
 升 sg
 午 wu
-半 bj pj
 华 hw
 协 xx
 卒 zu
 单 dj
 卖 ml
-南 na nj
 博 bo
-卜 bu pu
 占 zj
-卡 ka qw
-卢 lu lv
 卤 lu
 卯 mk
-却 jc qt
 卷 qr
 厂 ch
 厅 ty
@@ -343,7 +702,6 @@
 厕 ce
 厘 li
 厚 hb
-原 yj yr
 厢 xd
 厦 sa
 厨 cu
@@ -364,25 +722,20 @@
 叠 dx
 口 kb
 古 gu
-句 gb ju
 另 ly
 叩 kb
 只 zi
 叫 jc
 召 zk
-可 ge ke
 台 tl
 史 si
-右 yb yu
 叶 ye
 号 hk
 司 si
 叹 tj
 吁 xu
-吃 ci qi
 各 ge
 吆 yk
-合 ge he
 吉 ji
 吊 dc
 同 ts
@@ -390,22 +743,14 @@
 吏 li
 吐 tu
 向 xd
-吓 ha xw
 吕 lv
 吗 ma
 君 jp
 吞 tp
 吟 jn
-否 fb pi
-吧 ba pa
-吨 dp tp
-吩 ff pf
 含 hj
-听 ty yt
-吭 hh kg
 启 qi
 吴 wu
-吵 ck mc
 吶 na
 吸 xi
 吹 cv
@@ -422,46 +767,34 @@
 呜 wu
 呢 ne
 周 zb
-味 mz wi
-呵 ha he
 呼 hu
 命 my
 咋 za
 和 he
 咏 ys
-咐 fi fu
 咒 zb
 咔 ka
-咖 ga ka
 咧 lz
 咪 mx
-咬 jc yk
 咯 ka
 咱 za
-咳 hl ki
 咸 xr
-咽 ye yj
 哀 ai
 品 pn
 哄 hs
 哆 do
-哈 ha he
 响 xd
 哑 ya
 哗 hw
 哟 yo
 哥 ge
-哦 ou vo
 哨 sk
-哪 na ne nz
 哭 ku
 哲 ze
 哺 bu
 哼 hg
-唆 so sw
 唉 ai
 唐 th
-唔 en ng
 唠 lk
 唤 hr
 唬 hk
@@ -470,7 +803,6 @@
 唱 ch
 啃 kf
 商 sh
-啊 ao va
 啜 cy
 啤 pi
 啦 la
@@ -478,16 +810,13 @@
 喂 wj
 善 sj
 喉 hb
-喊 hj jr kj
 喘 cr
 喜 xi
 喝 he
-喷 ff pf
 喻 yu
 嗓 sh
 嗦 so
 嗨 hz
-嗯 en ng vf vv
 嗲 dw
 嘉 jw
 嘎 ga
@@ -498,10 +827,7 @@
 嚷 rh
 囊 nh
 四 si
-回 hv vh
 因 yn
-团 qq tr
-囤 dp tp
 园 yr
 困 kp
 围 hv
@@ -510,19 +836,13 @@
 国 go
 图 tu
 圆 yr
-圈 jr qr
-土 du tu
 在 zl
-地 de di
 场 ch
 均 jp
 坊 fh
 坎 kj
-坏 hv yu
 坐 zo
-坑 kg kh
 块 ky
-坚 jr kj
 坝 ba
 坟 ff
 坠 zv
@@ -539,12 +859,9 @@
 埃 ai
 埋 mj
 城 cg
-埔 bu pu
 域 yu
 埠 bu
-培 pb pi pz
 基 ji
-堂 gg th
 堆 dv
 堕 do
 堡 bk
@@ -557,7 +874,6 @@
 境 jy
 墓 mu
 墙 qd
-增 cg zg
 墨 mo
 壕 hk
 壤 rh
@@ -568,14 +884,11 @@
 处 cu
 备 bz
 复 fu
-夏 jw xw
 夕 xi
-外 wa wi wl
 多 do
 夜 ye
 够 gb
 大 da
-天 tm tr
 太 tl
 夫 fu
 夯 bf
@@ -584,21 +897,16 @@
 夷 yi
 夸 kw
 夹 jw
-夺 do dv
 奇 ji
 奉 fg
 奋 ff
 奏 cb
 契 qx
-奔 bf ff
 奖 jd
 套 tk
-奥 ao vk
 女 nv
 奴 nu
 奶 nl
-她 jx ta
-好 hk ho
 如 ru
 妄 wg
 妆 zd
@@ -631,7 +939,6 @@
 娱 yu
 娶 qu
 婆 po
-婚 hp jw
 婴 yy
 婷 ty
 媒 mz
@@ -646,16 +953,12 @@
 孙 sp
 孝 xc
 季 ji
-学 hw jc xt
 孩 hl
 宁 ny
 它 ta
-宅 du zl
 宇 yu
 守 sb
-安 an vj
 宋 ss
-完 kr yr
 宏 hs
 宕 dh
 官 gr
@@ -667,20 +970,17 @@
 实 si
 宠 cs
 审 sf
-客 ke qw
 宣 xr
 室 si
 宪 xr
 宫 gs
 宰 zl
-害 he hl
 宴 yr
 宵 xc
 家 jw
 容 rs
 宽 kr
 宾 bn
-宿 su xq
 寄 ji
 密 mi
 富 fu
@@ -697,8 +997,6 @@
 封 fg
 射 se
 将 jd
-小 xc xi
-少 sk uo
 尘 cf
 尚 sh
 尬 ga
@@ -710,7 +1008,6 @@
 屁 pi
 层 cg
 居 ju
-屈 jt qt qu
 届 jx
 屋 wu
 屑 xx
@@ -725,7 +1022,6 @@
 岩 yr
 岭 ly
 岳 ta
-岸 an vi
 峰 fg
 峻 jp
 崇 cs
@@ -741,17 +1037,14 @@
 巨 ju
 巩 gs
 差 cl
-己 ji qi
 已 yi
 巴 ba
-巷 hh xd
 巾 jn
 币 bi
 市 si
 布 bu
 帅 sy
 帆 fj
-师 si zi
 希 xi
 帐 zh
 帑 nu
@@ -762,33 +1055,26 @@
 帝 di
 带 dl
 席 xi
-帮 bg bh
 常 ch
 帽 mk
 幂 mi
 幅 fu
 幌 hd
-幕 mj mu
 干 gj
-平 pr py
-年 nm nr ny
 并 by
 幸 xy
 幻 hr
 广 gd
 庄 zd
 庆 qy
-床 cd cg
 序 xu
 库 ku
 应 yy
-底 de di
 店 dm
 庙 mc
 府 fu
 庞 ph
 废 fz
-度 do du
 座 zo
 庭 ty
 康 kh
@@ -806,9 +1092,6 @@
 弩 nu
 弯 yr
 弱 ro
-弹 dj tj
-强 jd qd
-归 gi gv
 当 dh
 录 lu
 形 xy
@@ -826,7 +1109,6 @@
 律 lv
 徐 xu
 徒 tu
-得 de dz
 御 yu
 德 de
 心 xn
@@ -838,9 +1120,7 @@
 忒 tz
 志 zi
 忘 wg
-忙 mh ph
 忠 zs
-快 ku ky
 念 nr
 忸 nq
 忽 hu
@@ -861,10 +1141,7 @@
 怯 qx
 总 ls
 怼 dv
-恁 nf nn
 恋 lv
-恐 kb ks
-恒 gg hg
 恤 xu
 恩 en
 恭 gs
@@ -888,12 +1165,8 @@
 惩 cg
 惯 gr
 惰 do
-想 wx xd
-惹 re ro
-愁 cb qc
 意 yi
 愚 yu
-感 gj hj
 愣 lg
 愤 ff
 愧 kv
@@ -902,29 +1175,24 @@
 慌 hd
 慎 sf
 慕 mu
-慢 mj mo
 慧 hv
 憋 bx
 懂 ds
 懈 xx
 懊 ao
-戎 rg rs
 戏 xi
 成 cg
-我 wo wu
 戒 jx
 或 ho
 战 zj
 戳 io
 戴 dl
 户 hu
-房 fh ph
 所 so
 扇 sj
 手 sb
 扎 za
 扑 pu
-扒 ba pa
 打 da
 扔 rg
 托 to
@@ -932,23 +1200,15 @@
 执 zi
 扩 ko
 扫 sk
-扭 cb nq
 扮 bj
 扯 ce
 扰 rk
-扳 bj pj
-扶 fe fu pu
-找 hw zk
 承 cg
-技 ji qi
 抄 ck
-把 ba pa
 抑 yi
 抒 ss
 抓 zw
-投 db tb
 抖 db
-折 se ze
 抚 fu
 抛 pk
 抝 nq
@@ -958,24 +1218,17 @@
 护 hu
 报 bk
 抬 tl
-抱 bk pb pk
 抵 di
-抹 ma mo
 抽 cb
 拂 fu
-担 dj jx
 拆 cl
 拉 la
-拌 bj pj
-拍 pe pl
 拐 gy
 拒 ju
 拓 to
 拔 ba
 拖 to
-拗 ao nq
 拘 ju
-招 qc zk
 拜 bl
 拟 ni
 拢 ls
@@ -990,24 +1243,19 @@
 拳 qr
 拷 kk
 拼 pn
-拽 ye zy
 拿 na
 持 ci
 挂 gw
 指 zi
 按 an
-挎 do ku
-挑 dc tc
 挝 zw
 挞 ta
 挠 nk
 挡 dh
 挣 zg
 挤 ji
-挥 hp hv
 挨 ai
 挪 no
-挫 co zo
 振 zf
 挺 ty
 挽 yr
@@ -1024,9 +1272,6 @@
 换 hr
 捣 dk
 据 ju
-捶 cv do
-捷 ju jx qx
-掀 xm xr
 授 sb
 掉 dc
 掌 zh
@@ -1035,25 +1280,20 @@
 掘 jt
 探 tj
 接 jx
-控 ks qd
 推 tv
 掩 yj
 措 co
 掸 sj
 揉 rb
-描 mc mk
 提 di
 插 ca
 握 wo
-揣 cy do
 揪 jq
 揭 jx
-援 hr yr
 搋 cy
 搏 bo
 搓 co
 搜 sb
-搞 gk kk
 搬 bj
 搭 da
 携 xx
@@ -1064,7 +1304,6 @@
 摔 sy
 摘 zl
 摧 cv
-摩 ma mo
 摸 mo
 撒 sa
 撞 zd
@@ -1075,21 +1314,16 @@
 擒 qn
 攘 rh
 收 sb
-改 gl kk
 攻 gs
-放 fh ph
 政 zg
 故 gu
-敌 di hw
 敏 mn
 救 jq
 敖 ao
 教 jc
-敞 cg ch
 敢 gj
 散 sj
 敬 jy
-数 ss su
 敲 qc
 整 zg
 文 wf
@@ -1101,7 +1335,6 @@
 断 dr
 斯 si
 新 xn
-方 fh ph
 施 si
 旁 ph
 旅 lv
@@ -1112,25 +1345,19 @@
 既 ji
 日 ri
 旦 dj
-旧 ji jq
 早 zk
-旬 jp xp
 旭 xu
 时 si
 旷 kd
 旺 wg
-昂 ah vh
-昆 hp kp
 昊 hk
 昌 ch
-明 mg my
 昏 hp
 易 yi
 星 xy
 映 yy
 春 cp
 昨 zo
-是 sh si
 昼 zb
 显 xr
 晃 hd
@@ -1151,31 +1378,24 @@
 暑 ss
 暖 nr
 暗 an
-暴 bk pu
 曲 qu
 更 gg
 曹 ck
 曼 mj
-曾 cg zg
 替 ti
 最 zv
-月 ru ta yt
 有 yb
 服 fu
 朔 so
 朗 lh
-望 wg wh
-朝 ck zk
 期 qi
 木 mu
-本 bf pf
 术 ss
 朴 pu
 朵 do
 机 ji
 朽 xq
 杀 sa
-杂 do za
 权 qr
 杆 gj
 杉 sj
@@ -1184,7 +1404,6 @@
 材 cl
 村 cp
 杖 zh
-杜 di du
 束 ss
 杠 gs
 条 tc
@@ -1195,23 +1414,17 @@
 杰 jx
 松 ss
 板 bj
-极 je ji
-构 gb gg
 枕 zf
 林 ln
 枘 nf
-果 go lo
 枝 zi
 枣 zk
 枪 qd
 枯 ku
-架 jw jx
-柏 bl bo
 某 mb
 染 rj
 柔 rb
 柚 yb
-柜 gv ju
 柠 ny
 查 ca
 柯 ke
@@ -1221,12 +1434,8 @@
 栈 zj
 栋 ds
 栏 lj
-树 ss zi
-校 jc qc xc
 样 yh
-核 he kj
 根 gf
-格 ge he lo
 栽 zl
 桂 gv
 桃 tk
@@ -1250,7 +1459,6 @@
 梳 ss
 检 jr
 棉 mr
-棍 gp hp
 棒 bg
 棚 pg
 棵 ke
@@ -1258,16 +1466,12 @@
 植 zi
 椎 zv
 椒 jc
-楚 cb cu
-楼 lb ls lv
 概 gl
 榕 rs
 榜 bg
 榨 za
 榭 xx
 槽 ck
-模 mo mu
-横 gd hg
 次 ci
 欢 hr
 欧 vb
@@ -1278,7 +1482,6 @@
 正 zg
 此 ci
 步 bu
-武 we wu
 歪 yy
 歹 dl
 死 si
@@ -1290,12 +1493,10 @@
 母 mu
 每 mz
 毒 du
-比 bi pi
 毕 bi
 毙 bi
 毛 mk
 民 mn
-气 qi qu
 氛 ff
 氢 qy
 氧 yh
@@ -1310,11 +1511,9 @@
 江 jd
 池 ci
 污 wu
-汤 ls th
 汪 wg
 汰 tl
 汹 xs
-汽 gl qi
 沁 qn
 沉 cf
 沏 qx
@@ -1322,7 +1521,6 @@
 沓 da
 沙 sa
 沟 gb
-没 mo mz
 沦 lp
 沪 hu
 沫 mo
@@ -1333,7 +1531,6 @@
 沿 yj
 況 kd
 泄 xx
-泊 bo po
 泌 bi
 泛 fg
 泞 ny
@@ -1358,18 +1555,13 @@
 津 jn
 洪 hs
 洲 zb
-活 go ho
 洽 qw
-派 ml pl
 流 lq
-浅 jr qr
 浇 jc
 测 ce
-济 ji qi
 浑 hp
 浙 ze
 浦 pu
-浩 gk hk
 浪 lh
 浮 fu
 浴 yu
@@ -1383,7 +1575,6 @@
 涡 go
 润 rp
 涨 zh
-涮 sr sw
 涵 hj
 淀 dm
 淆 xc
@@ -1392,19 +1583,14 @@
 淡 dj
 淮 hy
 深 sf
-混 gp hp kp
 淹 yj
 添 tr
 清 qy
-渐 jr qr qu
 渔 yu
-渠 ju qu
 渡 du
 渣 za
 温 wf
 港 hs
-渴 he jx ke
-游 lq yb
 湖 hu
 湾 yr
 溃 kv
@@ -1417,15 +1603,11 @@
 滑 hw
 滕 tg
 滚 gp
-满 mf mj
 滤 lv
-滨 bi bn
 滩 tj
 滴 di
 漂 pc
-漆 qi qx
 漏 lo
-演 jr yr
 漠 mo
 漫 mj
 漳 zh
@@ -1437,18 +1619,13 @@
 澡 zk
 澳 ao
 激 ji
-灌 gr hr
 火 ho
 灭 mx
-灯 dg dy
 灰 hv
 灵 ly
 灶 zk
 灾 zl
-灿 cj qr
-炉 lc lu
 炊 cv
-炎 js yj
 炒 ck
 炕 kh
 炖 dp
@@ -1462,10 +1639,6 @@
 烁 so
 烂 lj
 烃 ty
-烈 gd lx
-烙 lk lo
-烟 yj yr
-烦 fa fj
 烫 th
 烬 jn
 热 re
@@ -1473,8 +1646,6 @@
 焕 hr
 焖 mf
 焚 ff
-焦 jc qc
-焰 yj yr
 然 rj
 煎 jr
 煜 ys
@@ -1493,13 +1664,11 @@
 爆 bk
 爪 zw
 爬 pa
-爱 ai vl
 父 fu
 爷 ye
 爸 ba
 爹 dx
 爽 sd
-片 pj pm pr
 版 bj
 牌 pl
 牙 ya
@@ -1510,10 +1679,8 @@
 牵 qr
 特 te
 牺 xi
-犯 fa fj
 状 zd
 犷 gd
-狂 jt kd
 狈 bz
 狐 hu
 狗 gb
@@ -1521,40 +1688,33 @@
 狡 jc
 独 du
 狱 yu
-狼 lh ly
 猎 lx
 猜 cl
 猩 xy
-猫 mc mk mz
 献 xr
 猴 hb
 猾 hw
 玄 xr
-率 lt lv sy
 玉 yu
 王 wg
 玛 ma
 玩 yr
 玫 mz
 环 hr
-现 xm xr
 玲 ly
 玻 bo
 珊 sj
 珍 zf
 珠 ju
 班 bj
-球 qq qu
 理 li
 琐 so
 琨 kp
-琳 ln ly
 琴 qn
 琶 pa
 瑞 rv
 瑰 mz
 瓜 gw
-瓦 pu wa
 瓶 py
 瓷 ci
 甘 gj
@@ -1578,7 +1738,6 @@
 略 lt
 番 fj
 疏 ss
-疑 ny yi
 疗 lc
 疟 nt
 疤 ba
@@ -1587,7 +1746,6 @@
 疲 pi
 疼 tg
 疾 ji
-病 by pi
 症 zg
 痒 yh
 痛 ts
@@ -1596,11 +1754,7 @@
 瘦 sb
 癌 ai
 登 dg
-白 bi bl
-百 ba be bl
 皂 zk
-的 de di
-皇 hd hr
 皮 pi
 皱 zb
 盆 pf
@@ -1614,30 +1768,22 @@
 盔 kv
 盖 gl
 盗 dk
-盛 cg sg
 盟 mg
-目 mu xu
 直 zi
 相 xd
-盼 gj pj
 盾 dp
-省 sg xy
 眉 mz
-看 kh kj
 眜 mx
 真 zf
-眠 mn mr
 眨 za
 眶 kd
 眺 tc
 眼 yj
-着 ze zk
 睁 zg
 睡 sv
 瞬 sp
 知 zi
 矫 jc
-短 dr du
 矮 ai
 石 si
 矿 kd
@@ -1707,7 +1853,6 @@
 窃 qx
 窄 zl
 窍 qc
-窗 cd cg
 立 li
 竖 ss
 站 zj
@@ -1717,32 +1862,24 @@
 笆 ba
 笋 sp
 笑 xc
-笔 bi pi
 笛 di
 符 fu
 笨 bf
 第 di
 笼 ls
-筒 ds ts
 答 da
 策 ce
 筹 cb
 签 qr
-简 jr qx
 箔 bo
 算 sr
-管 gp gr
 箭 jr
 箱 xd
-篇 pc pr
-篮 lj ls
 篾 mx
 簿 bu
 米 mi
 类 lz
-粉 ff pi
 粒 li
-粗 cu se
 粥 zb
 粪 ff
 粮 ld
@@ -1752,13 +1889,9 @@
 糕 gk
 糖 th
 糟 zk
-系 ji xi
 素 su
 索 so
 紧 jn
-累 lv lz qq
-纠 jc jq
-红 gs ho hs
 约 ta
 级 ji
 纪 ji
@@ -1781,11 +1914,8 @@
 经 jy
 绑 bg
 绒 rs
-结 ji jx
 绕 rk
 绘 hv
-给 gz ji
-络 lk lo
 绝 jt
 绞 jc
 统 ts
@@ -1796,12 +1926,10 @@
 绪 xu
 续 xu
 绰 io
-绳 mn sg
 维 wz
 绷 bg
 绸 cb
 绽 zj
-绿 lu lv
 缀 zv
 缆 lj
 缎 dr
@@ -1819,7 +1947,6 @@
 罐 gr
 网 wg
 罗 lo
-罢 ba bi
 罩 zk
 置 zi
 署 ss
@@ -1827,7 +1954,7 @@
 美 mz
 羞 xq
 羡 xr
-群 qp 
+群 qp
 翁 wg
 翅 ci
 翎 ly
@@ -1837,22 +1964,18 @@
 者 ze
 而 vr
 耍 swv
-耐 ng nl
 耕 gg
 耗 hk
 耦 vb
-耳 rg vr
 耻 ci
 耿 gg
 聆 ly
-聊 lc lq
 聋 ls
 职 zi
 联 lv
 聘 pn
 聚 ju
 聪 cs
-肉 rb ru
 肋 lz
 肌 ji
 肘 zb
@@ -1865,33 +1988,25 @@
 肥 fz
 肩 jr
 肮 ah
-肯 hj kf
 育 yu
 肺 fz
 肿 zs
 胀 zh
 胁 xx
 胆 dj
-背 bi bz
 胎 tl
-胖 ph pj
 胜 sg
-胞 bk pk
-胡 he hu
 胫 kg
 胴 ds
 胶 jc
 胸 xs
-能 ng nl
 脆 cv
 脉 ml
 脏 zh
 脑 nk
 脖 bo
 脚 jc
-脱 lo to
 脸 lv
-脾 bi pi
 腋 ye
 腐 fu
 腔 qd
@@ -1917,25 +2032,18 @@
 舔 tr
 舛 cr
 舟 zb
-航 hh ph
-般 bj pj
 船 cr
 艇 ty
-良 ld lh
 艰 jr
-色 se sl
 艳 yj
 艺 yi
-艾 ai qq yi
 节 jx
 芋 yu
 芍 di
 芒 mh
 芝 zi
 芥 jx
-芦 hu lu
 芬 ff
-芭 ba pa
 芯 xn
 花 hw
 芳 fg
@@ -1946,14 +2054,9 @@
 苏 su
 苑 yr
 苔 tl
-苗 mc mz
-苞 bk pk pu
-若 re ro
-苦 fu gu ku
 苯 bf
 英 yy
 茂 mk
-范 fa fj
 茄 qx
 茅 mk
 茧 jr
@@ -1974,7 +2077,6 @@
 莎 sa
 莓 mz
 莫 mo
-莲 fu lv
 获 ho
 莹 yy
 莺 yy
@@ -1985,16 +2087,13 @@
 菠 bo
 菩 pu
 萄 tk
-萌 mg my
 萍 py
 萜 tx
 萤 yy
 营 yy
 萧 xc
-落 la lo
 葡 pu
 董 ds
-葫 hu ty
 葬 zh
 葶 ty
 蒂 di
@@ -2002,8 +2101,6 @@
 蒲 pu
 蒸 zg
 蓉 rs
-蓝 le lj
-蓬 bg pg
 蔓 mj
 蔬 ss
 蔷 qd
@@ -2011,15 +2108,11 @@
 薄 bo
 薪 xn
 薯 ss
-藏 ch zh
 藤 tg
-虎 hi hu
 虐 nt
 虑 lv
 虚 xu
 虫 cs
-虹 gs hs
-虾 ha xw
 蚁 yi
 蚕 cj
 蚝 hk
@@ -2030,7 +2123,6 @@
 蜂 fg
 蜓 ty
 蜕 tv
-蜜 mi ni
 蝉 cj
 蝴 hu
 蝶 di
@@ -2038,7 +2130,6 @@
 蟀 sy
 蟒 mh
 血 xt
-行 hh xd xy
 街 jx
 衡 hg
 衣 yi
@@ -2055,11 +2146,8 @@
 袒 tj
 袖 xq
 袜 wa
-被 bi bz pi
-袭 jr xi
 裁 cl
 裂 lx
-装 jx zd
 裉 kf
 裕 yu
 裙 qp
@@ -2067,15 +2155,11 @@
 裱 bc
 褪 tv
 西 xi
-要 yj yk
-见 jm jr
 观 gr
 规 gv
 视 si
 览 lj
 觉 jo
-角 jc jt
-解 jx xx
 触 cu
 言 yj
 誉 yu
@@ -2099,7 +2183,6 @@
 论 lp
 设 se
 访 fh
-证 bc zg
 评 py
 识 si
 诈 za
@@ -2118,19 +2201,12 @@
 语 yu
 诱 qv
 诲 hv
-说 so uo
-诶 ai vz
-请 qo qy
 诺 no
-读 db du
 课 ke
 谁 sz
-调 dc do tc
 谅 ld
 谆 zp
 谈 tj
-谊 jw yi
-谋 mb sj
 谍 dx
 谎 hr
 谐 xx
@@ -2139,14 +2215,12 @@
 谣 yk
 谨 jn
 谬 mq
-谱 pc pu
 谷 gu
 豁 hw
 豆 db
 豉 ci
 豪 hk
 豫 yu
-豹 bk pi
 賊 zz
 贝 bz
 负 fu
@@ -2159,15 +2233,12 @@
 货 ho
 质 zi
 贪 tj
-贫 ff pn
-贬 br pr
 购 gb
 贱 jr
 贴 tx
 贵 gv
 贷 dl
 贸 mk
-费 bi fu fz
 贺 he
 贼 zz
 贾 gu
@@ -2175,7 +2246,6 @@
 赁 ln
 赃 zh
 赋 fu
-赌 db du
 赏 sh
 赐 ci
 赔 pz
@@ -2189,31 +2259,22 @@
 走 zb
 赴 fu
 赵 zk
-赶 gj ji ju
 起 qi
-趁 cf cg nr
 超 ck
-越 qu ta
 趋 qu
 趣 qu
 足 zu
 跃 ta
 跆 tl
 跋 ba
-跌 dp dx
 跑 pk
-距 ju qu
 跟 gf
-跨 jy ku kw ky
 跪 gv
-路 ge lo lu qu
-跳 dc qd tc
 践 jr
 跷 qc
 跺 do
 踏 ta
 踔 io
-踢 dx ti
 踩 cl
 踹 cy
 蹄 di
@@ -2226,7 +2287,6 @@
 躺 th
 车 ce
 轨 gv
-轩 hj xr
 转 zr
 轮 lp
 软 rr
@@ -2258,34 +2318,26 @@
 迎 yy
 运 qu
 近 jn
-返 fa fj
-还 hl hr
-这 ze zz
 进 jn
 远 yr
 违 hv
-连 lm lv
 迟 ci
 迪 di
 迫 po
 述 ss
 迷 mi
-追 dv zv
 退 tv
 适 ko
 逃 tk
 逆 ni
-选 sw xr
 透 tb
 递 di
 途 tu
 逗 db
 通 ts
-逛 gd kd
 逞 cg
 速 su
 造 zk
-逢 fg pg ph
 逮 dl
 逸 yi
 逻 lo
@@ -2298,10 +2350,8 @@
 遥 yk
 遭 zk
 遮 ze
-避 bi pi
 邓 dg
 邛 qs
-那 na ne no nz
 邦 bg
 邮 yb
 邱 qq
@@ -2311,16 +2361,13 @@
 郎 lh
 郝 hk
 郡 jp
-部 bu pb
 郭 go
-都 db du
 鄙 pi
 配 pz
 酒 jq
 酬 cb
 酱 jd
 酵 jc
-酷 gu ku
 酿 nd
 醋 zo
 醒 xy
@@ -2335,21 +2382,16 @@
 銩 dq
 针 zf
 钉 dy
-钓 dc do
 钛 tl
 钝 dp
 钞 ck
 钟 zs
 钢 gh
-钥 ta yb yk
 钦 qn
 钧 jp
-钩 gb hb qq
 钭 tb
 钮 cb
-钱 jr qr
 钳 qr
-铁 dg dx tx
 铂 bo
 铃 ly
 铅 qr
@@ -2371,7 +2413,6 @@
 锈 xq
 锋 fg
 锌 xn
-锐 dv rv
 错 co
 锚 mk
 锡 xi
@@ -2385,14 +2426,10 @@
 镁 mz
 镇 zf
 镍 nx
-镑 bg ph
 镜 jy
-长 ch zh
 閏 rp
 閠 rp
 门 mf
-闪 hj sj
-闭 he pi
 问 wf
 闯 cd
 闰 rp
@@ -2407,15 +2444,12 @@
 队 dv
 阬 kg
 阮 rr
-防 fh ph
 阳 yh
 阵 zf
 阶 jx
 阻 zu
 陀 to
 附 fu
-际 ja ji
-陆 lq lu
 陈 cf
 降 jd
 限 xr
@@ -2423,36 +2457,27 @@
 陡 db
 院 yr
 除 cu
-险 jr xa xr
 陪 pz
 陵 ly
 陶 tk
 陷 xr
 隆 ls
-隔 ge rs
 隙 xi
 障 zh
 隶 li
-雀 qc qt
 雁 yr
 雄 xs
 雅 ya
-集 ji ju
 雇 gu
-雕 dc do
 雨 yu
 雪 xt
-零 lv ly
 雷 lz
-需 rr xu
 霆 ty
 震 zf
 霉 mz
 霍 ho
 霜 sd
-露 lb lc lu
 霸 ba
-青 jy qe qy
 静 jy
 非 fz
 靠 kk
@@ -2464,22 +2489,14 @@
 韩 hj
 页 ye
 顶 dy
-项 hj pi xd xe
 顺 sp
 须 xu
-顽 gp kp yr
-顾 gu hv
-顿 dp du
 颁 bj
 颂 rs
-预 ys yu
 领 ly
-颈 gg jy
 频 pn
 颓 tv
 颖 yy
-颗 ke kr
-题 di ti
 颜 yj
 颤 cj
 风 fg
@@ -2490,13 +2507,10 @@
 食 si
 餐 cj
 餮 tx
-饥 ji jn
 饨 tp
 饪 rf
-饭 fa fj
 饮 yn
 饰 si
-饱 bk lo
 饶 rk
 饺 jc
 饼 by
@@ -2513,37 +2527,27 @@
 首 sb
 香 xd
 马 ma
-驱 qa qu
 驳 bo
 驴 lv
 驶 si
 驼 to
 驾 jw
 骂 ma
-骄 jc qc
 骆 lo
-验 yj yr
 骏 jp
-骑 ji jt
 骗 pr
-骨 gg gj gu po
 骰 tb
 髋 kr
-高 ga gk
 鬼 gv
 魂 hp
 魄 po
 魅 mz
 魔 mo
 鱼 yu
-鲁 lu lv
-鲍 bk pi pk
 鲜 xr
 鲤 ly
 鲨 sa
 鳴 my
-鸟 nc qt
-鸡 gb ji qu
 鸣 my
 鸦 ya
 鸭 ya
@@ -2551,18 +2555,14 @@
 鸿 hs
 鹤 he
 鹰 yy
-鹿 lu lv
-麦 ma ml
 麻 ma
 黄 hd
 黎 li
-黑 he hz
 黒 hz
 默 mo
 鼎 dy
 鼓 gu
 鼠 ss
-鼻 bi pi
 齉 nh
 齐 qi
 龄 ly
