@@ -683,68 +683,82 @@ function! s:dbLoad(db, dbFile, ...)
         " Successfully loaded from cache
         call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
     else
-        " Load from source file and create cache
-        call ZFVimIM_DEBUG_profileStart('dbLoadFile')
-        let isYaml = s:isYamlFile(a:dbFile)
-        let lines = readfile(a:dbFile)
-        call ZFVimIM_DEBUG_profileStop()
-        if empty(lines)
-            return
-        endif
-
-        call ZFVimIM_DEBUG_profileStart('dbLoad')
-        if isYaml
-            " Load from YAML format
-            for line in lines
-                let parsed = s:parseYamlLine(line)
-                if !empty(parsed)
-                    let key = parsed[0]
-                    let wordList = parsed[1]
-                    if !exists('dbMap[key[0]]')
-                        let dbMap[key[0]] = []
-                    endif
-                    call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
-                                \   'key' : key,
-                                \   'wordList' : wordList,
-                                \   'countList' : [],
-                                \ }))
-                endif
-            endfor
+        " Try to use Python script for faster loading if available
+        if s:dbLoad_tryUsePythonScript(dbMap, a:dbFile, cacheFile, get(a:, 1, ''))
+            " Successfully loaded using Python script
+            call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
         else
-            " Load from TXT format (backward compatibility)
-            for line in lines
-                if match(line, '\\ ') >= 0
-                    let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
-                    if !empty(wordListTmp)
-                        let key = remove(wordListTmp, 0)
-                    endif
+            " Fallback to VimScript loading
+            " Load from source file and create cache
+            call ZFVimIM_DEBUG_profileStart('dbLoadFile')
+            let isYaml = s:isYamlFile(a:dbFile)
+            let lines = readfile(a:dbFile)
+            call ZFVimIM_DEBUG_profileStop()
+            if empty(lines)
+                return
+            endif
 
-                    let wordList = []
-                    for word in wordListTmp
-                        call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
+            call ZFVimIM_DEBUG_profileStart('dbLoad')
+            if isYaml
+                " Load from YAML format - optimized batch processing
+                let batchSize = 1000
+                let i = 0
+                while i < len(lines)
+                    let endIdx = min([i + batchSize, len(lines)])
+                    let batch = lines[i : endIdx - 1]
+                    for line in batch
+                        let parsed = s:parseYamlLine(line)
+                        if !empty(parsed)
+                            let key = parsed[0]
+                            let wordList = parsed[1]
+                            if !exists('dbMap[key[0]]')
+                                let dbMap[key[0]] = []
+                            endif
+                            call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
+                                        \   'key' : key,
+                                        \   'wordList' : wordList,
+                                        \   'countList' : [],
+                                        \ }))
+                        endif
                     endfor
-                else
-                    let wordList = split(line)
+                    let i = endIdx
+                endwhile
+            else
+                " Load from TXT format (backward compatibility)
+                for line in lines
+                    if match(line, '\\ ') >= 0
+                        let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
+                        if !empty(wordListTmp)
+                            let key = remove(wordListTmp, 0)
+                        endif
+
+                        let wordList = []
+                        for word in wordListTmp
+                            call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
+                        endfor
+                    else
+                        let wordList = split(line)
+                        if !empty(wordList)
+                            let key = remove(wordList, 0)
+                        endif
+                    endif
                     if !empty(wordList)
-                        let key = remove(wordList, 0)
+                        if !exists('dbMap[key[0]]')
+                            let dbMap[key[0]] = []
+                        endif
+                        call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
+                                    \   'key' : key,
+                                    \   'wordList' : wordList,
+                                    \   'countList' : [],
+                                    \ }))
                     endif
-                endif
-                if !empty(wordList)
-                    if !exists('dbMap[key[0]]')
-                        let dbMap[key[0]] = []
-                    endif
-                    call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
-                                \   'key' : key,
-                                \   'wordList' : wordList,
-                                \   'countList' : [],
-                                \ }))
-                endif
-            endfor
+                endfor
+            endif
+            call ZFVimIM_DEBUG_profileStop()
+            
+            " Save to cache for next time
+            call s:dbLoad_saveToCache(dbMap, cacheFile)
         endif
-        call ZFVimIM_DEBUG_profileStop()
-        
-        " Save to cache for next time
-        call s:dbLoad_saveToCache(dbMap, cacheFile)
     endif
 
     let dbCountFile = get(a:, 1, '')
@@ -843,6 +857,97 @@ function! s:dbLoad_tryLoadFromCache(dbMap, dbFile, cacheFile)
         return 1
     catch
         " If anything fails, fall back to loading from source
+        return 0
+    endtry
+endfunction
+
+" Try to use Python script for faster loading
+" Returns 1 if successful, 0 otherwise
+function! s:dbLoad_tryUsePythonScript(dbMap, dbFile, cacheFile, dbCountFile)
+    " Check if Python is available
+    if !executable('python') && !executable('python3')
+        return 0
+    endif
+    
+    " Check if Python script exists
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    else
+        if !isdirectory(pluginDir . '/misc')
+            let altPath = stdpath('config') . '/lazy/ZFVimIM'
+            if isdirectory(altPath . '/misc')
+                let pluginDir = altPath
+            endif
+        endif
+    endif
+    
+    let scriptPath = pluginDir . '/misc/dbLoad.py'
+    if !filereadable(scriptPath)
+        return 0
+    endif
+    
+    " Get cache path for Python script output
+    let cachePath = ZFVimIM_cachePath()
+    let cacheDir = fnamemodify(a:cacheFile, ':h')
+    if !isdirectory(cacheDir)
+        call mkdir(cacheDir, 'p')
+    endif
+    
+    " Use a temporary cache path for Python script output
+    let pythonCachePath = cachePath . '/dbLoadCache'
+    
+    " Determine Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    
+    " Run Python script to generate cache files
+    try
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let dbFileAbs = CygpathFix_absPath(a:dbFile)
+        let dbCountFileAbs = empty(a:dbCountFile) ? '' : CygpathFix_absPath(a:dbCountFile)
+        let cachePathAbs = CygpathFix_absPath(pythonCachePath)
+        
+        " Build command with proper quoting for paths with spaces
+        let cmd = pythonCmd . ' "' . scriptPathAbs . '" "' . dbFileAbs . '" "' . dbCountFileAbs . '" "' . cachePathAbs . '"'
+        let result = system(cmd)
+        
+        if v:shell_error != 0
+            return 0
+        endif
+        
+        " Load from Python-generated cache files (one file per character)
+        call ZFVimIM_DEBUG_profileStart('dbLoadPythonCache')
+        for c_ in range(char2nr('a'), char2nr('z'))
+            let c = nr2char(c_)
+            let cachePartFile = pythonCachePath . '_' . c
+            if filereadable(cachePartFile)
+                let lines = readfile(cachePartFile)
+                if !empty(lines)
+                    if !has_key(a:dbMap, c)
+                        let a:dbMap[c] = []
+                    endif
+                    call extend(a:dbMap[c], lines)
+                endif
+            endif
+        endfor
+        call ZFVimIM_DEBUG_profileStop()
+        
+        " Convert Python cache format to Vim cache format and save
+        call s:dbLoad_saveToCache(a:dbMap, a:cacheFile)
+        
+        " Clean up Python cache files
+        for c_ in range(char2nr('a'), char2nr('z'))
+            let c = nr2char(c_)
+            let cachePartFile = pythonCachePath . '_' . c
+            if filereadable(cachePartFile)
+                call delete(cachePartFile)
+            endif
+        endfor
+        
+        return 1
+    catch
+        " If Python script fails, fall back to VimScript loading
         return 0
     endtry
 endfunction
