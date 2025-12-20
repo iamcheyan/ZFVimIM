@@ -1038,6 +1038,11 @@ function! s:floatEnsure(lines)
     endif
     if !s:float_hl_inited
         silent! highlight default link ZFVimIMFloatLabel PmenuSbar
+        " 设置选中候选的颜色为鲜亮的绿色
+        " 如果要修改颜色，可以在这里修改下面的颜色代码：
+        "   guibg=#00ff00 表示背景色（绿色），guifg=#000000 表示文字颜色（黑色）
+        "   或者使用 ctermbg=2 ctermfg=0 用于终端版本
+        silent! highlight default ZFVimIMFloatSelected guibg=#00ff00 guifg=#000000 ctermbg=2 ctermfg=0
         let s:float_hl_inited = 1
     endif
     if s:float_bufnr <= 0 || !nvim_buf_is_valid(s:float_bufnr)
@@ -1067,9 +1072,12 @@ function! s:floatEnsure(lines)
                 \ }
     if s:floatVisible()
         call nvim_win_set_config(s:float_winid, config)
+        " 设置选中行的颜色（使用上面定义的鲜亮绿色）
+        call nvim_win_set_option(s:float_winid, 'winhl', 'Normal:Pmenu,FloatBorder:Pmenu,CursorLine:ZFVimIMFloatSelected')
     else
         let s:float_winid = nvim_open_win(s:float_bufnr, v:false, config)
-        call nvim_win_set_option(s:float_winid, 'winhl', 'Normal:Pmenu,FloatBorder:Pmenu')
+        " 设置选中行的颜色（使用上面定义的鲜亮绿色）
+        call nvim_win_set_option(s:float_winid, 'winhl', 'Normal:Pmenu,FloatBorder:Pmenu,CursorLine:ZFVimIMFloatSelected')
     endif
 endfunction
 
