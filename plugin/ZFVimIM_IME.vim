@@ -34,18 +34,18 @@ function! s:ZFVimIM_autoLoadDict()
     let dictDir = pluginDir . '/dict'
     
     " Determine default dictionary name
-    " Default dictionary is default_pinyin.yaml
-    " If zfvimim_default_dict_name is set, use it; otherwise use default_pinyin.yaml
+    " Default dictionary is default_pinyin.txt
+    " If zfvimim_default_dict_name is set, use it; otherwise use default_pinyin.txt
     if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
         let defaultDictName = g:zfvimim_default_dict_name
-        " Add .yaml extension if not present
-        if defaultDictName !~ '\.\(yaml\|yml\)$'
-            let defaultDictName = defaultDictName . '.yaml'
+        " Add .txt extension if not present
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
         endif
         let defaultDict = dictDir . '/' . defaultDictName
     else
-        " Default dictionary: default_pinyin.yaml
-        let defaultDict = dictDir . '/default_pinyin.yaml'
+        " Default dictionary: default_pinyin.txt
+        let defaultDict = dictDir . '/default_pinyin.txt'
     endif
     
     " Check if zfvimim_dict_path is set
@@ -1469,18 +1469,18 @@ function! s:removeWord(dbId, key, word)
         endif
         let dictDir = pluginDir . '/dict'
         
-        " Default dictionary is default_pinyin.yaml
+        " Default dictionary is default_pinyin.txt
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
-            if defaultDictName !~ '\.\(yaml\|yml\)$'
-                let defaultDictName = defaultDictName . '.yaml'
+            if defaultDictName !~ '\.txt$'
+                let defaultDictName = defaultDictName . '.txt'
             endif
             let dictPath = dictDir . '/' . defaultDictName
         elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
             let dictPath = expand(g:zfvimim_dict_path)
         else
-            " Default dictionary: default_pinyin.yaml
-            let dictPath = dictDir . '/default_pinyin.yaml'
+            " Default dictionary: default_pinyin.txt
+            let dictPath = dictDir . '/default_pinyin.txt'
         endif
     endif
     
@@ -1826,7 +1826,7 @@ endif
 augroup ZFVimIM_autoCacheUpdate_augroup
     autocmd!
     " Detect when dictionary files are saved
-    autocmd BufWritePost *.yaml,*.yml call s:ZFVimIM_autoCacheUpdate(expand('<afile>:p'))
+    autocmd BufWritePost *.txt call s:ZFVimIM_autoCacheUpdate(expand('<afile>:p'))
 augroup END
 
 " Function to check if file is a dictionary file and regenerate cache
@@ -1893,18 +1893,18 @@ function! ZFVimIM_cleanupDictionary()
         endif
         let dictDir = pluginDir . '/dict'
         
-        " Default dictionary is default_pinyin.yaml
+        " Default dictionary is default_pinyin.txt
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
-            if defaultDictName !~ '\.\(yaml\|yml\)$'
-                let defaultDictName = defaultDictName . '.yaml'
+            if defaultDictName !~ '\.txt$'
+                let defaultDictName = defaultDictName . '.txt'
             endif
             let dictPath = dictDir . '/' . defaultDictName
         elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
             let dictPath = expand(g:zfvimim_dict_path)
         else
-            " Default dictionary: default_pinyin.yaml
-            let dictPath = dictDir . '/default_pinyin.yaml'
+            " Default dictionary: default_pinyin.txt
+            let dictPath = dictDir . '/default_pinyin.txt'
         endif
     endif
     
@@ -2014,8 +2014,8 @@ function! ZFVimIM_showInfo()
             endif
             let dictDir = pluginDir . '/dict'
             let defaultDictName = g:zfvimim_default_dict_name
-            if defaultDictName !~ '\.\(yaml\|yml\)$'
-                let defaultDictName = defaultDictName . '.yaml'
+            if defaultDictName !~ '\.txt$'
+                let defaultDictName = defaultDictName . '.txt'
             endif
             let defaultDict = dictDir . '/' . defaultDictName
             if filereadable(defaultDict)

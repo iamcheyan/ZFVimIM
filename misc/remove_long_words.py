@@ -55,9 +55,9 @@ def remove_long_words(input_file, output_file):
     return processed_lines, removed_count
 
 if __name__ == '__main__':
-    input_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml'
-    output_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml'
-    temp_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml.tmp'
+    input_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt'
+    output_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt'
+    temp_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt.tmp'
     
     print("3文字以上の単語を削除中...")
     processed, removed = remove_long_words(input_file, temp_file)

@@ -12,7 +12,7 @@
 - **智能排序优化**：基于使用频率、单字优先、完全匹配优先等多维度排序算法
 - **自动造词功能**：连续选择多个词后自动组合成新词并添加到词库
 - **翻页功能**：支持候选词列表翻页浏览
-- **本地词库支持**：通过配置文件或全局变量指定词库位置，支持 YAML 格式
+- **本地词库支持**：通过配置文件或全局变量指定词库位置，支持 TXT 格式
 
 ## 快速开始
 
@@ -39,7 +39,7 @@ return {
 }
 ```
 
-插件会自动在 `~/.local/share/nvim/lazy/ZFVimIM/dict/` 目录下查找 `sbzr.userdb.yaml`。
+插件会自动在 `~/.local/share/nvim/lazy/ZFVimIM/dict/` 目录下查找 `sbzr.userdb.txt`。
 
 #### 方法 2：使用自定义词库路径（绝对路径）
 
@@ -48,7 +48,7 @@ return {
 ```lua
 -- ZFVimIM 词库配置
 -- 使用绝对路径指定词库位置
-vim.g.zfvimim_dict_path = "/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml"
+vim.g.zfvimim_dict_path = "/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt"
 
 return {
   {
@@ -62,17 +62,17 @@ return {
 
 - **绝对路径**：
   ```lua
-  vim.g.zfvimim_dict_path = "/Users/username/path/to/dict.yaml"
+  vim.g.zfvimim_dict_path = "/Users/username/path/to/dict.txt"
   ```
 
 - **使用 Neovim 配置目录**：
   ```lua
-  vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
+  vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
   ```
 
 - **使用数据目录**：
   ```lua
-  vim.g.zfvimim_dict_path = vim.fn.stdpath("data") .. "/ZFVimIM/my_dict.yaml"
+  vim.g.zfvimim_dict_path = vim.fn.stdpath("data") .. "/ZFVimIM/my_dict.txt"
   ```
 
 #### 方法 3：在 options.lua 中设置（全局配置）
@@ -81,7 +81,7 @@ return {
 
 ```lua
 -- 词库路径（最高优先级，会覆盖插件配置）
-vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
+vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
 
 -- 或者使用插件目录下的词库
 -- vim.g.zfvimim_default_dict_name = "sbzr.userdb"
@@ -91,20 +91,20 @@ vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.y
 
 1. `vim.g.zfvimim_dict_path`（最高优先级）- 指定完整路径的词库文件
 2. `vim.g.zfvimim_default_dict_name` - 指定插件 `dict/` 目录下的词库文件名
-3. `default_pinyin.yaml`（默认）- 如果以上都未设置，使用内置默认词库
+3. `default_pinyin.txt`（默认）- 如果以上都未设置，使用内置默认词库
 
 ### 3. 词库文件格式
 
-#### YAML 格式（推荐）
+#### TXT 格式（推荐）
 
-```yaml
+```txt
 a: [啊, 阿, 吖]
 ai: [爱, 唉, 埃]
 nihao: [你好, 你号]
 ceshi: [测试, 测时]
 ```
 
-保存为 `.yaml` 或 `.yml` 文件。
+保存为 `.txt` 文件。
 
 ### 4. 使用输入法
 
@@ -125,7 +125,7 @@ ceshi: [测试, 测时]
 
 ```lua
 -- 修改这一行来更改词库路径
-local ZFVIMIM_DICT_PATH = "/path/to/your/dict.yaml"
+local ZFVIMIM_DICT_PATH = "/path/to/your/dict.txt"
 ```
 
 **注意事项**：
@@ -138,7 +138,7 @@ local ZFVIMIM_DICT_PATH = "/path/to/your/dict.yaml"
 
 插件内置的默认词库位于：
 
-- `~/.local/share/nvim/lazy/ZFVimIM/dict/default_pinyin.yaml`
+- `~/.local/share/nvim/lazy/ZFVimIM/dict/default_pinyin.txt`
 
 如果未配置自定义词库，插件会尝试使用默认词库。
 
@@ -146,8 +146,8 @@ local ZFVIMIM_DICT_PATH = "/path/to/your/dict.yaml"
 
 插件目录下可能包含以下词库文件：
 
-- `default_pinyin.yaml` - 默认拼音词库
-- `sbzr.userdb.yaml` - 用户词库（如果存在）
+- `default_pinyin.txt` - 默认拼音词库
+- `sbzr.userdb.txt` - 用户词库（如果存在）
 
 你可以直接使用这些文件，或复制后修改。
 
@@ -159,7 +159,7 @@ local ZFVIMIM_DICT_PATH = "/path/to/your/dict.yaml"
 
 ```lua
 -- 词库路径（最高优先级）
-vim.g.zfvimim_dict_path = "/path/to/dict.yaml"
+vim.g.zfvimim_dict_path = "/path/to/dict.txt"
 
 -- 默认词库名称（如果未设置 zfvimim_dict_path）
 vim.g.zfvimim_default_dict_name = "sbzr.userdb"
@@ -285,7 +285,7 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
   当前词库索引: 1 / 1
 
   👉 词库 #1: sbzr.userdb
-      路径: /Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml
+      路径: /Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt
       最后修改: 2024-12-20 23:06:00
       文件大小: 12.5 MB
       条目数量: 620095
@@ -353,7 +353,7 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
 
 2. **检查文件是否存在**：
    ```vim
-   :lua print(vim.fn.filereadable("/path/to/dict.yaml"))
+   :lua print(vim.fn.filereadable("/path/to/dict.txt"))
    ```
 
 3. **查看错误信息**：
@@ -397,8 +397,8 @@ return {
 ```
 
 **说明**：
-- 插件会自动在 `~/.local/share/nvim/lazy/ZFVimIM/dict/` 目录下查找 `sbzr.userdb.yaml`
-- 如果文件不存在，会自动回退到 `default_pinyin.yaml`
+- 插件会自动在 `~/.local/share/nvim/lazy/ZFVimIM/dict/` 目录下查找 `sbzr.userdb.txt`
+- 如果文件不存在，会自动回退到 `default_pinyin.txt`
 
 #### 示例 2：使用自定义词库路径（绝对路径）
 
@@ -407,7 +407,7 @@ return {
 ```lua
 -- ZFVimIM 词库配置
 -- 使用绝对路径指定词库位置
-vim.g.zfvimim_dict_path = "/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml"
+vim.g.zfvimim_dict_path = "/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt"
 
 return {
   {
@@ -424,7 +424,7 @@ return {
 ```lua
 -- ZFVimIM 词库配置
 -- 使用 Neovim 配置目录下的词库
-vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
+vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
 
 return {
   {
@@ -434,7 +434,7 @@ return {
 }
 ```
 
-**注意**：需要确保 `~/.config/nvim/zfvimim_db/sbzr.userdb.yaml` 文件存在。
+**注意**：需要确保 `~/.config/nvim/zfvimim_db/sbzr.userdb.txt` 文件存在。
 
 #### 示例 4：在 options.lua 中设置全局变量（推荐用于多词库切换）
 
@@ -443,7 +443,7 @@ return {
 ```lua
 -- ZFVimIM 词库配置
 -- 词库路径（最高优先级，会覆盖插件配置）
-vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
+vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
 
 -- 或者使用插件目录下的词库
 -- vim.g.zfvimim_default_dict_name = "sbzr.userdb"
@@ -479,7 +479,7 @@ return {
 vim.g.zfvimim_default_dict_name = "sbzr.userdb"
 
 -- 方法2：使用自定义路径（取消注释以使用）
--- vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
+-- vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.txt"
 
 -- ===== 补全设置 =====
 vim.g.ZFVimIM_matchLimit = 2000      -- 匹配结果的最大数量（默认: 2000）
@@ -509,10 +509,10 @@ return {
 
 ### 创建自定义词库
 
-1. 创建 YAML 格式的词库文件：
+1. 创建 TXT 格式的词库文件：
 
-```yaml
-# my_dict.yaml
+```txt
+# my_dict.txt
 a: [啊, 阿, 吖]
 ai: [爱, 唉, 埃]
 nihao: [你好, 你号]
@@ -522,7 +522,7 @@ wo: [我, 窝, 握]
 2. 在配置文件中指定路径：
 
 ```lua
-local ZFVIMIM_DICT_PATH = "/path/to/my_dict.yaml"
+local ZFVIMIM_DICT_PATH = "/path/to/my_dict.txt"
 ```
 
 3. 重启 Neovim 或运行 `:ZFVimIMReload`
@@ -537,9 +537,9 @@ local ZFVIMIM_DICT_PATH = "/path/to/my_dict.yaml"
 
 **方法 2：直接编辑词库文件**
 
-编辑 YAML 文件，添加新词条：
+编辑 TXT 文件，添加新词条：
 
-```yaml
+```txt
 ceshi: [测试, 测时, 侧视]
 ```
 
