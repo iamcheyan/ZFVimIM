@@ -303,10 +303,10 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
 
 ### 字典编辑
 
-- `:IMAdd [word] [key]` - 添加词到字典
-  - 例: `:IMAdd 测试 ceshi`
+- `:IMAdd [key] [word]` - 添加词到字典（格式：编码 词，与词库格式一致）
+  - 例: `:IMAdd ceshi 测试`
 - `:IMRemove [word] [key]` - 从字典删除词
-  - 例: `:IMRemove 测试 ceshi`
+  - 例: `:IMRemove 测试 ceshi`（可只输入词，删除该词的所有编码）
 - `:IMReorder [word] [key]` - 更改词的顺序
 
 ## 按键映射
@@ -532,7 +532,7 @@ local ZFVIMIM_DICT_PATH = "/path/to/my_dict.txt"
 **方法 1：使用命令**
 
 ```vim
-:IMAdd 测试 ceshi
+:IMAdd ceshi 测试
 ```
 
 **方法 2：直接编辑词库文件**

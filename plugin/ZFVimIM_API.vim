@@ -267,20 +267,241 @@ function! ZFVimIM_wordReorder(db, word, ...)
     call s:dbEditWildKey(a:db, a:word, get(a:, 1, ''), 'reorder')
 endfunction
 
-function! IMAdd(bang, db, word, key)
+function! IMAdd(bang, db, key, word)
     if a:bang == '!'
         let g:ZFVimIM_dbEditApplyFlag += 1
     endif
-    call ZFVimIM_wordAdd(a:db, a:word, a:key)
+    
+    " Initialize database if not already loaded
+    if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
+        " Trigger initialization event to load dictionary
+        if exists('*ZFVimIME_init')
+            call ZFVimIME_init()
+        else
+            " Fallback: manually trigger the autocommand
+            doautocmd User ZFVimIM_event_OnDbInit
+        endif
+    endif
+    
+    " Use current database if db is empty
+    let db = a:db
+    if empty(db)
+        if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
+            echom '[ZFVimIM] Error: No database available. Please start input method first (press ;;)'
+            return
+        endif
+        if !exists('g:ZFVimIM_dbIndex')
+            let g:ZFVimIM_dbIndex = 0
+        endif
+        if g:ZFVimIM_dbIndex < len(g:ZFVimIM_db)
+            let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
+        else
+            " Try first database if index is out of range
+            if len(g:ZFVimIM_db) > 0
+                let db = g:ZFVimIM_db[0]
+            else
+                echom '[ZFVimIM] Error: No database available. Please start input method first (press ;;)'
+                return
+            endif
+        endif
+    endif
+    
+    if empty(db)
+        echom '[ZFVimIM] Error: No database available. Please start input method first (press ;;)'
+        return
+    endif
+    
+    call ZFVimIM_wordAdd(db, a:word, a:key)
     if a:bang == '!'
         let g:ZFVimIM_dbEditApplyFlag -= 1
+    endif
+    
+    " Save to file if path is valid and file exists
+    if !empty(db)
+        let dictPath = ''
+        if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+            let dictPath = db['implData']['dictPath']
+        else
+            " Try to get from autoLoadDict logic
+            let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+            let sfileDir = expand('<sfile>:p:h:h')
+            if isdirectory(sfileDir . '/dict')
+                let pluginDir = sfileDir
+            endif
+            let dictDir = pluginDir . '/dict'
+            
+            " Default dictionary is default_pinyin.txt
+            if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+                let defaultDictName = g:zfvimim_default_dict_name
+                if defaultDictName !~ '\.txt$'
+                    let defaultDictName = defaultDictName . '.txt'
+                endif
+                let dictPath = dictDir . '/' . defaultDictName
+            elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+                let dictPath = expand(g:zfvimim_dict_path)
+            else
+                " Default dictionary: default_pinyin.txt
+                let dictPath = dictDir . '/default_pinyin.txt'
+            endif
+        endif
+        
+        if !empty(dictPath) && filereadable(dictPath)
+            try
+                call ZFVimIM_dbSave(db, dictPath)
+                " Store dictPath in implData for future use
+                if !has_key(db, 'implData')
+                    let db['implData'] = {}
+                endif
+                let db['implData']['dictPath'] = dictPath
+            catch
+                " Silently ignore save errors
+            endtry
+        endif
     endif
 endfunction
 function! IMRemove(bang, db, word, ...)
     if a:bang == '!'
         let g:ZFVimIM_dbEditApplyFlag += 1
     endif
-    call ZFVimIM_wordRemove(a:db, a:word, get(a:, 1, ''))
+    
+    let word = a:word
+    
+    " Get dictionary file path
+    let dictPath = ''
+    if !empty(a:db) && has_key(a:db, 'implData') && has_key(a:db['implData'], 'dictPath')
+        let dictPath = a:db['implData']['dictPath']
+    else
+        " Try to get from configuration
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/dict')
+            let pluginDir = sfileDir
+        endif
+        let dictDir = pluginDir . '/dict'
+        
+        if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+            let defaultDictName = g:zfvimim_default_dict_name
+            if defaultDictName !~ '\.txt$'
+                let defaultDictName = defaultDictName . '.txt'
+            endif
+            let dictPath = dictDir . '/' . defaultDictName
+        elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+            let dictPath = expand(g:zfvimim_dict_path)
+        else
+            let dictPath = dictDir . '/default_pinyin.txt'
+        endif
+    endif
+    
+    if empty(dictPath) || !filereadable(dictPath)
+        echom '[ZFVimIM] Error: Dictionary file not found: ' . dictPath
+        return
+    endif
+    
+    " Use Python to directly replace word with empty string in file
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        echom '[ZFVimIM] Error: Python not found. Cannot edit dictionary file directly.'
+        return
+    endif
+    
+    " Create a simple Python script to replace word in file
+    let tmpScript = ZFVimIM_cachePath() . '/direct_remove_word.py'
+    " Use join() to avoid string escaping issues
+    let scriptLines = [
+                \ '#!/usr/bin/env python3',
+                \ '# -*- coding: utf-8 -*-',
+                \ 'import sys',
+                \ '',
+                \ 'dictFile = sys.argv[1]',
+                \ 'word = sys.argv[2]',
+                \ '',
+                \ '# Read file line by line',
+                \ 'modified = False',
+                \ 'newLines = []',
+                \ '',
+                \ 'with open(dictFile, "r", encoding="utf-8") as f:',
+                \ '    for line in f:',
+                \ '        line = line.rstrip("\n")',
+                \ '        if not line:',
+                \ '            newLines.append("")',
+                \ '            continue',
+                \ '        ',
+                \ '        # Handle escaped spaces: replace \  with placeholder',
+                \ '        lineTmp = line.replace("\\ ", "_ZFVimIM_space_")',
+                \ '        parts = lineTmp.split()',
+                \ '        ',
+                \ '        if len(parts) <= 1:',
+                \ '            # Only key, no words, skip this line',
+                \ '            continue',
+                \ '        ',
+                \ '        # Remove the word if it exists',
+                \ '        newParts = [parts[0]]  # Keep the key',
+                \ '        found = False',
+                \ '        for w in parts[1:]:',
+                \ '            # Restore spaces and compare',
+                \ '            wRestored = w.replace("_ZFVimIM_space_", " ")',
+                \ '            if wRestored != word:',
+                \ '                newParts.append(w)',
+                \ '            else:',
+                \ '                found = True',
+                \ '                modified = True',
+                \ '        ',
+                \ '        # If line still has words after removal, keep it',
+                \ '        if len(newParts) > 1:',
+                \ '            # Reconstruct line with escaped spaces',
+                \ '            newLine = newParts[0]',
+                \ '            for w in newParts[1:]:',
+                \ '                newLine += " " + w.replace(" ", "\\ ")',
+                \ '            newLines.append(newLine)',
+                \ '        # If only key left, skip this line',
+                \ '',
+                \ '# Write back',
+                \ 'if modified:',
+                \ '    with open(dictFile, "w", encoding="utf-8") as f:',
+                \ '        for line in newLines:',
+                \ '            f.write(line + "\n")',
+                \ '    print("OK")',
+                \ 'else:',
+                \ '    print("NOT_FOUND")',
+                \ ]
+    let scriptContent = join(scriptLines, "\n") . "\n"
+    
+    " Write script file using writefile (expects list) or direct write
+    if type(scriptContent) == type([])
+        call writefile(scriptContent, tmpScript)
+    else
+        " If it's a string, convert to list
+        call writefile(split(scriptContent, "\n", 1), tmpScript)
+    endif
+    
+    " Execute Python script
+    let cmd = pythonCmd . ' "' . tmpScript . '" "' . dictPath . '" "' . word . '"'
+    let result = system(cmd)
+    let result = substitute(result, '[\r\n]', '', 'g')
+    
+    " Clean up
+    call delete(tmpScript)
+    
+    if result ==# 'OK'
+        " File modification time will automatically invalidate cache
+        " Just clear in-memory search cache if database is loaded
+        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+            for db in g:ZFVimIM_db
+                if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                    if db['implData']['dictPath'] ==# dictPath
+                        call ZFVimIM_dbSearchCacheClear(db)
+                        break
+                    endif
+                endif
+            endfor
+        endif
+        echom '[ZFVimIM] Word removed from dictionary file: ' . word
+    elseif result ==# 'NOT_FOUND'
+        echom '[ZFVimIM] Word "' . word . '" not found in dictionary'
+    else
+        echom '[ZFVimIM] Error: ' . result
+    endif
+    
     if a:bang == '!'
         let g:ZFVimIM_dbEditApplyFlag -= 1
     endif
@@ -294,8 +515,28 @@ function! IMReorder(bang, db, word, ...)
         let g:ZFVimIM_dbEditApplyFlag -= 1
     endif
 endfunction
-command! -nargs=+ -bang IMAdd :call IMAdd(<q-bang>, {}, <f-args>)
-command! -nargs=+ -bang IMRemove :call IMRemove(<q-bang>, {}, <f-args>)
+" Wrapper functions to parse arguments in format: key word (matching dictionary format)
+function! s:IMAddWrapper(bang, ...)
+    if a:0 < 2
+        echom '[ZFVimIM] Error: Usage: IMAdd <key> <word>'
+        return
+    endif
+    let key = a:1
+    let word = join(a:000[1:], ' ')
+    call IMAdd(a:bang, {}, key, word)
+endfunction
+
+function! s:IMRemoveWrapper(bang, ...)
+    if a:0 < 1
+        echom '[ZFVimIM] Error: Usage: IMRemove <word>'
+        return
+    endif
+    let word = join(a:000, ' ')
+    call IMRemove(a:bang, {}, word)
+endfunction
+
+command! -nargs=+ -bang IMAdd :call s:IMAddWrapper(<q-bang>, <f-args>)
+command! -nargs=+ -bang IMRemove :call s:IMRemoveWrapper(<q-bang>, <f-args>)
 command! -nargs=+ -bang IMReorder :call IMReorder(<q-bang>, {}, <f-args>)
 
 let s:ZFVimIM_dbItemReorderThreshold = 1
@@ -897,8 +1138,56 @@ function! s:dbSave(db, dbFile, ...)
     endfor
     call ZFVimIM_DEBUG_profileStop()
 
+    " Show progress for large dictionaries
+    let totalEntries = len(txtLines)
+    if totalEntries > 10000
+        echom '[ZFVimIM] Preparing to save dictionary (' . totalEntries . ' entries)...'
+        redraw
+    endif
+
     call ZFVimIM_DEBUG_profileStart('dbSaveFile')
-    call writefile(txtLines, a:dbFile)
+    
+    " For very large files, use Python script for faster saving
+    if totalEntries > 50000 && (executable('python') || executable('python3'))
+        let pythonCmd = executable('python3') ? 'python3' : 'python'
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/misc')
+            let pluginDir = sfileDir
+        endif
+        let dbFuncScript = pluginDir . '/misc/dbFunc.py'
+        let cachePath = ZFVimIM_cachePath()
+        
+        if filereadable(dbFuncScript)
+            " Use Python to save - write to temp file first, then use Python
+            let tmpFile = cachePath . '/dbSaveTmp.txt'
+            if writefile(txtLines, tmpFile) == 0
+                " Use Python to move and optimize
+                let cmd = pythonCmd . ' -c "'
+                let cmd .= 'import shutil; '
+                let cmd .= 'shutil.move(\"' . tmpFile . '\", \"' . a:dbFile . '\")'
+                let cmd .= '"'
+                let result = system(cmd)
+                if v:shell_error == 0
+                    echom '[ZFVimIM] Dictionary saved successfully: ' . totalEntries . ' entries (using Python)'
+                    call ZFVimIM_DEBUG_profileStop()
+                    return
+                endif
+            endif
+        endif
+    endif
+    
+    " Fallback to VimScript writefile
+    if totalEntries > 10000
+        echom '[ZFVimIM] Writing to file (this may take a while for large dictionaries)...'
+        redraw
+    endif
+    
+    if writefile(txtLines, a:dbFile) == 0
+        echom '[ZFVimIM] Dictionary saved successfully: ' . totalEntries . ' entries'
+    else
+        echom '[ZFVimIM] Error: Failed to save dictionary file'
+    endif
     call ZFVimIM_DEBUG_profileStop()
     
     " Save count file if needed
@@ -950,22 +1239,62 @@ function! s:dbEditWildKey(db, word, key, action)
         return
     endif
 
+    " Search for all keys containing this word
+    " Optimized: decode items and check wordList directly instead of regex matching
     let keyToApply = []
     let dbMap = db['dbMap']
+    let totalItems = 0
     for c in keys(dbMap)
-        let index = match(dbMap[c], ''
-                    \ . '\(' . g:ZFVimIM_KEY_S_MAIN . '\|' . g:ZFVimIM_KEY_S_SUB . '\)'
-                    \ . a:word
-                    \ . '\(' . g:ZFVimIM_KEY_S_MAIN . '\|' . g:ZFVimIM_KEY_S_SUB . '\|$\)'
-                    \ )
-        if index >= 0
-            call add(keyToApply, ZFVimIM_dbItemDecode(dbMap[c][index])['key'])
+        let totalItems += len(dbMap[c])
+    endfor
+    
+    " For very large dictionaries, warn user and limit search
+    let maxCheck = get(g:, 'ZFVimIM_wildKeySearchLimit', 50000)
+    if totalItems > maxCheck
+        echom '[ZFVimIM] Dictionary is very large (' . totalItems . ' entries). Searching may take time...'
+        echom '[ZFVimIM] Tip: Specify key for instant removal: IMRemove ' . a:word . ' <key>'
+    endif
+    
+    let checkedCount = 0
+    for c in keys(dbMap)
+        for dbItemEncoded in dbMap[c]
+            let checkedCount += 1
+            " Limit search to prevent hanging on very large dictionaries
+            if checkedCount > maxCheck
+                echom '[ZFVimIM] Warning: Search limit reached (' . maxCheck . ' entries).'
+                echom '[ZFVimIM] Please specify key explicitly: IMRemove ' . a:word . ' <key>'
+                if !empty(keyToApply)
+                    echom '[ZFVimIM] Found ' . len(keyToApply) . ' key(s) so far. Continuing with those...'
+                endif
+                break
+            endif
+            
+            let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
+            " Check if word exists in wordList
+            let wordIndex = index(dbItem['wordList'], a:word)
+            if wordIndex >= 0
+                call add(keyToApply, dbItem['key'])
+            endif
+        endfor
+        if checkedCount > maxCheck
+            break
         endif
     endfor
 
+    if empty(keyToApply)
+        echom '[ZFVimIM] Word not found: ' . a:word
+        if checkedCount >= maxCheck
+            echom '[ZFVimIM] Note: Search was limited. Word may exist in unchecked entries.'
+            echom '[ZFVimIM] Try: IMRemove ' . a:word . ' <key> (specify the key)'
+        endif
+        return
+    endif
+
+    echom '[ZFVimIM] Found word in ' . len(keyToApply) . ' key(s). Removing...'
     for key in keyToApply
         call s:dbEdit(db, a:word, key, a:action)
     endfor
+    echom '[ZFVimIM] Removed word from ' . len(keyToApply) . ' key(s).'
 endfunction
 
 function! s:dbEdit(db, word, key, action)
@@ -1051,13 +1380,17 @@ function! s:dbEditMap(db, dbEdit)
                         \ '^' . key . g:ZFVimIM_KEY_S_MAIN,
                         \ 0)
             if index < 0
+                echom '[ZFVimIM] Key not found: ' . key
                 continue
             endif
             let dbItem = ZFVimIM_dbItemDecode(dbMap[key[0]][index])
             let wordIndex = index(dbItem['wordList'], word)
             if wordIndex < 0
+                echom '[ZFVimIM] Word "' . word . '" not found in key "' . key . '"'
+                echom '[ZFVimIM] Available words: ' . join(dbItem['wordList'], ', ')
                 continue
             endif
+            echom '[ZFVimIM] Removing word "' . word . '" from key "' . key . '"'
             call remove(dbItem['wordList'], wordIndex)
             call remove(dbItem['countList'], wordIndex)
             if empty(dbItem['wordList'])
@@ -1066,8 +1399,11 @@ function! s:dbEditMap(db, dbEdit)
                     call remove(dbMap, key[0])
                 endif
                 call ZFVimIM_dbSearchCacheClear(a:db)
+                echom '[ZFVimIM] Key "' . key . '" removed (no words left)'
             else
+                " Update the item in dbMap after removing word
                 let dbMap[key[0]][index] = ZFVimIM_dbItemEncode(dbItem)
+                echom '[ZFVimIM] Word removed. Remaining words: ' . join(dbItem['wordList'], ', ')
             endif
         elseif e['action'] == 'reorder'
             let index = ZFVimIM_dbSearch(a:db, key[0],

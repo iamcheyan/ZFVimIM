@@ -209,21 +209,22 @@ function! ZFVimIME_keymap_add_n()
     if !ZFVimIME_started()
         call ZFVimIME_start()
     endif
-    call feedkeys(":IMAdd\<space>\<c-c>q:kA", 'nt')
+    call feedkeys(":IMAdd ", 'nt')
     return ''
 endfunction
 function! ZFVimIME_keymap_add_i()
     if !ZFVimIME_started()
         call ZFVimIME_start()
     endif
-    call feedkeys("\<esc>:IMAdd\<space>\<c-c>q:kA", 'nt')
+    call feedkeys("\<esc>:IMAdd ", 'nt')
     return ''
 endfunction
 function! ZFVimIME_keymap_add_v()
     if !ZFVimIME_started()
         call ZFVimIME_start()
     endif
-    call feedkeys("\"ty:IMAdd\<space>\<c-r>t\<space>\<c-c>q:kA", 'nt')
+    " In visual mode, use selected text as word
+    call feedkeys("\<esc>\"ty:IMAdd \<c-r>t ", 'nt')
     return ''
 endfunction
 
@@ -231,21 +232,22 @@ function! ZFVimIME_keymap_remove_n()
     if !ZFVimIME_started()
         call ZFVimIME_start()
     endif
-    call feedkeys(":IMRemove\<space>\<c-c>q:kA", 'nt')
+    call feedkeys(":IMRemove ", 'nt')
     return ''
 endfunction
 function! ZFVimIME_keymap_remove_i()
     if !ZFVimIME_started()
         call ZFVimIME_start()
     endif
-    call feedkeys("\<esc>:IMRemove\<space>\<c-c>q:kA", 'nt')
+    call feedkeys("\<esc>:IMRemove ", 'nt')
     return ''
 endfunction
 function! ZFVimIME_keymap_remove_v()
     if !ZFVimIME_started()
         call ZFVimIME_start()
     endif
-    call feedkeys("\"tx:IMRemove\<space>\<c-r>t\<cr>", 'nt')
+    " In visual mode, use selected text as word
+    call feedkeys("\<esc>\"ty:IMRemove \<c-r>t\<cr>", 'nt')
     return ''
 endfunction
 
@@ -1419,6 +1421,35 @@ function! s:OnInsertLeave()
         return
     endif
     call s:resetState()
+    
+    " Save all pending dictionaries in background
+    call s:savePendingDicts()
+endfunction
+
+" Save all pending dictionaries asynchronously
+function! s:savePendingDicts()
+    if empty(s:pendingSaveDicts)
+        return
+    endif
+    
+    " Save each dictionary in background
+    for dictPath in keys(s:pendingSaveDicts)
+        let db = s:pendingSaveDicts[dictPath]
+        if has('timers')
+            " Use timer to save asynchronously (non-blocking)
+            call timer_start(0, {-> s:asyncSaveDict(db, dictPath)})
+        else
+            " Fallback: save synchronously if timers not available
+            try
+                call ZFVimIM_dbSave(db, dictPath)
+            catch
+                " Silently ignore save errors
+            endtry
+        endif
+    endfor
+    
+    " Clear pending saves
+    let s:pendingSaveDicts = {}
 endfunction
 function! s:OnCursorMovedI()
     if get(g:, 'ZFJobTimerFallbackCursorMoving', 0) > 0
@@ -1433,12 +1464,18 @@ function! s:OnCursorMovedI()
 endfunction
 
 
+" Track which databases need to be saved
+if !exists('s:pendingSaveDicts')
+    let s:pendingSaveDicts = {}
+endif
+
 function! s:addWord(dbId, key, word)
     let dbIndex = ZFVimIM_dbIndexForId(a:dbId)
     if dbIndex < 0
         return
     endif
-    call ZFVimIM_wordAdd(g:ZFVimIM_db[dbIndex], a:word, a:key)
+    let db = g:ZFVimIM_db[dbIndex]
+    call ZFVimIM_wordAdd(db, a:word, a:key)
 
     let g:ZFVimIM_event_OnAddWord = {
                 \   'dbId' : a:dbId,
@@ -1446,6 +1483,54 @@ function! s:addWord(dbId, key, word)
                 \   'word' : a:word,
                 \ }
     doautocmd User ZFVimIM_event_OnAddWord
+    
+    " Mark database for saving (don't save immediately)
+    let dictPath = ''
+    if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+        let dictPath = db['implData']['dictPath']
+    else
+        " Try to get from autoLoadDict logic
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/dict')
+            let pluginDir = sfileDir
+        endif
+        let dictDir = pluginDir . '/dict'
+        
+        " Default dictionary is default_pinyin.txt
+        if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+            let defaultDictName = g:zfvimim_default_dict_name
+            if defaultDictName !~ '\.txt$'
+                let defaultDictName = defaultDictName . '.txt'
+            endif
+            let dictPath = dictDir . '/' . defaultDictName
+        elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+            let dictPath = expand(g:zfvimim_dict_path)
+        else
+            " Default dictionary: default_pinyin.txt
+            let dictPath = dictDir . '/default_pinyin.txt'
+        endif
+    endif
+    
+    if !empty(dictPath) && filereadable(dictPath)
+        " Store dictPath in implData for future use
+        if !has_key(db, 'implData')
+            let db['implData'] = {}
+        endif
+        let db['implData']['dictPath'] = dictPath
+        
+        " Mark this database for saving when leaving insert mode
+        let s:pendingSaveDicts[dictPath] = db
+    endif
+endfunction
+
+" Async save function to avoid blocking
+function! s:asyncSaveDict(db, dictPath)
+    try
+        call ZFVimIM_dbSave(a:db, a:dictPath)
+    catch
+        " Silently ignore save errors
+    endtry
 endfunction
 
 function! s:removeWord(dbId, key, word)
@@ -1493,18 +1578,16 @@ function! s:removeWord(dbId, key, word)
         call remove(s:word_frequency, freqKey)
     endif
     
-    " Save to file if path is valid and file exists
+    " Mark database for saving (don't save immediately)
     if !empty(dictPath) && filereadable(dictPath)
-        try
-            call ZFVimIM_dbSave(db, dictPath)
-            " Store dictPath in implData for future use
-            if !has_key(db, 'implData')
-                let db['implData'] = {}
-            endif
-            let db['implData']['dictPath'] = dictPath
-        catch
-            " Silently ignore save errors
-        endtry
+        " Store dictPath in implData for future use
+        if !has_key(db, 'implData')
+            let db['implData'] = {}
+        endif
+        let db['implData']['dictPath'] = dictPath
+        
+        " Mark this database for saving when leaving insert mode
+        let s:pendingSaveDicts[dictPath] = db
     endif
     
     return 1
