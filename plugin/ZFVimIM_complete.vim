@@ -759,8 +759,12 @@ function! s:mergeResult(data, key, option, db)
         
         if len(allMultiChars) >= 2
             let extractedChars = s:extractCommonFirstChar(allMultiChars, a:key, a:db)
+            let pendingExtracted = []
             for extractedChar in extractedChars
-                " Check if this single char already exists to avoid duplicate
+                " Tag extracted result so we can treat it with lower priority later
+                let extractedChar['source'] = 'extracted_common_char'
+
+                " Skip if exact same candidate already exists
                 let alreadyExists = 0
                 for item in ret
                     if item['word'] ==# extractedChar['word'] && item['key'] ==# extractedChar['key']
@@ -769,10 +773,31 @@ function! s:mergeResult(data, key, option, db)
                     endif
                 endfor
                 if !alreadyExists
-                    " Insert at the beginning
-                    call insert(ret, extractedChar, 0)
+                    call add(pendingExtracted, extractedChar)
                 endif
             endfor
+
+            if !empty(pendingExtracted)
+                " Insert extracted chars after real exact-match entries from current db
+                let insertPos = 0
+                while insertPos < len(ret)
+                    let item = ret[insertPos]
+                    if get(item, 'type', '') ==# 'match'
+                                \ && get(item, 'key', '') ==# a:key
+                                \ && get(item, 'dbId', -1) == a:db['dbId']
+                                \ && get(item, 'source', '') !=# 'extracted_common_char'
+                        let insertPos += 1
+                        continue
+                    endif
+                    break
+                endwhile
+
+                let offset = 0
+                for extractedChar in pendingExtracted
+                    call insert(ret, extractedChar, insertPos + offset)
+                    let offset += 1
+                endfor
+            endif
         endif
     endif
 
