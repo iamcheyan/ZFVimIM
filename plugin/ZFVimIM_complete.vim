@@ -529,40 +529,12 @@ function! s:removeDuplicate(ret, exists)
     endwhile
 endfunction
 
-" Sort function to prioritize single characters (单字)
-function! s:sortSingleCharFirst(item1, item2)
-    let len1 = len(a:item1['word'])
-    let len2 = len(a:item2['word'])
-    " Single character (length == 1) has higher priority
-    if len1 == 1 && len2 != 1
-        return -1
-    elseif len1 != 1 && len2 == 1
-        return 1
-    else
-        " Keep original order for same type
-        return 0
-    endif
-endfunction
-
-" Sort list to prioritize single characters
+" Sort list to prioritize shorter words first (单字优先，随后按长度升序)
 function! s:sortSingleCharPriority(ret)
     if len(a:ret) <= 1
         return
     endif
-    " Separate single characters and multi-character words
-    let singleChars = []
-    let multiChars = []
-    for item in a:ret
-        if len(item['word']) == 1
-            call add(singleChars, item)
-        else
-            call add(multiChars, item)
-        endif
-    endfor
-    " Clear and rebuild with single chars first
-    call remove(a:ret, 0, len(a:ret) - 1)
-    call extend(a:ret, singleChars)
-    call extend(a:ret, multiChars)
+    call sort(a:ret, function('s:sortByLengthThenFrequency'))
 endfunction
 
 " Sort function with frequency support
@@ -589,35 +561,24 @@ function! s:sortByFrequency(item1, item2)
     endif
 endfunction
 
-" Sort list by frequency (used words first) within single char priority groups
+" Sort helper: shorter word first, tie-break by frequency
+function! s:sortByLengthThenFrequency(item1, item2)
+    let len1 = len(get(a:item1, 'word', ''))
+    let len2 = len(get(a:item2, 'word', ''))
+    if len1 < len2
+        return -1
+    elseif len1 > len2
+        return 1
+    endif
+    return s:sortByFrequency(a:item1, a:item2)
+endfunction
+
+" Sort list by length (short to long) and then frequency
 function! s:sortByFrequencyPriority(ret)
     if len(a:ret) <= 1
         return
     endif
-    
-    " First separate single chars and multi-chars
-    let singleChars = []
-    let multiChars = []
-    for item in a:ret
-        if len(item['word']) == 1
-            call add(singleChars, item)
-        else
-            call add(multiChars, item)
-        endif
-    endfor
-    
-    " Sort each group by frequency
-    if len(singleChars) > 1
-        call sort(singleChars, function('s:sortByFrequency'))
-    endif
-    if len(multiChars) > 1
-        call sort(multiChars, function('s:sortByFrequency'))
-    endif
-    
-    " Rebuild with single chars first, sorted by frequency
-    call remove(a:ret, 0, len(a:ret) - 1)
-    call extend(a:ret, singleChars)
-    call extend(a:ret, multiChars)
+    call sort(a:ret, function('s:sortByLengthThenFrequency'))
 endfunction
 " data: {
 "   'sentence' : [],
