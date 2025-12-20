@@ -1001,6 +1001,7 @@ let s:float_index = 0
 let s:float_items = []
 let s:float_ns = -1
 let s:float_label_widths = []
+let s:float_orig_key_ranges = []
 let s:float_hl_inited = 0
 let s:pending_left_len = 0
 
@@ -1017,6 +1018,7 @@ function! s:floatCloseNow(...)
     let s:float_index = 0
     let s:float_items = []
     let s:float_label_widths = []
+    let s:float_orig_key_ranges = []
 endfunction
 
 function! s:floatClose()
@@ -1038,6 +1040,7 @@ function! s:floatEnsure(lines)
     endif
     if !s:float_hl_inited
         silent! highlight default link ZFVimIMFloatLabel PmenuSbar
+        silent! highlight default link ZFVimIMFloatOrigKey Question
         " 设置选中候选的颜色为鲜亮的绿色
         " 如果要修改颜色，可以在这里修改下面的颜色代码：
         "   guibg=#00ff00 表示背景色（绿色），guifg=#000000 表示文字颜色（黑色）
@@ -1089,6 +1092,7 @@ function! s:floatRender(list)
     let label = 1
     let lines = []
     let labelWidths = []
+    let origRanges = []
     for item in a:list
         if get(g:, 'ZFVimIM_freeScroll', 0)
             let labelstring = printf('%2d', label == 10 ? 0 : label)
@@ -1103,9 +1107,20 @@ function! s:floatRender(list)
         endif
         let left = strpart(s:keyboard, item['len'])
         let labelcell = ' ' . labelstring . ' '
-        let content = ' ' . item['word'] . left . ' '
+        let wordPart = ' ' . item['word'] . left . ' '
+        let content = wordPart
+        let origRange = [-1, -1, -1]
+        let origKey = get(item, 'key', '')
+        if !empty(origKey)
+            let origText = '[' . origKey . ']'
+            let origStart = strlen(labelcell . content)
+            let origEnd = origStart + strlen(origText)
+            let content .= origText . ' '
+            let origRange = [len(lines), origStart, origEnd]
+        endif
         call add(labelWidths, strdisplaywidth(labelcell))
         call add(lines, labelcell . content)
+        call add(origRanges, origRange)
         let label += 1
     endfor
     call s:floatEnsure(lines)
@@ -1114,6 +1129,7 @@ function! s:floatRender(list)
     call nvim_buf_set_option(s:float_bufnr, 'modifiable', v:false)
     let s:float_items = a:list
     let s:float_label_widths = labelWidths
+    let s:float_orig_key_ranges = origRanges
     if s:float_index >= len(lines)
         let s:float_index = 0
     endif
@@ -1126,6 +1142,11 @@ function! s:floatRender(list)
         endif
         let i += 1
     endwhile
+    for range in s:float_orig_key_ranges
+        if range[0] >= 0 && range[1] >= 0
+            call nvim_buf_add_highlight(s:float_bufnr, s:float_ns, 'ZFVimIMFloatOrigKey', range[0], range[1], range[2])
+        endif
+    endfor
     if s:float_index >= 0 && s:float_index < len(lines)
         " ウィンドウのCursorLineを設定して行全体の背景色を変更（深い色、行全体の幅）
         if s:floatVisible()
@@ -1155,6 +1176,11 @@ function! s:floatMove(delta)
         endif
         let i += 1
     endwhile
+    for range in s:float_orig_key_ranges
+        if range[0] >= 0 && range[1] >= 0
+            call nvim_buf_add_highlight(s:float_bufnr, s:float_ns, 'ZFVimIMFloatOrigKey', range[0], range[1], range[2])
+        endif
+    endfor
     if s:float_index >= 0 && s:float_index < len(s:float_label_widths)
         " ウィンドウのCursorLineを設定して行全体の背景色を変更（深い色、行全体の幅）
         if s:floatVisible()
