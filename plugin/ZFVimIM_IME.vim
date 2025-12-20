@@ -1791,3 +1791,105 @@ function! s:ZFVimIM_autoCacheUpdate(filePath)
         call ZFVimIM_cacheRegenerateForFile(a:filePath)
     endif
 endfunction
+
+" ============================================================
+" Cleanup dictionary manually
+function! ZFVimIM_cleanupDictionary()
+    " Check if Python is available
+    if !executable('python') && !executable('python3')
+        echom 'ZFVimIM: Python not found, cannot cleanup dictionary'
+        return
+    endif
+    
+    " Get current database
+    if g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
+        echom 'ZFVimIM: No database loaded'
+        return
+    endif
+    let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
+    
+    " Get dictionary file path
+    let dictPath = ''
+    if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+        let dictPath = db['implData']['dictPath']
+    else
+        " Try to get from autoLoadDict logic
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/dict')
+            let pluginDir = sfileDir
+        endif
+        let dictDir = pluginDir . '/dict'
+        
+        if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+            let defaultDictName = g:zfvimim_default_dict_name
+            if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
+                let defaultDictName = defaultDictName . '.yaml'
+            endif
+            let dictPath = dictDir . '/' . defaultDictName
+            if !filereadable(dictPath) && defaultDictName =~ '\.yaml$'
+                let dictPath = dictDir . '/' . substitute(defaultDictName, '\.yaml$', '.txt', '')
+            endif
+        elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+            let dictPath = expand(g:zfvimim_dict_path)
+        else
+            let dictPath = dictDir . '/default_pinyin.yaml'
+            if !filereadable(dictPath)
+                let dictPath = dictDir . '/default_pinyin.txt'
+            endif
+        endif
+    endif
+    
+    " Skip if dictionary file doesn't exist or is not readable
+    if empty(dictPath) || !filereadable(dictPath)
+        echom 'ZFVimIM: Dictionary file not found: ' . dictPath
+        return
+    endif
+    
+    " Get script path
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict') && isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    else
+        if !isdirectory(pluginDir . '/misc')
+            let altPath = stdpath('config') . '/lazy/ZFVimIM'
+            if isdirectory(altPath . '/misc')
+                let pluginDir = altPath
+            endif
+        endif
+    endif
+    
+    let scriptPath = pluginDir . '/misc/dbCleanup.py'
+    if !filereadable(scriptPath)
+        echom 'ZFVimIM: Cleanup script not found: ' . scriptPath
+        return
+    endif
+    
+    " Get cache path
+    let cachePath = ZFVimIM_cachePath()
+    
+    " Determine Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    
+    " Run cleanup script synchronously
+    try
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let dictPathAbs = CygpathFix_absPath(dictPath)
+        let cachePathAbs = CygpathFix_absPath(cachePath)
+        
+        echom 'ZFVimIM: Cleaning up dictionary: ' . dictPathAbs
+        let cmdList = [pythonCmd, scriptPathAbs, dictPathAbs, cachePathAbs]
+        let result = system(join(cmdList, ' '))
+        if v:shell_error == 0
+            echom 'ZFVimIM: Dictionary cleanup completed successfully'
+        else
+            echom 'ZFVimIM: Cleanup failed: ' . result
+        endif
+    catch /.*/
+        echom 'ZFVimIM: Error running cleanup: ' . v:exception
+    endtry
+endfunction
+
+" Command to manually cleanup dictionary
+command! -nargs=0 ZFVimIMCleanup call ZFVimIM_cleanupDictionary()
