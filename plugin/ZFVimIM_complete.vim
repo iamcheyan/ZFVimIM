@@ -452,10 +452,15 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     " Extract common first character from multi-chars - DISABLED in intermediate stages
     " Only extract in mergeResult to avoid duplicate extraction
     
+    " Sort multi-chars by length first (shortest first), then by frequency
+    if len(multiChars) > 1
+        call sort(multiChars, function('s:sortByLengthAndFrequency'))
+    endif
+    
     " Add all single characters first (no limit)
     call extend(a:ret, singleChars)
     
-    " Then add multi-character words up to limit
+    " Then add multi-character words up to limit (already sorted by length)
     let remainingLimit = matchLimit - len(singleChars)
     if remainingLimit > 0
         let wordIndex = 0
@@ -554,10 +559,15 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
         " Extract common first character - DISABLED in intermediate stages
         " Only extract in mergeResult to avoid duplicate extraction
         
+        " Sort multi-chars by length first (shortest first), then by frequency
+        if len(multiChars) > 1
+            call sort(multiChars, function('s:sortByLengthAndFrequency'))
+        endif
+        
         " Add all single characters first (no limit)
         call extend(ret, singleChars)
         
-        " Then add multi-character words up to remaining limit
+        " Then add multi-character words up to remaining limit (already sorted by length)
         let remainingLimit = matchLimit - len(singleChars)
         if remainingLimit > 0
             let wordIndex = 0
@@ -669,6 +679,7 @@ function! s:removeDuplicate(ret, exists)
 endfunction
 
 " Sort list to prioritize single characters
+" Multi-chars are sorted by length first (shortest first), then by frequency
 function! s:sortSingleCharPriority(ret)
     if len(a:ret) <= 1
         return
@@ -677,13 +688,19 @@ function! s:sortSingleCharPriority(ret)
     let singleChars = []
     let multiChars = []
     for item in a:ret
-        if len(item['word']) == 1
+        if strchars(item['word']) == 1
             call add(singleChars, item)
         else
             call add(multiChars, item)
         endif
     endfor
-    " Clear and rebuild with single chars first
+    
+    " Sort multi-chars by length first (shortest first), then by frequency
+    if len(multiChars) > 1
+        call sort(multiChars, function('s:sortByLengthAndFrequency'))
+    endif
+    
+    " Clear and rebuild with single chars first, then multi-chars sorted by length
     call remove(a:ret, 0, len(a:ret) - 1)
     call extend(a:ret, singleChars)
     call extend(a:ret, multiChars)
@@ -713,7 +730,24 @@ function! s:sortByFrequency(item1, item2)
     endif
 endfunction
 
+" Sort function: first by word length (shortest first), then by frequency
+function! s:sortByLengthAndFrequency(item1, item2)
+    let len1 = strchars(get(a:item1, 'word', ''))
+    let len2 = strchars(get(a:item2, 'word', ''))
+    
+    " First sort by length (shorter first)
+    if len1 < len2
+        return -1
+    elseif len1 > len2
+        return 1
+    endif
+    
+    " If same length, sort by frequency
+    return s:sortByFrequency(a:item1, a:item2)
+endfunction
+
 " Sort list by frequency (used words first) within single char priority groups
+" Multi-chars are sorted by length first (shortest first), then by frequency
 function! s:sortByFrequencyPriority(ret)
     if len(a:ret) <= 1
         return
@@ -723,22 +757,24 @@ function! s:sortByFrequencyPriority(ret)
     let singleChars = []
     let multiChars = []
     for item in a:ret
-        if len(item['word']) == 1
+        if strchars(item['word']) == 1
             call add(singleChars, item)
         else
             call add(multiChars, item)
         endif
     endfor
     
-    " Sort each group by frequency
+    " Sort single chars by frequency
     if len(singleChars) > 1
         call sort(singleChars, function('s:sortByFrequency'))
     endif
+    
+    " Sort multi-chars by length first (shortest first), then by frequency
     if len(multiChars) > 1
-        call sort(multiChars, function('s:sortByFrequency'))
+        call sort(multiChars, function('s:sortByLengthAndFrequency'))
     endif
     
-    " Rebuild with single chars first, sorted by frequency
+    " Rebuild with single chars first, then multi-chars sorted by length and frequency
     call remove(a:ret, 0, len(a:ret) - 1)
     call extend(a:ret, singleChars)
     call extend(a:ret, multiChars)
@@ -753,8 +789,9 @@ function! s:sortExactMatches(ret)
 endfunction
 
 function! s:compareExactMatch(item1, item2)
-    let len1 = len(get(a:item1, 'word', ''))
-    let len2 = len(get(a:item2, 'word', ''))
+    " Use strchars() to count characters correctly (not bytes)
+    let len1 = strchars(get(a:item1, 'word', ''))
+    let len2 = strchars(get(a:item2, 'word', ''))
     if len1 < len2
         return -1
     elseif len1 > len2
