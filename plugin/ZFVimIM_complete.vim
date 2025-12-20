@@ -41,48 +41,66 @@ function! s:complete_match_alias(ret, key, db, matchLimit)
     if len(a:key) != 4 || a:matchLimit <= 0
         return 0
     endif
-    let bucket = get(a:db['dbMap'], a:key[0], [])
-    if empty(bucket)
-        return 0
+    if !exists('s:alias_cache')
+        let s:alias_cache = {}
+        let s:alias_cache_keys = []
+    endif
+    if has_key(s:alias_cache, a:key)
+        let cache = s:alias_cache[a:key]
+    else
+        let cache = s:buildAliasMatches(a:key, a:db)
+        let s:alias_cache[a:key] = cache
+        call add(s:alias_cache_keys, a:key)
+        if len(s:alias_cache_keys) > 200
+            let removeCount = len(s:alias_cache_keys) - 200
+            if removeCount > 0
+                let toRemove = remove(s:alias_cache_keys, 0, removeCount - 1)
+                for oldKey in toRemove
+                    call remove(s:alias_cache, oldKey)
+                endfor
+            endif
+        endif
     endif
     let added = 0
-    for dbItemEncoded in bucket
+    for entry in cache
+        call add(a:ret, {
+                    \   'dbId' : a:db['dbId'],
+                    \   'len' : len(a:key),
+                    \   'key' : entry['key'],
+                    \   'word' : entry['word'],
+                    \   'type' : 'match',
+                    \ })
+        let added += 1
         if added >= a:matchLimit
             break
         endif
+    endfor
+    return added
+endfunction
+
+function! s:buildAliasMatches(aliasKey, db)
+    let bucket = get(a:db['dbMap'], a:aliasKey[0], [])
+    if empty(bucket)
+        return []
+    endif
+    let matches = []
+    for dbItemEncoded in bucket
         let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
         let dbItemKey = dbItem['key']
         for word in dbItem['wordList']
             let wordLen = strchars(word)
             if wordLen == 3
-                if s:aliasMatchThree(dbItemKey, a:key)
-                    call add(a:ret, {
-                                \   'dbId' : a:db['dbId'],
-                                \   'len' : len(a:key),
-                                \   'key' : dbItemKey,
-                                \   'word' : word,
-                                \   'type' : 'match',
-                                \ })
-                    let added += 1
+                if s:aliasMatchThree(dbItemKey, a:aliasKey)
+                    call add(matches, {'key': dbItemKey, 'word': word})
                 endif
             elseif wordLen >= 4
-                if s:aliasMatchLong(dbItemKey, a:key, wordLen)
-                    call add(a:ret, {
-                                \   'dbId' : a:db['dbId'],
-                                \   'len' : len(a:key),
-                                \   'key' : dbItemKey,
-                                \   'word' : word,
-                                \   'type' : 'match',
-                                \ })
-                    let added += 1
+                if s:aliasMatchLong(dbItemKey, a:aliasKey, wordLen)
+                    call add(matches, {'key': dbItemKey, 'word': word})
                 endif
-            endif
-            if added >= a:matchLimit
-                break
             endif
         endfor
     endfor
-    return added
+    return matches
 endfunction
 
 function! s:aliasMatchThree(fullKey, aliasKey)
