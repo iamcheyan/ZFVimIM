@@ -39,11 +39,11 @@ endfunction
 
 function! s:complete_match_alias(ret, key, db, matchLimit)
     if len(a:key) != 4 || a:matchLimit <= 0
-        return
+        return 0
     endif
     let bucket = get(a:db['dbMap'], a:key[0], [])
     if empty(bucket)
-        return
+        return 0
     endif
     let added = 0
     for dbItemEncoded in bucket
@@ -82,6 +82,7 @@ function! s:complete_match_alias(ret, key, db, matchLimit)
             endif
         endfor
     endfor
+    return added
 endfunction
 
 function! s:aliasMatchThree(fullKey, aliasKey)
@@ -453,6 +454,7 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
     let keyLen = len(a:key)
     let p = keyLen
     let subMatchLongestFlag = 1
+    let aliasTried = 0
     while p > 0 && matchLimit > 0
         if keyLen == 2 && p < keyLen
             break
@@ -462,6 +464,13 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
                     \ '^' . subKey,
                     \ 0)
         if index < 0
+            if p == keyLen && !aliasTried
+                let aliasAdded = s:complete_match_alias(a:matchRet, a:key, a:db, matchLimit)
+                let aliasTried = 1
+                if aliasAdded > 0
+                    return
+                endif
+            endif
             let p -= 1
             continue
         endif
