@@ -529,12 +529,25 @@ function! s:removeDuplicate(ret, exists)
     endwhile
 endfunction
 
-" Sort list to prioritize shorter words first (单字优先，随后按长度升序)
+" Sort list to prioritize single characters
 function! s:sortSingleCharPriority(ret)
     if len(a:ret) <= 1
         return
     endif
-    call sort(a:ret, function('s:sortByLengthThenFrequency'))
+    " Separate single characters and multi-character words
+    let singleChars = []
+    let multiChars = []
+    for item in a:ret
+        if len(item['word']) == 1
+            call add(singleChars, item)
+        else
+            call add(multiChars, item)
+        endif
+    endfor
+    " Clear and rebuild with single chars first
+    call remove(a:ret, 0, len(a:ret) - 1)
+    call extend(a:ret, singleChars)
+    call extend(a:ret, multiChars)
 endfunction
 
 " Sort function with frequency support
@@ -561,8 +574,46 @@ function! s:sortByFrequency(item1, item2)
     endif
 endfunction
 
-" Sort helper: shorter word first, tie-break by frequency
-function! s:sortByLengthThenFrequency(item1, item2)
+" Sort list by frequency (used words first) within single char priority groups
+function! s:sortByFrequencyPriority(ret)
+    if len(a:ret) <= 1
+        return
+    endif
+    
+    " First separate single chars and multi-chars
+    let singleChars = []
+    let multiChars = []
+    for item in a:ret
+        if len(item['word']) == 1
+            call add(singleChars, item)
+        else
+            call add(multiChars, item)
+        endif
+    endfor
+    
+    " Sort each group by frequency
+    if len(singleChars) > 1
+        call sort(singleChars, function('s:sortByFrequency'))
+    endif
+    if len(multiChars) > 1
+        call sort(multiChars, function('s:sortByFrequency'))
+    endif
+    
+    " Rebuild with single chars first, sorted by frequency
+    call remove(a:ret, 0, len(a:ret) - 1)
+    call extend(a:ret, singleChars)
+    call extend(a:ret, multiChars)
+endfunction
+
+" Sort exact matches by length first, then frequency
+function! s:sortExactMatches(ret)
+    if len(a:ret) <= 1
+        return
+    endif
+    call sort(a:ret, function('s:compareExactMatch'))
+endfunction
+
+function! s:compareExactMatch(item1, item2)
     let len1 = len(get(a:item1, 'word', ''))
     let len2 = len(get(a:item2, 'word', ''))
     if len1 < len2
@@ -573,12 +624,27 @@ function! s:sortByLengthThenFrequency(item1, item2)
     return s:sortByFrequency(a:item1, a:item2)
 endfunction
 
-" Sort list by length (short to long) and then frequency
-function! s:sortByFrequencyPriority(ret)
-    if len(a:ret) <= 1
+function! s:sortMatchResults(matchRet, inputKey)
+    if len(a:matchRet) <= 1
         return
     endif
-    call sort(a:ret, function('s:sortByLengthThenFrequency'))
+
+    let exactMatches = []
+    let otherMatches = []
+    for item in a:matchRet
+        if get(item, 'key', '') ==# a:inputKey
+            call add(exactMatches, item)
+        else
+            call add(otherMatches, item)
+        endif
+    endfor
+
+    call s:sortExactMatches(exactMatches)
+    call s:sortByFrequencyPriority(otherMatches)
+
+    call remove(a:matchRet, 0, len(a:matchRet) - 1)
+    call extend(a:matchRet, exactMatches)
+    call extend(a:matchRet, otherMatches)
 endfunction
 " data: {
 "   'sentence' : [],
@@ -627,8 +693,8 @@ function! s:mergeResult(data, key, option, db)
         call extend(tailRet, remove(predictRet, g:ZFVimIM_predictLimitWhenMatch, len(predictRet) - 1))
     endif
 
-    " Sort each list to prioritize single characters, then by frequency
-    call s:sortByFrequencyPriority(matchRet)
+    " Sort match list with exact matches prioritized and length-aware ordering
+    call s:sortMatchResults(matchRet, a:key)
     call s:sortByFrequencyPriority(sentenceRet)
     call s:sortByFrequencyPriority(subMatchLongestRet)
     call s:sortByFrequencyPriority(subMatchRet)
