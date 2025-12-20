@@ -1626,15 +1626,33 @@ function! ZFVimIME_removeCurrentWord()
         call IMRemove('', {}, word)
         
         " Also remove from memory database if we have the key
+        " Try to remove from all databases, not just current one
         let removedFromMemory = 0
-        if !empty(db) && !empty(key)
-            try
-                call ZFVimIM_wordRemove(db, word, key)
-                call ZFVimIM_dbSearchCacheClear(db)
-                let removedFromMemory = 1
-            catch
-                " Ignore errors
-            endtry
+        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db) && !empty(key)
+            for dbItem in g:ZFVimIM_db
+                try
+                    " Try to remove from this database
+                    call ZFVimIM_wordRemove(dbItem, word, key)
+                    call ZFVimIM_dbSearchCacheClear(dbItem)
+                    let removedFromMemory = 1
+                catch
+                    " Ignore errors, continue to next database
+                endtry
+            endfor
+        endif
+        
+        " If we don't have key, try to remove from all databases without key
+        if empty(key) && exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+            for dbItem in g:ZFVimIM_db
+                try
+                    " Try to remove without key (searches all keys)
+                    call ZFVimIM_wordRemove(dbItem, word, '')
+                    call ZFVimIM_dbSearchCacheClear(dbItem)
+                    let removedFromMemory = 1
+                catch
+                    " Ignore errors
+                endtry
+            endfor
         endif
         
         " Clear cache and refresh candidates
@@ -1665,26 +1683,49 @@ function! s:refreshAfterRemove(dictPath, db, removedFromMemory)
             call ZFVimIM_cacheClearForFile(a:dictPath)
         endif
         
-        " Clear search cache for the database
-        if !empty(a:db)
-            call ZFVimIM_dbSearchCacheClear(a:db)
+        " Clear search cache for ALL databases (not just current one)
+        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+            for dbItem in g:ZFVimIM_db
+                call ZFVimIM_dbSearchCacheClear(dbItem)
+            endfor
         endif
         
-        " Only reload dictionary file if we couldn't remove from memory
-        " This avoids slow reload for large dictionaries (62万行)
-        if !a:removedFromMemory && !empty(a:dictPath) && filereadable(a:dictPath) && !empty(a:db)
+        " Clear alias cache if exists (used for abbreviation matching)
+        if exists('s:alias_cache')
+            let s:alias_cache = {}
+            let s:alias_cache_keys = []
+        endif
+        
+        " Always reload dictionary file to ensure memory is in sync with file
+        " Even if removed from memory, file was modified, so reload to be safe
+        if !empty(a:dictPath) && filereadable(a:dictPath) && !empty(a:db)
             " Reload dictionary file (this updates dbMap in memory)
             " Use async reload to avoid blocking
             if has('timers')
+                " Reload first, then update candidates after reload completes
                 call timer_start(0, {-> s:asyncReloadDict(a:db, a:dictPath)})
             else
+                " Synchronous reload
                 call ZFVimIM_dbLoad(a:db, a:dictPath)
+                " Update candidates after reload
+                if mode() == 'i' && s:floatVisible()
+                    " Clear existing match list to force regeneration
+                    let s:match_list = []
+                    let s:page = 0
+                    let s:pageup_pagedown = 0
+                    call s:updateCandidates()
+                endif
             endif
-        endif
-        
-        " Update candidates if still in insert mode and float is visible
-        if mode() == 'i' && s:floatVisible()
-            call s:updateCandidates()
+        else
+            " If no file path, just refresh candidates from current memory state
+            if mode() == 'i' && s:floatVisible()
+                " Clear existing match list to force regeneration
+                let s:match_list = []
+                let s:page = 0
+                let s:pageup_pagedown = 0
+                " Force update candidates (this will regenerate from updated database)
+                call s:updateCandidates()
+            endif
         endif
     catch
         " Ignore errors
@@ -1694,9 +1735,30 @@ endfunction
 " Async reload dictionary to avoid blocking
 function! s:asyncReloadDict(db, dictPath)
     try
+        " Reload dictionary file
         call ZFVimIM_dbLoad(a:db, a:dictPath)
-        " Update candidates after reload
+        
+        " Update candidates after reload completes
+        " Use another timer to ensure reload is complete
+        if has('timers')
+            call timer_start(50, {-> s:updateCandidatesAfterReload()})
+        else
+            call s:updateCandidatesAfterReload()
+        endif
+    catch
+        " Ignore errors
+    endtry
+endfunction
+
+" Update candidates after dictionary reload
+function! s:updateCandidatesAfterReload()
+    try
         if mode() == 'i' && s:floatVisible()
+            " Clear existing match list to force regeneration
+            let s:match_list = []
+            let s:page = 0
+            let s:pageup_pagedown = 0
+            " Force update candidates (this will regenerate from reloaded database)
             call s:updateCandidates()
         endif
     catch
