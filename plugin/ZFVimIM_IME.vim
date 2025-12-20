@@ -34,7 +34,8 @@ function! s:ZFVimIM_autoLoadDict()
     let dictDir = pluginDir . '/dict'
     
     " Determine default dictionary name
-    " If zfvimim_default_dict_name is set, use it; otherwise use default_pinyin
+    " Default dictionary is default_pinyin.yaml
+    " If zfvimim_default_dict_name is set, use it; otherwise use default_pinyin.yaml
     if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
         let defaultDictName = g:zfvimim_default_dict_name
         " Add .yaml extension if not present
@@ -43,11 +44,8 @@ function! s:ZFVimIM_autoLoadDict()
         endif
         let defaultDict = dictDir . '/' . defaultDictName
     else
+        " Default dictionary: default_pinyin.yaml
         let defaultDict = dictDir . '/default_pinyin.yaml'
-        " Fallback to .txt if .yaml doesn't exist
-        if !filereadable(defaultDict)
-            let defaultDict = dictDir . '/default_pinyin.txt'
-        endif
     endif
     
     " Check if zfvimim_dict_path is set
@@ -1461,24 +1459,18 @@ function! s:removeWord(dbId, key, word)
         endif
         let dictDir = pluginDir . '/dict'
         
+        " Default dictionary is default_pinyin.yaml
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
             if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
                 let defaultDictName = defaultDictName . '.yaml'
             endif
             let dictPath = dictDir . '/' . defaultDictName
-            " Fallback to .txt if .yaml doesn't exist
-            if !filereadable(dictPath) && defaultDictName =~ '\.yaml$'
-                let dictPath = dictDir . '/' . substitute(defaultDictName, '\.yaml$', '.txt', '')
-            endif
         elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
             let dictPath = expand(g:zfvimim_dict_path)
         else
+            " Default dictionary: default_pinyin.yaml
             let dictPath = dictDir . '/default_pinyin.yaml'
-            " Fallback to .txt if .yaml doesn't exist
-            if !filereadable(dictPath)
-                let dictPath = dictDir . '/default_pinyin.txt'
-            endif
         endif
     endif
     
@@ -1901,22 +1893,18 @@ function! ZFVimIM_cleanupDictionary()
         endif
         let dictDir = pluginDir . '/dict'
         
+        " Default dictionary is default_pinyin.yaml
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
             if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
                 let defaultDictName = defaultDictName . '.yaml'
             endif
             let dictPath = dictDir . '/' . defaultDictName
-            if !filereadable(dictPath) && defaultDictName =~ '\.yaml$'
-                let dictPath = dictDir . '/' . substitute(defaultDictName, '\.yaml$', '.txt', '')
-            endif
         elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
             let dictPath = expand(g:zfvimim_dict_path)
         else
+            " Default dictionary: default_pinyin.yaml
             let dictPath = dictDir . '/default_pinyin.yaml'
-            if !filereadable(dictPath)
-                let dictPath = dictDir . '/default_pinyin.txt'
-            endif
         endif
     endif
     

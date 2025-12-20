@@ -1,20 +1,18 @@
-# 升级 ZFVimIM 说明
+# ZFVimIM - Neovim 中文输入法插件
 
 ## 关于本项目
 
 本项目基于 [ZSaberLv0/ZFVimIM](https://github.com/ZSaberLv0/ZFVimIM)，由于原项目已停止维护，无法在新版本的 Neovim 中使用，本版本已适配 Neovim 0.11（测试版本：v0.11.5）。
 
-做了以下最小化改动，便于与本地词库配合：
+### 主要改进
 
-- 通过 `vim.g.zfvimim_dict_path` 指定词库位置（默认读取 `~/.dotfiles/config/nvim/zfvimim_db/sbzr.userdb.yaml`）。
-- 词库作为本地文件使用 `local` 模式注册，不依赖 GitHub 同步。
-- 其它 Vim 脚本保持与 upstream 一致，便于后续合并更新。
-
-## Neovim 0.11 适配说明
-
-- **接口更新**：适配 Neovim 0.11 的新 API 接口，确保兼容性
-- **性能优化**：利用 Neovim 0.11 的性能改进，提升输入法响应速度
-- **功能增强**：支持 Neovim 0.11 的新特性，改善用户体验
+- **Neovim 0.11 适配**：完全适配 Neovim 0.11 的新 API 接口
+- **浮动窗口绘制**：使用 Neovim 原生浮动窗口（floating window）显示候选词，提供更好的视觉体验
+- **缩写编码支持**：支持 4 字符缩写编码，快速输入长词（如 3 字词使用首、二、尾字符拼音）
+- **智能排序优化**：基于使用频率、单字优先、完全匹配优先等多维度排序算法
+- **自动造词功能**：连续选择多个词后自动组合成新词并添加到词库
+- **翻页功能**：支持候选词列表翻页浏览
+- **本地词库支持**：通过 `vim.g.zfvimim_dict_path` 指定词库位置，支持 YAML 和 TXT 格式
 
 ## 预览效果
 
@@ -30,344 +28,489 @@
 
 ### 默认词库
 
-为防止用户第一次使用时没有词库，本仓库已包含一个简单的默认拼音词库：
-- 位置：`~/.local/share/nvim/lazy/ZFVimIM/dict/default_pinyin.yaml`
+插件内置默认词库为 `default_pinyin.yaml`，位于插件目录的 `dict/` 文件夹下：
+
+- 默认路径：`~/.local/share/nvim/lazy/ZFVimIM/dict/default_pinyin.yaml`
 - 包含常用汉字和词汇，可直接使用
 
-**自动加载机制**：
-- 如果未设置 `vim.g.zfvimim_dict_path`，插件会自动加载默认词库 `dict/default_pinyin.yaml`（如果不存在则回退到 `.txt` 格式）
-- 如果设置了 `vim.g.zfvimim_dict_path`，则使用指定的词库文件（支持 `.yaml`、`.yml` 和 `.txt` 格式）
+**词库加载优先级**：
 
-### 配置步骤
+1. 如果设置了 `vim.g.zfvimim_dict_path`，优先使用指定的词库文件（绝对路径或相对路径）
+2. 如果设置了 `vim.g.zfvimim_default_dict_name`，使用插件 `dict/` 目录下对应名称的词库
+3. 否则，使用默认词库 `default_pinyin.yaml`
 
-1. **无需配置（推荐首次使用）**：
-   插件会自动使用默认词库，无需任何配置即可开始使用。
+### 词库切换配置
 
-2. **使用自定义词库**：
-   在 `lua/config/options.lua` 设置：
-   ```lua
-   vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
-   ```
+#### 方法 1：使用自定义词库路径（推荐）
 
-3. **显式指定默认词库**（可选）：
-   如果需要显式指定默认词库路径：
-   ```lua
-   vim.g.zfvimim_dict_path = vim.fn.stdpath("data") .. "/lazy/ZFVimIM/dict/default_pinyin.yaml"
-   ```
+在配置文件中（如 `lua/config/options.lua` 或 `init.lua`）设置：
+
+```lua
+-- 使用自定义词库（绝对路径）
+vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
+
+-- 或者使用相对路径（相对于 Neovim 配置目录）
+vim.g.zfvimim_dict_path = "~/my_dicts/custom.yaml"
+```
+
+**说明**：
+
+- 支持 `.yaml`、`.yml`格式
+- 如果指定的文件不存在，会自动回退到默认词库
+- 可以使用绝对路径或相对路径（`~` 会被展开）
+
+#### 方法 2：使用插件目录下的其他词库
+
+如果你想使用插件 `dict/` 目录下的其他词库文件（如 `sbzr.userdb.yaml`），可以设置：
+
+```lua
+-- 使用插件 dict/ 目录下的其他词库（只需指定文件名，不含扩展名）
+vim.g.zfvimim_default_dict_name = "sbzr.userdb"
+```
+
+**说明**：
+
+- 只需指定文件名（不含 `.yaml` 扩展名）
+- 插件会自动在 `dict/` 目录下查找对应文件（`.yaml` 格式）
+- 如果文件不存在，会回退到 `default_pinyin.yaml`
+
+#### 方法 3：恢复默认词库
+
+如果想恢复使用默认的 `default_pinyin.yaml`，只需删除或注释掉相关配置：
+
+```lua
+-- 删除或注释掉这两行即可恢复默认词库
+-- vim.g.zfvimim_dict_path = "..."
+-- vim.g.zfvimim_default_dict_name = "..."
+```
+
+### 配置示例
+
+```lua
+-- 示例 1：使用自定义词库（推荐方式）
+vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
+
+-- 示例 2：使用插件目录下的其他词库
+vim.g.zfvimim_default_dict_name = "sbzr.userdb"
+
+-- 示例 3：使用默认词库（无需配置，或删除上述配置）
+-- 插件会自动使用 dict/default_pinyin.yaml
+```
 
 4. **词库格式**：
    词库支持 YAML 格式（推荐）和 TXT 格式（向后兼容）。
-   
+
    **YAML 格式**（推荐）：
+
    ```yaml
    a: [啊, 阿, 吖]
    ai: [爱, 唉, 埃]
    ```
-   
+
    **TXT 格式**（向后兼容）：
+
    ```
    a 啊 阿 吖
    ai 爱 唉 埃
    ```
-
-4. **使用方法**：
+5. **使用方法**：
    Neovim 启动后 `;;` 进入输入状态，`0-9`/空格选词，`Esc` 退出。
 
-## キャッシュ管理
+## 核心特性
 
-辞書ファイルを変更した場合、キャッシュを更新する必要があります。
+### 1. 浮动窗口绘制
 
-### キャッシュ更新コマンド
+使用 Neovim 原生浮动窗口（floating window）显示候选词列表，具有以下特点：
 
-以下のコマンドでキャッシュを手動で更新できます：
+- **美观的界面**：候选词显示在光标下方，不遮挡编辑内容
+- **高亮显示**：当前选中的候选词使用醒目的绿色高亮
+- **显示编码**：每个候选词显示原始编码（如 `[ceshi]`），方便学习
+- **实时更新**：输入时实时更新候选词列表
+- **自动定位**：浮动窗口自动跟随光标位置
+
+### 2. 缩写编码
+
+支持 4 字符缩写编码，快速输入长词：
+
+- **3 字词缩写**：使用首字符、第二字符、尾字符的拼音
+  - 例如：`测试输入` 的完整编码是 `ceshishuru`，可以使用缩写 `cssu`（首 `c` + 二 `s` + 尾 `u`）
+- **4 字及以上缩写**：使用首字符、第二字符、第三字符、尾字符的拼音
+  - 例如：`中华人民共和国` 可以使用缩写 `zhrg`（首 `z` + 二 `h` + 三 `r` + 尾 `g`）
+- **自动匹配**：输入 4 字符时，如果匹配到缩写编码，会自动显示对应的长词
+
+### 3. 智能排序优化
+
+多维度排序算法，确保最常用的词优先显示：
+
+- **使用频率排序**：根据词的使用频率自动调整顺序，常用词优先
+- **单字优先**：单字词优先于多字词显示，提高输入效率
+- **完全匹配优先**：完全匹配的编码优先于部分匹配
+- **长度优先**：在相同匹配度下，较短的词优先显示
+- **频率文件**：使用频率保存在 `~/.local/share/nvim/ZFVimIM_word_freq.txt`
+- **自动学习**：每次选择词后自动更新频率，10 次使用后自动保存
+
+### 4. 自动造词
+
+智能学习用户输入习惯，自动创建新词：
+
+- **触发条件**：
+  - 连续选择多个词（2 个以上）
+  - 所有词来自同一个数据库
+  - 组合后的总长度不超过 `g:ZFVimIM_autoAddWordLen`（默认 12 字符）
+- **自动保存**：新词自动添加到词库并保存到文件
+- **自定义检查器**：可通过 `g:ZFVimIM_autoAddWordChecker` 自定义造词规则
+
+**示例**：
+
+- 输入 `ceshi` 选择 `测试`，然后输入 `shuru` 选择 `输入`
+- 系统自动创建新词 `测试输入`，编码为 `ceshishuru`
+- 下次输入 `ceshishuru` 时可以直接选择 `测试输入`
+
+### 5. 翻页功能
+
+支持候选词列表翻页浏览：
+
+- **翻页键**：`-`/`=` 或 `,`/`.` 进行上下翻页（可通过 `g:ZFVimIM_key_pageUp/Down` 自定义）
+- **自由滚动模式**：设置 `g:ZFVimIM_freeScroll = 1` 可启用自由滚动，不受 10 个候选词限制
+- **页码显示**：在自由滚动模式下，显示完整的页码（如 `01`, `02` 等）
+
+### 6. 动态频率调整
+
+- **自动学习**：使用频率自动记录，常用词自动提升优先级
+- **频率文件**：`~/.local/share/nvim/ZFVimIM_word_freq.txt` 保存频率数据
+- **自动保存**：每 10 次使用自动保存，Vim 退出时也会保存
+- **最大频率**：1000 次（防止溢出）
+- **最大条目数**：10000 条（超出时删除最少使用的条目）
+
+## 缓存管理
+
+字典文件更改后，需要更新缓存。
+
+### 缓存更新命令
+
+以下命令可以手动更新缓存：
 
 ```vim
-" すべてのキャッシュファイルを削除
+" 删除所有缓存文件
 :ZFVimIMCacheClear
 
-" キャッシュを削除して辞書を再読み込み（推奨）
+" 删除缓存并重新加载字典（推荐）
 :ZFVimIMCacheUpdate
 ```
 
-### 使用例
+### 使用示例
 
-1. **辞書ファイルを変更した後**：
+1. **字典文件更改后**：
+
    ```vim
    :ZFVimIMCacheUpdate
    ```
-   これにより、すべてのキャッシュが削除され、辞書が再読み込みされて新しいキャッシュが生成されます。
 
-2. **キャッシュのみを削除したい場合**：
+   这会删除所有缓存，重新加载字典并生成新的缓存。
+2. **仅删除缓存**：
+
    ```vim
    :ZFVimIMCacheClear
    ```
-   次回の辞書読み込み時に新しいキャッシュが自動生成されます。
 
-3. **プラグイン全体を再読み込みする場合**：
+   下次字典加载时会自动生成新缓存。
+3. **重新加载插件**：
+
    ```vim
    :ZFVimIMReload
    ```
-   プラグイン全体を再読み込みします（キャッシュは自動的に更新されます）。
 
-### トラブルシューティング
+   重新加载整个插件（缓存会自动更新）。
 
-- 辞書を変更したのに反映されない場合 → `:ZFVimIMCacheUpdate` を実行
-- キャッシュが破損している可能性がある場合 → `:ZFVimIMCacheClear` でキャッシュを削除してから Vim を再起動
+### 故障排除
 
-## 機能一覧
+- 字典更改后未反映 → 执行 `:ZFVimIMCacheUpdate`
+- 缓存可能损坏 → 执行 `:ZFVimIMCacheClear` 删除缓存后重启 Vim
 
-### コマンド
+## 功能列表
 
-#### プラグイン管理
-- `:ZFVimIMReload` - プラグイン全体を再読み込み
-- `:ZFVimIMCacheClear` - すべてのキャッシュファイルを削除
-- `:ZFVimIMCacheUpdate` - キャッシュを削除して辞書を再読み込み（推奨）
+### 命令
 
-#### 辞書編集
-- `:IMAdd [word] [key]` - 単語を辞書に追加
+#### 插件管理
+
+- `:ZFVimIMReload` - 重新加载整个插件
+- `:ZFVimIMCacheClear` - 删除所有缓存文件
+- `:ZFVimIMCacheUpdate` - 删除缓存并重新加载字典（推荐）
+
+#### 字典编辑
+
+- `:IMAdd [word] [key]` - 添加词到字典
   - 例: `:IMAdd 测试 ceshi`
-  - `:IMAdd!` - 即座に適用（`g:ZFVimIM_dbEditApplyFlag` を一時的に増加）
-- `:IMRemove [word] [key]` - 辞書から単語を削除
+  - `:IMAdd!` - 立即应用（临时增加 `g:ZFVimIM_dbEditApplyFlag`）
+- `:IMRemove [word] [key]` - 从字典删除词
   - 例: `:IMRemove 测试 ceshi`
-  - `key` を省略すると、該当するすべてのキーから削除
-  - `:IMRemove!` - 即座に適用
-- `:IMReorder [word] [key]` - 単語の順序を変更（頻度をリセット）
+  - 省略 `key` 时，从所有匹配的键中删除
+  - `:IMRemove!` - 立即应用
+- `:IMReorder [word] [key]` - 更改词的顺序（重置频率）
   - 例: `:IMReorder 测试 ceshi`
-  - `:IMReorder!` - 即座に適用
+  - `:IMReorder!` - 立即应用
 
-### キーマッピング
+### 按键映射
 
 #### 基本操作
-- `;;` - 入力法のオン/オフを切り替え（Normal/Insert/Visual モード）
-- `;:` - 次の辞書データベースに切り替え（Normal/Insert/Visual モード）
-- `;,` - 単語追加ダイアログを開く（Normal/Insert/Visual モード）
-- `;.` - 単語削除ダイアログを開く（Normal/Insert/Visual モード）
 
-#### 入力中の操作（Insert モード、入力法有効時）
-- `0-9` - 候補を選択（0 は 10 番目の候補）
-- `<Space>` - 最初の候補を確定
-- `<Enter>` - 候補メニューを閉じる（候補がない場合は通常の改行）
-- `<Esc>` - 入力をキャンセルして候補メニューを閉じる
-- `<Backspace>` - 1文字削除（候補メニュー表示中は候補を更新）
-- `<Tab>` / `<S-Tab>` - 候補を上下に移動
-- `-` / `=` または `,` / `.` - 候補ページを上下に移動（`g:ZFVimIM_key_pageUp/Down` で変更可能）
-- `[` / `]` - 左/右に分割して確定（`g:ZFVimIM_key_chooseL/R` で変更可能）
-- `<C-d>` - 現在選択中の候補を辞書から削除（`g:ZFVimIM_key_deleteWord` で変更可能）
+- `;;` - 切换输入法开/关（Normal/Insert/Visual 模式）
+- `;:` - 切换到下一个字典数据库（Normal/Insert/Visual 模式）
+- `;,` - 打开添加词对话框（Normal/Insert/Visual 模式）
+- `;.` - 打开删除词对话框（Normal/Insert/Visual 模式）
 
-### 設定変数
+#### 输入中的操作（Insert 模式，输入法启用时）
 
-#### 辞書設定
+- `0-9` - 选择候选词（0 是第 10 个候选）
+- `<Space>` - 确定第一个候选
+- `<Enter>` - 关闭候选菜单（无候选时正常换行）
+- `<Esc>` - 取消输入并关闭候选菜单
+- `<Backspace>` - 删除 1 个字符（候选菜单显示时更新候选）
+- `<Tab>` / `<S-Tab>` - 上下移动候选
+- `-` / `=` 或 `,` / `.` - 上下翻页（可通过 `g:ZFVimIM_key_pageUp/Down` 更改）
+- `[` / `]` - 左/右分割确定（可通过 `g:ZFVimIM_key_chooseL/R` 更改）
+- `<C-d>` - 删除当前选中的候选词（可通过 `g:ZFVimIM_key_deleteWord` 更改）
+
+### 配置变量
+
+#### 字典设置
+
 ```lua
--- デフォルト辞書名（拡張子なし、.yaml が自動追加、.txt にフォールバック）
+-- 默认字典名（无扩展名，自动添加 .yaml）
+-- 用于指定插件 dict/ 目录下的词库文件名（不含扩展名）
+-- 例如：设置为 "sbzr.userdb" 会查找 dict/sbzr.userdb.yaml
 vim.g.zfvimim_default_dict_name = "sbzr.userdb"
 
--- カスタム辞書パス（絶対パスまたは相対パス、.yaml/.yml/.txt をサポート）
+-- 自定义字典路径（绝对路径或相对路径，支持 .yaml/.yml）
+-- 优先级高于 zfvimim_default_dict_name
+-- 如果文件不存在，会自动回退到默认词库
 vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.yaml"
 ```
 
-#### 補完設定
+**词库加载优先级说明**：
+
+1. `zfvimim_dict_path`（最高优先级）- 指定完整路径的词库文件
+2. `zfvimim_default_dict_name` - 指定插件 `dict/` 目录下的词库文件名
+3. `default_pinyin.yaml`（默认）- 如果以上都未设置，使用内置默认词库
+
+#### 补全设置
+
 ```lua
--- マッチ結果の最大数（デフォルト: 2000）
+-- 匹配结果的最大数量（默认: 2000）
 vim.g.ZFVimIM_matchLimit = 2000
 
--- 予測入力の最大数（デフォルト: 1000）
+-- 预测输入的最大数量（默认: 1000）
 vim.g.ZFVimIM_predictLimit = 1000
 
--- マッチがある場合の予測入力数（デフォルト: 5）
+-- 有匹配时的预测输入数（默认: 5）
 vim.g.ZFVimIM_predictLimitWhenMatch = 5
 
--- 文補完を有効化（デフォルト: 1）
+-- 启用句子补全（默认: 1）
 vim.g.ZFVimIM_sentence = 1
 
--- クロスデータベース検索（デフォルト: 2）
--- 0: 無効, 1: 完全一致のみ, 2: 予測も含む, 3: 部分一致も含む
+-- 跨数据库搜索（默认: 2）
+-- 0: 禁用, 1: 仅完全匹配, 2: 包含预测, 3: 包含部分匹配
 vim.g.ZFVimIM_crossable = 2
 
--- クロスデータベース検索の最大結果数（デフォルト: 2）
+-- 跨数据库搜索的最大结果数（默认: 2）
 vim.g.ZFVimIM_crossDbLimit = 2
 
--- クロスデータベース結果の表示位置（デフォルト: 5）
+-- 跨数据库结果的显示位置（默认: 5）
 vim.g.ZFVimIM_crossDbPos = 5
 ```
 
-#### 自動追加設定
+#### 自动添加设置
+
 ```lua
--- 自動追加する単語の最大長（デフォルト: 12 = 3*4）
+-- 自动添加词的最大长度（默认: 12 = 3*4）
 vim.g.ZFVimIM_autoAddWordLen = 12
 
--- 自動追加チェッカー関数のリスト
--- 関数は userWord リストを受け取り、追加するかどうかを返す（1: 追加, 0: 追加しない）
+-- 自动添加检查器函数列表
+-- 函数接收 userWord 列表，返回是否添加（1: 添加, 0: 不添加）
 vim.g.ZFVimIM_autoAddWordChecker = []
 ```
 
-#### キーマッピング設定
+#### 按键映射设置
+
 ```lua
--- キーマッピングを有効化（デフォルト: 1）
+-- 启用按键映射（默认: 1）
 vim.g.ZFVimIM_keymap = 1
 
--- カスタムキーマッピング（デフォルト値）
-vim.g.ZFVimIM_key_pageUp = ['-', ',']      -- ページアップ（- または ,）
-vim.g.ZFVimIM_key_pageDown = ['=', '.']   -- ページダウン（= または .）
-vim.g.ZFVimIM_key_chooseL = ['[']     -- 左に分割
-vim.g.ZFVimIM_key_chooseR = [']']     -- 右に分割
-vim.g.ZFVimIM_key_backspace = ['<bs>'] -- バックスペース
-vim.g.ZFVimIM_key_esc = ['<esc>']     -- エスケープ
-vim.g.ZFVimIM_key_enter = ['<cr>']    -- エンター
-vim.g.ZFVimIM_key_space = ['<space>'] -- スペース
-vim.g.ZFVimIM_key_tabNext = ['<tab>'] -- 次の候補
-vim.g.ZFVimIM_key_tabPrev = ['<s-tab>'] -- 前の候補
-vim.g.ZFVimIM_key_deleteWord = ['<c-d>'] -- 単語削除
+-- 自定义按键映射（默认值）
+vim.g.ZFVimIM_key_pageUp = ['-', ',']      -- 上翻页（- 或 ,）
+vim.g.ZFVimIM_key_pageDown = ['=', '.']   -- 下翻页（= 或 .）
+vim.g.ZFVimIM_key_chooseL = ['[']     -- 左分割
+vim.g.ZFVimIM_key_chooseR = [']']     -- 右分割
+vim.g.ZFVimIM_key_backspace = ['<bs>'] -- 退格
+vim.g.ZFVimIM_key_esc = ['<esc>']     -- 退出
+vim.g.ZFVimIM_key_enter = ['<cr>']    -- 回车
+vim.g.ZFVimIM_key_space = ['<space>'] -- 空格
+vim.g.ZFVimIM_key_tabNext = ['<tab>'] -- 下一个候选
+vim.g.ZFVimIM_key_tabPrev = ['<s-tab>'] -- 上一个候选
+vim.g.ZFVimIM_key_deleteWord = ['<c-d>'] -- 删除词
 
--- 候補選択用の追加キー（2-9 の候補用）
+-- 候选选择用的额外按键（2-9 的候选用）
 vim.g.ZFVimIM_key_candidates = []
 ```
 
-#### 表示設定
+#### 显示设置
+
 ```lua
--- キーヒントを表示する長さ（デフォルト: 無制限、0 で無効）
--- 负数表示不截断，正数按长度截断。
+-- 按键提示显示长度（默认: 无限制，0 禁用）
+-- 负数表示不截断，正数按长度截断
 vim.g.ZFVimIM_showKeyHint = -1
 
--- クロスデータベースヒントを表示（デフォルト: 1）
+-- 显示跨数据库提示（默认: 1）
 vim.g.ZFVimIM_showCrossDbHint = 1
 
--- 自由スクロールモード（デフォルト: 0）
--- 1 にすると、候補が 10 個を超えてもスクロール可能
+-- 自由滚动模式（默认: 0）
+-- 1 时，候选超过 10 个也可滚动
 vim.g.ZFVimIM_freeScroll = 0
 
--- ステータスライン表示設定
-vim.g.ZFVimIME_IMEStatus_tagL = ' <'  -- 左タグ
-vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右タグ
+-- 状态栏显示设置
+vim.g.ZFVimIME_IMEStatus_tagL = ' <'  -- 左标签
+vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
 ```
 
-#### その他の設定
+#### 其他设置
+
 ```lua
--- 記号マップ（キー -> 記号のリストまたは関数）
+-- 符号映射（键 -> 符号列表或函数）
 vim.g.ZFVimIM_symbolMap = {}
 
--- キャッシュパス（デフォルト: ~/.vim_cache/ZFVimIM）
+-- 缓存路径（默认: ~/.vim_cache/ZFVimIM）
 vim.g.ZFVimIM_cachePath = vim.fn.expand("~/.vim_cache/ZFVimIM")
 
--- Insert モードでのみ有効化（デフォルト: 1）
+-- 仅在 Insert 模式启用（默认: 1）
 vim.g.ZFVimIME_enableOnInsertOnly = 1
 
--- バッファ同期（デフォルト: 1）
+-- 缓冲区同步（默认: 1）
 vim.g.ZFVimIME_syncBuffer = 1
 
--- <C-c> を <Esc> として扱う（デフォルト: 1）
+-- 将 <C-c> 视为 <Esc>（默认: 1）
 vim.g.ZFVimIME_fixCtrlC = 1
 
--- 辞書編集の履歴制限（デフォルト: 500）
+-- 字典编辑历史限制（默认: 500）
 vim.g.ZFVimIM_dbEditLimit = 500
 ```
 
-### 主要機能
+### 主要功能
 
-#### 1. 動的頻度調整（Dynamic Frequency Adjustment）
-- **自動学習**: 使用頻度に基づいて候補の順序を自動調整
-- **頻度ファイル**: `~/.local/share/nvim/ZFVimIM_word_freq.txt` に保存
-- **自動保存**: 10回使用ごとに自動保存、Vim終了時にも保存
-- **最大頻度**: 1000回まで（オーバーフロー防止）
-- **最大エントリ数**: 10000エントリまで保持
+#### 1. 动态频率调整（Dynamic Frequency Adjustment）
 
-#### 2. 単語削除機能
-- **入力中削除**: `<C-d>` で現在選択中の候補を即座に削除
-- **コマンド削除**: `:IMRemove [word] [key]` で削除
-- **自動保存**: 削除後、辞書ファイルに自動保存
-- **頻度リセット**: 削除時に頻度データも削除
+- **自动学习**：根据使用频率自动调整候选顺序
+- **频率文件**：保存在 `~/.local/share/nvim/ZFVimIM_word_freq.txt`
+- **自动保存**：每 10 次使用自动保存，Vim 退出时也保存
+- **最大频率**：1000 次（防止溢出）
+- **最大条目数**：10000 条
 
-#### 3. キャッシュシステム
-- **自動キャッシュ**: 辞書読み込み時に自動生成
-- **キャッシュ場所**: `~/.vim_cache/ZFVimIM/dbCache_*.vim`
-- **更新チェック**: 辞書ファイルより古いキャッシュは自動的に無視
-- **手動更新**: `:ZFVimIMCacheUpdate` で強制更新
+#### 2. 词删除功能
 
-#### 4. 自動単語追加
-- **条件**: 
-  - 複数の単語を連続して選択
-  - 同じデータベースから
-  - 合計長が `g:ZFVimIM_autoAddWordLen` 以下
-- **カスタムチェッカー**: `g:ZFVimIM_autoAddWordChecker` で制御可能
-- **自動保存**: 追加後、辞書ファイルに自動保存
+- **输入中删除**：`<C-d>` 立即删除当前选中的候选
+- **命令删除**：`:IMRemove [word] [key]` 删除
+- **自动保存**：删除后自动保存到字典文件
+- **频率重置**：删除时同时删除频率数据
 
-#### 5. 文補完（Sentence Completion）
-- **機能**: 複数の単語を組み合わせて長い文を補完
-- **例**: `ceshi` → `测试`、`shuru` → `输入` → `测试输入` として補完
-- **設定**: `g:ZFVimIM_sentence = 1` で有効化
+#### 3. 缓存系统
 
-#### 6. クロスデータベース検索
-- **機能**: 現在のデータベース以外からも候補を検索
-- **レベル**:
-  - `0`: 無効
-  - `1`: 完全一致のみ表示
-  - `2`: 予測も含む（デフォルト）
-  - `3`: 部分一致も含む
-- **制限**: `g:ZFVimIM_crossDbLimit` で最大結果数を制限
+- **自动缓存**：字典加载时自动生成
+- **缓存位置**：`~/.vim_cache/ZFVimIM/dbCache_*.vim`
+- **更新检查**：自动忽略比字典文件旧的缓存
+- **手动更新**：`:ZFVimIMCacheUpdate` 强制更新
 
-#### 7. 予測入力（Predictive Input）
-- **機能**: 入力途中で候補を予測
-- **例**: `ces` 入力時に `ceshi` の候補を表示
-- **制限**: `g:ZFVimIM_predictLimit` で最大予測数
+#### 4. 自动造词
 
-#### 8. 検索キャッシュ
-- **機能**: データベース検索結果をメモリにキャッシュ
-- **サイズ制限**: 最大300エントリ（超過時は古い200エントリを削除）
-- **自動クリア**: 辞書編集時に自動クリア
+- **条件**：
+  - 连续选择多个词
+  - 来自同一个数据库
+  - 总长度不超过 `g:ZFVimIM_autoAddWordLen`
+- **自定义检查器**：通过 `g:ZFVimIM_autoAddWordChecker` 控制
+- **自动保存**：添加后自动保存到字典文件
 
-### イベント
+#### 5. 句子补全（Sentence Completion）
 
-以下のイベントが定義されており、`autocmd User` で監視可能：
+- **功能**：组合多个词补全长句
+- **示例**：`ceshi` → `测试`，`shuru` → `输入` → `测试输入` 补全
+- **设置**：`g:ZFVimIM_sentence = 1` 启用
 
-- `ZFVimIM_event_OnDbInit` - データベース初期化時
-- `ZFVimIM_event_OnStart` - 入力法開始時
-- `ZFVimIM_event_OnStop` - 入力法停止時
-- `ZFVimIM_event_OnEnable` - 入力法有効化時
-- `ZFVimIM_event_OnDisable` - 入力法無効化時
-- `ZFVimIM_event_OnAddWord` - 単語追加時
-  - `g:ZFVimIM_event_OnAddWord` に `{dbId, key, word}` が設定される
-- `ZFVimIM_event_OnDbChange` - データベース切り替え時
-- `ZFVimIM_event_OnUpdate` - 候補更新時
-- `ZFVimIM_event_OnUpdateOmni` - 候補メニュー更新時
-- `ZFVimIM_event_OnCompleteDone` - 候補確定時
-  - `g:ZFVimIM_choosedWord` に選択された単語情報が設定される
-- `ZFVimIM_event_OnUpdateDb` - データベース更新時
+#### 6. 跨数据库搜索
 
-### データ構造
+- **功能**：从当前数据库以外的数据库搜索候选
+- **级别**：
+  - `0`: 禁用
+  - `1`: 仅显示完全匹配
+  - `2`: 包含预测（默认）
+  - `3`: 包含部分匹配
+- **限制**：`g:ZFVimIM_crossDbLimit` 限制最大结果数
 
-#### データベース構造
+#### 7. 预测输入（Predictive Input）
+
+- **功能**：输入途中预测候选
+- **示例**：输入 `ces` 时显示 `ceshi` 的候选
+- **限制**：`g:ZFVimIM_predictLimit` 限制最大预测数
+
+#### 8. 搜索缓存
+
+- **功能**：在内存中缓存数据库搜索结果
+- **大小限制**：最大 300 条（超出时删除最旧的 200 条）
+- **自动清除**：字典编辑时自动清除
+
+### 事件
+
+以下事件已定义，可通过 `autocmd User` 监听：
+
+- `ZFVimIM_event_OnDbInit` - 数据库初始化时
+- `ZFVimIM_event_OnStart` - 输入法开始时
+- `ZFVimIM_event_OnStop` - 输入法停止时
+- `ZFVimIM_event_OnEnable` - 输入法启用时
+- `ZFVimIM_event_OnDisable` - 输入法禁用时
+- `ZFVimIM_event_OnAddWord` - 添加词时
+  - `g:ZFVimIM_event_OnAddWord` 设置为 `{dbId, key, word}`
+- `ZFVimIM_event_OnDbChange` - 切换数据库时
+- `ZFVimIM_event_OnUpdate` - 更新候选时
+- `ZFVimIM_event_OnUpdateOmni` - 更新候选菜单时
+- `ZFVimIM_event_OnCompleteDone` - 确定候选时
+  - `g:ZFVimIM_choosedWord` 设置为选中的词信息
+- `ZFVimIM_event_OnUpdateDb` - 更新数据库时
+
+### 数据结构
+
+#### 数据库结构
+
 ```vim
 g:ZFVimIM_db = [
   {
-    'dbId': 1,                    -- 自動生成ID
-    'name': 'sbzr',               -- データベース名
-    'priority': 100,              -- 優先度（小さい方が優先）
-    'switchable': 1,              -- 切り替え可能か
-    'editable': 1,                -- 編集可能か
-    'crossable': 2,               -- クロス検索レベル
-    'crossDbLimit': 2,            -- クロス検索結果数制限
-    'dbMap': {                    -- 辞書データ（a-z で分割）
+    'dbId': 1,                    -- 自动生成ID
+    'name': 'sbzr',               -- 数据库名
+    'priority': 100,              -- 优先级（小者优先）
+    'switchable': 1,              -- 可切换
+    'editable': 1,                -- 可编辑
+    'crossable': 2,               -- 跨搜索级别
+    'crossDbLimit': 2,            -- 跨搜索结果数限制
+    'dbMap': {                    -- 字典数据（按 a-z 分割）
       'a': ['a#啊,阿#3,2', ...],
       'b': ['ba#吧,把#1', ...],
     },
-    'dbEdit': [],                 -- 編集履歴
-    'dbSearchCache': {},          -- 検索キャッシュ
-    'implData': {                 -- 実装データ
-      'dictPath': '/path/to/dict.yaml',  -- .yaml/.yml/.txt をサポート
+    'dbEdit': [],                 -- 编辑历史
+    'dbSearchCache': {},          -- 搜索缓存
+    'implData': {                 -- 实现数据
+      'dictPath': '/path/to/dict.yaml',  -- 支持 .yaml/.yml
     },
   },
 ]
 ```
 
-#### 補完結果構造
+#### 补全结果结构
+
 ```vim
 [
   {
-    'dbId': 1,                    -- データベースID
-    'len': 2,                     -- マッチしたキーの長さ
-    'key': 'ceshi',               -- 完全なキー
-    'word': '测试',               -- 単語
-    'type': 'match',              -- タイプ: match/predict/sentence/subMatch
-    'sentenceList': [             -- 文補完の場合のみ
+    'dbId': 1,                    -- 数据库ID
+    'len': 2,                     -- 匹配的键长度
+    'key': 'ceshi',               -- 完整键
+    'word': '测试',               -- 词
+    'type': 'match',              -- 类型: match/predict/sentence/subMatch
+    'sentenceList': [             -- 仅句子补全时
       {'key': 'ceshi', 'word': '测试'},
       {'key': 'shuru', 'word': '输入'},
     ],
