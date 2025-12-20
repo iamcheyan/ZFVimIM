@@ -559,14 +559,45 @@ endfunction
 
 
 " ============================================================
-" Helper function to check if file is YAML format
+" Helper function to check if file is YAML format (by extension)
 function! s:isYamlFile(filePath)
     return a:filePath =~# '\.yaml$' || a:filePath =~# '\.yml$'
 endfunction
 
+" Helper function to detect actual file format (YAML or TXT)
+function! s:detectFileFormat(filePath, lines)
+    " Check first few non-empty lines to determine format
+    let yamlCount = 0
+    let txtCount = 0
+    let checked = 0
+    for line in a:lines
+        let line = substitute(line, '^\s*\(.\{-}\)\s*$', '\1', '')
+        if empty(line) || line[0] ==# '#'
+            continue
+        endif
+        " Check if line looks like YAML format (key: value)
+        if line =~# '^[a-z]\+:\s*'
+            let yamlCount += 1
+        " Check if line looks like TXT format (key word1 word2 ...)
+        elseif line =~# '^[a-z]\+\s\+[^\s]'
+            let txtCount += 1
+        endif
+        let checked += 1
+        if checked >= 10
+            break
+        endif
+    endfor
+    " If more YAML-like lines, return 'yaml', otherwise 'txt'
+    if yamlCount > txtCount
+        return 'yaml'
+    else
+        return 'txt'
+    endif
+endfunction
+
 " Helper function to parse YAML line
 " Returns: [key, wordList] or [] if invalid
-" Supports both YAML format (key: [word1, word2]) and TXT format (key word1 word2)
+" Supports YAML format (key: [word1, word2]) or (key: word)
 function! s:parseYamlLine(line)
     " Remove leading/trailing whitespace
     let line = substitute(a:line, '^\s*\(.\{-}\)\s*$', '\1', '')
@@ -574,44 +605,13 @@ function! s:parseYamlLine(line)
     if empty(line) || line[0] ==# '#'
         return []
     endif
-    " First try YAML format: key: [word1, word2, ...] or key: word
+    " Parse YAML format: key: [word1, word2, ...] or key: word
     let match = matchlist(line, '^\([a-z]\+\):\s*\(.*\)$')
-    if !empty(match)
-        let key = match[1]
-        let value = match[2]
-    else
-        " Try TXT format: key word1 word2 ...
-        " Check if line starts with a key (lowercase letters) followed by space and words
-        let txtMatch = matchlist(line, '^\([a-z]\+\)\s\+\(.*\)$')
-        if !empty(txtMatch)
-            let key = txtMatch[1]
-            let value = txtMatch[2]
-            " Parse as space-separated words
-            let wordList = []
-            if match(value, '\\ ') >= 0
-                " Handle escaped spaces
-                let wordListTmp = split(substitute(value, '\\ ', '_ZFVimIM_space_', 'g'))
-                for word in wordListTmp
-                    let word = substitute(word, '_ZFVimIM_space_', ' ', 'g')
-                    if !empty(word)
-                        call add(wordList, word)
-                    endif
-                endfor
-            else
-                " Regular space-separated words
-                let words = split(value)
-                for word in words
-                    if !empty(word)
-                        call add(wordList, word)
-                    endif
-                endfor
-            endif
-            if !empty(wordList)
-                return [key, wordList]
-            endif
-        endif
+    if empty(match)
         return []
     endif
+    let key = match[1]
+    let value = match[2]
     " Parse value: could be [word1, word2] or just word
     let wordList = []
     if value =~# '^\[.*\]$'
@@ -691,7 +691,6 @@ function! s:dbLoad(db, dbFile, ...)
             " Fallback to VimScript loading
             " Load from source file and create cache
             call ZFVimIM_DEBUG_profileStart('dbLoadFile')
-            let isYaml = s:isYamlFile(a:dbFile)
             let lines = readfile(a:dbFile)
             call ZFVimIM_DEBUG_profileStop()
             if empty(lines)
@@ -699,7 +698,45 @@ function! s:dbLoad(db, dbFile, ...)
             endif
 
             call ZFVimIM_DEBUG_profileStart('dbLoad')
-            if isYaml
+            " Detect actual file format (not just by extension)
+            let fileFormat = s:detectFileFormat(a:dbFile, lines)
+            
+            if fileFormat ==# 'txt'
+                " Load from TXT format (key word1 word2 ...)
+                for line in lines
+                    let line = substitute(line, '^\s*\(.\{-}\)\s*$', '\1', '')
+                    " Skip empty lines and comments
+                    if empty(line) || line[0] ==# '#'
+                        continue
+                    endif
+                    " Handle escaped spaces
+                    if match(line, '\\ ') >= 0
+                        let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
+                        if !empty(wordListTmp)
+                            let key = remove(wordListTmp, 0)
+                        endif
+                        let wordList = []
+                        for word in wordListTmp
+                            call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
+                        endfor
+                    else
+                        let wordList = split(line)
+                        if !empty(wordList)
+                            let key = remove(wordList, 0)
+                        endif
+                    endif
+                    if !empty(wordList) && !empty(key)
+                        if !exists('dbMap[key[0]]')
+                            let dbMap[key[0]] = []
+                        endif
+                        call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
+                                    \   'key' : key,
+                                    \   'wordList' : wordList,
+                                    \   'countList' : [],
+                                    \ }))
+                    endif
+                endfor
+            else
                 " Load from YAML format - optimized batch processing
                 let batchSize = 1000
                 let i = 0
@@ -723,36 +760,6 @@ function! s:dbLoad(db, dbFile, ...)
                     endfor
                     let i = endIdx
                 endwhile
-            else
-                " Load from TXT format (backward compatibility)
-                for line in lines
-                    if match(line, '\\ ') >= 0
-                        let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
-                        if !empty(wordListTmp)
-                            let key = remove(wordListTmp, 0)
-                        endif
-
-                        let wordList = []
-                        for word in wordListTmp
-                            call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
-                        endfor
-                    else
-                        let wordList = split(line)
-                        if !empty(wordList)
-                            let key = remove(wordList, 0)
-                        endif
-                    endif
-                    if !empty(wordList)
-                        if !exists('dbMap[key[0]]')
-                            let dbMap[key[0]] = []
-                        endif
-                        call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
-                                    \   'key' : key,
-                                    \   'wordList' : wordList,
-                                    \   'countList' : [],
-                                    \ }))
-                    endif
-                endfor
             endif
             call ZFVimIM_DEBUG_profileStop()
             
@@ -1060,61 +1067,8 @@ function! s:dbSave(db, dbFile, ...)
             call ZFVimIM_DEBUG_profileStop()
         endif
     else
-        " Save as TXT format (backward compatibility)
-        let lines = []
-        if empty(dbCountFile)
-            call ZFVimIM_DEBUG_profileStart('dbSave')
-            for c in keys(dbMap)
-                for dbItemEncoded in dbMap[c]
-                    let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
-                    let line = dbItem['key']
-                    for word in dbItem['wordList']
-                        let line .= ' '
-                        let line .= substitute(word, ' ', '\\ ', 'g')
-                    endfor
-                    call add(lines, line)
-                endfor
-            endfor
-            call ZFVimIM_DEBUG_profileStop()
-
-            call ZFVimIM_DEBUG_profileStart('dbSaveFile')
-            call writefile(lines, a:dbFile)
-            call ZFVimIM_DEBUG_profileStop()
-        else
-            let countLines = []
-            call ZFVimIM_DEBUG_profileStart('dbSave')
-            for c in keys(dbMap)
-                for dbItemEncoded in dbMap[c]
-                    let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
-                    let line = dbItem['key']
-                    let countLine = dbItem['key']
-                    for word in dbItem['wordList']
-                        let line .= ' '
-                        let line .= substitute(word, ' ', '\\ ', 'g')
-                    endfor
-                    call add(lines, line)
-                    for cnt in dbItem['countList']
-                        if cnt <= 0
-                            break
-                        endif
-                        let countLine .= ' '
-                        let countLine .= cnt
-                    endfor
-                    if countLine != dbItem['key']
-                        call add(countLines, countLine)
-                    endif
-                endfor
-            endfor
-            call ZFVimIM_DEBUG_profileStop()
-
-            call ZFVimIM_DEBUG_profileStart('dbSaveFile')
-            call writefile(lines, a:dbFile)
-            call ZFVimIM_DEBUG_profileStop()
-
-            call ZFVimIM_DEBUG_profileStart('dbSaveCountFile')
-            call writefile(countLines, dbCountFile)
-            call ZFVimIM_DEBUG_profileStop()
-        endif
+        " Only YAML format is supported
+        echom '[ZFVimIM] Error: Only .yaml and .yml files are supported. File: ' . a:dbFile
     endif
 endfunction
 

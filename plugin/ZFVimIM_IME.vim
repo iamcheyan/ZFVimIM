@@ -39,7 +39,7 @@ function! s:ZFVimIM_autoLoadDict()
     if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
         let defaultDictName = g:zfvimim_default_dict_name
         " Add .yaml extension if not present
-        if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
+        if defaultDictName !~ '\.\(yaml\|yml\)$'
             let defaultDictName = defaultDictName . '.yaml'
         endif
         let defaultDict = dictDir . '/' . defaultDictName
@@ -1472,7 +1472,7 @@ function! s:removeWord(dbId, key, word)
         " Default dictionary is default_pinyin.yaml
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
-            if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
+            if defaultDictName !~ '\.\(yaml\|yml\)$'
                 let defaultDictName = defaultDictName . '.yaml'
             endif
             let dictPath = dictDir . '/' . defaultDictName
@@ -1826,7 +1826,7 @@ endif
 augroup ZFVimIM_autoCacheUpdate_augroup
     autocmd!
     " Detect when dictionary files are saved
-    autocmd BufWritePost *.yaml,*.yml,*.txt call s:ZFVimIM_autoCacheUpdate(expand('<afile>:p'))
+    autocmd BufWritePost *.yaml,*.yml call s:ZFVimIM_autoCacheUpdate(expand('<afile>:p'))
 augroup END
 
 " Function to check if file is a dictionary file and regenerate cache
@@ -1896,7 +1896,7 @@ function! ZFVimIM_cleanupDictionary()
         " Default dictionary is default_pinyin.yaml
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
-            if defaultDictName !~ '\.\(yaml\|yml\|txt\)$'
+            if defaultDictName !~ '\.\(yaml\|yml\)$'
                 let defaultDictName = defaultDictName . '.yaml'
             endif
             let dictPath = dictDir . '/' . defaultDictName
@@ -1961,3 +1961,165 @@ endfunction
 
 " Command to manually cleanup dictionary
 command! -nargs=0 ZFVimIMCleanup call ZFVimIM_cleanupDictionary()
+
+" Command to show dictionary information
+command! -nargs=0 ZFVimIMInfo call ZFVimIM_showInfo()
+
+function! ZFVimIM_showInfo()
+    echo "=========================================="
+    echo "ZFVimIM 词库信息"
+    echo "=========================================="
+    
+    " Try to initialize if not already done
+    if !exists('s:dbInitFlag') || !s:dbInitFlag
+        echo "正在初始化词库..."
+        call ZFVimIME_init()
+    endif
+    
+    " Check if database is initialized
+    if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
+        echo "❌ 未加载任何词库"
+        echo ""
+        echo "配置信息:"
+        if exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+            echo "  zfvimim_dict_path: " . g:zfvimim_dict_path
+            if filereadable(g:zfvimim_dict_path)
+                let mtime = getftime(g:zfvimim_dict_path)
+                if mtime > 0
+                    echo "    文件存在，最后修改: " . strftime('%Y-%m-%d %H:%M:%S', mtime)
+                    let fileSize = getfsize(g:zfvimim_dict_path)
+                    if fileSize > 0
+                        if fileSize < 1024
+                            echo "    文件大小: " . fileSize . " B"
+                        elseif fileSize < 1024 * 1024
+                            echo "    文件大小: " . (fileSize / 1024.0) . " KB"
+                        else
+                            echo "    文件大小: " . (fileSize / (1024.0 * 1024.0)) . " MB"
+                        endif
+                    endif
+                else
+                    echo "    文件存在"
+                endif
+            else
+                echo "    ⚠️  文件不存在"
+            endif
+        endif
+        if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+            echo "  zfvimim_default_dict_name: " . g:zfvimim_default_dict_name
+            " Try to find the dictionary file
+            let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+            let sfileDir = expand('<sfile>:p:h:h')
+            if isdirectory(sfileDir . '/dict')
+                let pluginDir = sfileDir
+            endif
+            let dictDir = pluginDir . '/dict'
+            let defaultDictName = g:zfvimim_default_dict_name
+            if defaultDictName !~ '\.\(yaml\|yml\)$'
+                let defaultDictName = defaultDictName . '.yaml'
+            endif
+            let defaultDict = dictDir . '/' . defaultDictName
+            if filereadable(defaultDict)
+                echo "    默认词库文件: " . defaultDict
+                let mtime = getftime(defaultDict)
+                if mtime > 0
+                    echo "      最后修改: " . strftime('%Y-%m-%d %H:%M:%S', mtime)
+                endif
+            else
+                echo "    ⚠️  默认词库文件不存在: " . defaultDict
+            endif
+        endif
+        echo ""
+        echo "提示: 如果词库应该已加载，请尝试:"
+        echo "  1. 运行 :ZFVimIMReload 重新加载插件"
+        echo "  2. 检查词库文件路径是否正确"
+        echo "  3. 检查词库文件格式是否正确"
+        return
+    endif
+    
+    " Show current database index
+    let currentIndex = get(g:, 'ZFVimIM_dbIndex', 0)
+    let totalDbs = len(g:ZFVimIM_db)
+    echo "当前词库索引: " . (currentIndex + 1) . " / " . totalDbs
+    echo ""
+    
+    " Show each database
+    let idx = 0
+    for db in g:ZFVimIM_db
+        let isCurrent = (idx == currentIndex)
+        let marker = isCurrent ? "👉 " : "   "
+        
+        echo marker . "词库 #" . (idx + 1) . ": " . get(db, 'name', '(未命名)')
+        
+        " Show dictionary path
+        let dictPath = ''
+        if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+            let dictPath = db['implData']['dictPath']
+        endif
+        
+        if !empty(dictPath)
+            echo "    路径: " . dictPath
+            if filereadable(dictPath)
+                let mtime = getftime(dictPath)
+                if mtime > 0
+                    echo "    最后修改: " . strftime('%Y-%m-%d %H:%M:%S', mtime)
+                endif
+                let fileSize = getfsize(dictPath)
+                if fileSize > 0
+                    if fileSize < 1024
+                        echo "    文件大小: " . fileSize . " B"
+                    elseif fileSize < 1024 * 1024
+                        echo "    文件大小: " . (fileSize / 1024.0) . " KB"
+                    else
+                        echo "    文件大小: " . (fileSize / (1024.0 * 1024.0)) . " MB"
+                    endif
+                endif
+            else
+                echo "    ⚠️  文件不存在"
+            endif
+        else
+            echo "    路径: (未设置)"
+        endif
+        
+        " Count entries in database
+        let entryCount = 0
+        if has_key(db, 'dbMap')
+            for c in keys(db['dbMap'])
+                let entryCount += len(db['dbMap'][c])
+            endfor
+        endif
+        echo "    条目数量: " . entryCount
+        
+        " Show priority
+        if has_key(db, 'priority')
+            echo "    优先级: " . db['priority']
+        endif
+        
+        " Show other info
+        if has_key(db, 'dbId')
+            echo "    数据库ID: " . db['dbId']
+        endif
+        
+        echo ""
+        let idx += 1
+    endfor
+    
+    " Show configuration
+    echo "配置信息:"
+    if exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        echo "  zfvimim_dict_path: " . g:zfvimim_dict_path
+    endif
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        echo "  zfvimim_default_dict_name: " . g:zfvimim_default_dict_name
+    endif
+    if exists('g:ZFVimIM_matchLimit')
+        echo "  ZFVimIM_matchLimit: " . g:ZFVimIM_matchLimit
+    endif
+    if exists('g:ZFVimIM_predictLimit')
+        echo "  ZFVimIM_predictLimit: " . g:ZFVimIM_predictLimit
+    endif
+    if exists('g:ZFVimIM_crossDbLimit')
+        echo "  ZFVimIM_crossDbLimit: " . g:ZFVimIM_crossDbLimit
+    endif
+    
+    echo "=========================================="
+endfunction

@@ -12,7 +12,7 @@
 - **智能排序优化**：基于使用频率、单字优先、完全匹配优先等多维度排序算法
 - **自动造词功能**：连续选择多个词后自动组合成新词并添加到词库
 - **翻页功能**：支持候选词列表翻页浏览
-- **本地词库支持**：通过配置文件或全局变量指定词库位置，支持 YAML 和 TXT 格式
+- **本地词库支持**：通过配置文件或全局变量指定词库位置，支持 YAML 格式
 
 ## 快速开始
 
@@ -105,17 +105,6 @@ ceshi: [测试, 测时]
 ```
 
 保存为 `.yaml` 或 `.yml` 文件。
-
-#### TXT 格式（向后兼容）
-
-```
-a 啊 阿 吖
-ai 爱 唉 埃
-nihao 你好 你号
-ceshi 测试 测时
-```
-
-保存为 `.txt` 文件。
 
 ### 4. 使用输入法
 
@@ -259,6 +248,59 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
 - `:ZFVimIMCacheClear` - 删除所有缓存文件
 - `:ZFVimIMCacheUpdate` - 删除缓存并重新加载字典（推荐）
 
+### 调试和状态查询
+
+- `:ZFVimIMInfo` - **显示词库详细信息**（重要命令）
+
+  这个命令可以显示当前 ZFVimIM 插件的完整状态信息，帮助你快速诊断和了解词库加载情况。
+
+  **显示的信息包括：**
+  - 当前使用的词库索引和总数
+  - 每个词库的详细信息：
+    - 词库名称
+    - 文件路径
+    - 最后修改时间
+    - 文件大小（自动转换为 KB/MB）
+    - 条目数量（词库中的词条数）
+    - 优先级
+    - 数据库ID
+  - 配置信息：
+    - `zfvimim_dict_path` - 自定义词库路径
+    - `zfvimim_default_dict_name` - 默认词库名称
+    - `ZFVimIM_matchLimit` - 匹配结果限制
+    - `ZFVimIM_predictLimit` - 预测输入限制
+    - `ZFVimIM_crossDbLimit` - 跨数据库搜索限制
+
+  **使用场景：**
+  - 检查词库是否正确加载
+  - 查看词库文件路径和状态
+  - 诊断词库加载问题
+  - 了解当前配置
+
+  **示例输出：**
+  ```
+  ==========================================
+  ZFVimIM 词库信息
+  ==========================================
+  当前词库索引: 1 / 1
+
+  👉 词库 #1: sbzr.userdb
+      路径: /Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml
+      最后修改: 2024-12-20 23:06:00
+      文件大小: 12.5 MB
+      条目数量: 620095
+      优先级: 100
+
+  配置信息:
+    zfvimim_default_dict_name: sbzr.userdb
+    ZFVimIM_matchLimit: 2000
+    ZFVimIM_predictLimit: 1000
+    ZFVimIM_crossDbLimit: 2
+  ==========================================
+  ```
+
+  ![](assets/2025-12-20-23-13-34.png)
+
 ### 字典编辑
 
 - `:IMAdd [word] [key]` - 添加词到字典
@@ -291,6 +333,18 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
 ## 故障排除
 
 ### 词库未加载
+
+**首先运行 `:ZFVimIMInfo` 命令查看详细状态信息！**
+
+这个命令会自动检测词库加载状态，并显示：
+- 词库文件路径和是否存在
+- 文件大小和最后修改时间
+- 配置信息
+- 故障排除建议
+
+如果词库未加载，该命令会提供详细的诊断信息。
+
+**其他检查方法：**
 
 1. **检查词库路径**：
    ```vim
@@ -505,3 +559,5 @@ ceshi: [测试, 测时, 侧视]
 
 - 原项目：[ZSaberLv0/ZFVimIM](https://github.com/ZSaberLv0/ZFVimIM)
 - 适配版本：[iamcheyan/ZFVimIM](https://github.com/iamcheyan/ZFVimIM)
+
+![](assets/2025-12-20-23-13-34.png)
