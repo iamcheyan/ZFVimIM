@@ -85,6 +85,12 @@ function! s:buildAliasMatches(aliasKey, db)
     endif
     let matches = []
     
+    " Performance optimization: limit search range for large buckets
+    " For buckets with > 10000 items, only search first 5000 items
+    " This significantly speeds up search while still finding most matches
+    let bucketSize = len(bucket)
+    let maxSearchItems = bucketSize > 10000 ? 5000 : bucketSize
+    
     " Performance optimization: extract key first without full decode
     " Only decode items that might match (based on key pattern)
     let keyMain = g:ZFVimIM_KEY_S_MAIN
@@ -95,7 +101,13 @@ function! s:buildAliasMatches(aliasKey, db)
     " Pattern for 4+ char: first char (0), third char (2), fifth char (4), last char
     let candidateIndices = []
     let idx = 0
+    let searchCount = 0
     for dbItemEncoded in bucket
+        " Limit search range
+        if searchCount >= maxSearchItems
+            break
+        endif
+        let searchCount += 1
         " Extract key without full decode (much faster - just string operation)
         let keyEnd = stridx(dbItemEncoded, keyMain)
         if keyEnd < 0
@@ -494,8 +506,11 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     let multiChars = []
     
     " First pass: collect all items, separate single chars and multi chars
+    " For short keys (1-2 chars), limit search to first 200 items for performance
+    let maxItems = (keyLen <= 2) ? 200 : 10000
+    let itemCount = 0
     let tempIndex = index
-    while tempIndex >= 0
+    while tempIndex >= 0 && itemCount < maxItems
         let dbItem = ZFVimIM_dbItemDecode(a:db['dbMap'][a:key[0]][tempIndex])
         " Get the actual key from database
         let dbItemKey = dbItem['key']
@@ -513,6 +528,7 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
                 call add(multiChars, item)
             endif
         endfor
+        let itemCount += 1
         let tempIndex = ZFVimIM_dbSearch(a:db, a:key[0],
                     \ '^' . a:key . g:ZFVimIM_KEY_S_MAIN,
                     \ tempIndex + 1)

@@ -1030,8 +1030,65 @@ function! s:dbLoad(db, dbFile, ...)
     
     " Try to load from cache first
     let cacheFile = s:dbLoad_getCacheFile(actualDbFile)
-    if s:dbLoad_tryLoadFromCache(dbMap, actualDbFile, cacheFile)
-        " Successfully loaded from cache
+    
+    " First try Python-generated cache files (faster, per-character files)
+    let cachePath = ZFVimIM_cachePath()
+    let pythonCachePath = cachePath . '/dbLoadCache'
+    let pythonCacheExists = 0
+    for c_ in range(char2nr('a'), char2nr('z'))
+        let c = nr2char(c_)
+        let cachePartFile = pythonCachePath . '_' . c
+        if filereadable(cachePartFile)
+            let pythonCacheExists = 1
+            break
+        endif
+    endfor
+    
+    " Prefer Python cache files if they exist and are newer
+    if pythonCacheExists
+        let pythonCacheNewer = 1
+        let dbMtime = getftime(actualDbFile)
+        for c_ in range(char2nr('a'), char2nr('z'))
+            let c = nr2char(c_)
+            let cachePartFile = pythonCachePath . '_' . c
+            if filereadable(cachePartFile)
+                let cacheMtime = getftime(cachePartFile)
+                if cacheMtime < 0 || dbMtime < 0 || cacheMtime < dbMtime
+                    let pythonCacheNewer = 0
+                    break
+                endif
+            endif
+        endfor
+        
+        if pythonCacheNewer
+            " Load from Python cache files (much faster)
+            call ZFVimIM_DEBUG_profileStart('dbLoadPythonCache')
+            for c_ in range(char2nr('a'), char2nr('z'))
+                let c = nr2char(c_)
+                let cachePartFile = pythonCachePath . '_' . c
+                if filereadable(cachePartFile)
+                    let lines = readfile(cachePartFile)
+                    if !empty(lines)
+                        if !has_key(dbMap, c)
+                            let dbMap[c] = []
+                        endif
+                        call extend(dbMap[c], lines)
+                    endif
+                endif
+            endfor
+            call ZFVimIM_DEBUG_profileStop()
+            " Save to unified cache for next time
+            call s:dbLoad_saveToCache(dbMap, cacheFile)
+        else
+            " Python cache is outdated, regenerate
+            if s:dbLoad_tryUsePythonScript(dbMap, actualDbFile, cacheFile, get(a:, 1, ''))
+                call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
+            else
+                return
+            endif
+        endif
+    elseif s:dbLoad_tryLoadFromCache(dbMap, actualDbFile, cacheFile)
+        " Fallback to unified cache file
         call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
     else
         " Try to use Python script for faster loading if available
@@ -1223,16 +1280,11 @@ function! s:dbLoad_tryUsePythonScript(dbMap, dbFile, cacheFile, dbCountFile)
         call ZFVimIM_DEBUG_profileStop()
         
         " Convert Python cache format to Vim cache format and save
+        " (Keep Python cache files for faster loading next time)
         call s:dbLoad_saveToCache(a:dbMap, a:cacheFile)
         
-        " Clean up Python cache files
-        for c_ in range(char2nr('a'), char2nr('z'))
-            let c = nr2char(c_)
-            let cachePartFile = pythonCachePath . '_' . c
-            if filereadable(cachePartFile)
-                call delete(cachePartFile)
-            endif
-        endfor
+        " DO NOT delete Python cache files - keep them for faster loading
+        " They will be automatically regenerated if source DB is newer
         
         return 1
     catch

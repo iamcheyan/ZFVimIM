@@ -449,7 +449,7 @@ endfunction
 function! ZFVimIME_updatePage()
     " This function is called via feedkeys to defer updateCandidates execution
     if mode() == 'i' && s:floatVisible()
-        call s:updateCandidates()
+        call s:updateCandidatesDebounced()
     endif
     return ''
 endfunction
@@ -635,7 +635,7 @@ endfunction
 function! ZFVimIME_callOmni()
     let s:keyboard = (s:pageup_pagedown == 0) ? '' : s:keyboard
     if s:hasLeftChar()
-        call s:updateCandidates()
+        call s:updateCandidatesDebounced()
     else
         call s:floatClose()
     endif
@@ -1270,7 +1270,7 @@ function! s:continueMatchingAfterInsert()
         let s:seamless_positions = pos
         let s:pending_left_len = 0
     endif
-    call s:updateCandidates()
+    call s:updateCandidatesDebounced()
 endfunction
 
 function! s:getSeamless(cursor_positions)
@@ -1329,13 +1329,24 @@ function! s:updateKeyboardFromCursor()
     return 1
 endfunction
 
+" Debounce timer for updateCandidates
+let s:updateCandidatesTimer = -1
+" Result cache for fast lookup
+let s:completeCache = {}
+let s:completeCacheKeys = []
+" Last keyboard state for detecting changes
+let s:lastKeyboard = ''
+
 function! s:updateCandidates()
     let s:enter_to_confirm = 1
     let s:hasInput = 1
     if !s:updateKeyboardFromCursor()
         call s:floatClose()
+        let s:lastKeyboard = ''
         return
     endif
+    " Update last keyboard state
+    let s:lastKeyboard = s:keyboard
     if s:pageup_pagedown != 0 && !empty(s:match_list) && &pumheight > 0
         let length = len(s:match_list)
         let pageCount = (length-1) / &pumheight + 1
@@ -1347,10 +1358,28 @@ function! s:updateCandidates()
             let s:page = 0
         endif
     else
-        let s:match_list = ZFVimIM_complete(s:keyboard)
-        let s:match_list = s:filterMatchListByPrefix(s:match_list, s:keyboard)
-        " Remove duplicate candidates based on word
-        let s:match_list = s:deduplicateCandidates(s:match_list)
+        " Check cache first
+        if has_key(s:completeCache, s:keyboard)
+            let s:match_list = s:completeCache[s:keyboard]
+        else
+            let s:match_list = ZFVimIM_complete(s:keyboard)
+            let s:match_list = s:filterMatchListByPrefix(s:match_list, s:keyboard)
+            " Remove duplicate candidates based on word
+            let s:match_list = s:deduplicateCandidates(s:match_list)
+            " Cache result
+            let s:completeCache[s:keyboard] = s:match_list
+            call add(s:completeCacheKeys, s:keyboard)
+            " Limit cache size to 100 entries
+            if len(s:completeCacheKeys) > 100
+                let removeCount = len(s:completeCacheKeys) - 100
+                for i in range(removeCount)
+                    let oldKey = remove(s:completeCacheKeys, 0)
+                    if has_key(s:completeCache, oldKey)
+                        call remove(s:completeCache, oldKey)
+                    endif
+                endfor
+            endif
+        endif
         " Ensure pumheight is set correctly
         if &pumheight <= 0 || &pumheight < 10
             set pumheight=10
@@ -1371,6 +1400,62 @@ function! s:updateCandidates()
     doautocmd User ZFVimIM_event_OnUpdateOmni
 endfunction
 
+" Debounced version of updateCandidates
+function! s:updateCandidatesDebounced()
+    " First, try to get current keyboard state (peek without updating)
+    " Use updateKeyboardFromCursor logic but don't update s:keyboard yet
+    let cursor_positions = getpos('.')
+    let start_column = cursor_positions[2]
+    let current_line = getline(cursor_positions[1])
+    let seamless_column = s:getSeamless(cursor_positions)
+    if seamless_column <= 0
+        let seamless_column = 1
+    endif
+    if start_column <= seamless_column
+        " No input, update immediately
+        call s:updateCandidates()
+        return
+    endif
+    while start_column > seamless_column && current_line[(start_column-1) - 1] =~# s:input_keys
+        let start_column -= 1
+    endwhile
+    let len = cursor_positions[2] - start_column
+    if len <= 0
+        " No input, update immediately
+        call s:updateCandidates()
+        return
+    endif
+    let currentKeyboard = strpart(current_line, (start_column - 1), len)
+    
+    " For short input (1-2 chars) or when keyboard length/content changes, update immediately
+    " This ensures first character is always matched and changes are responsive
+    let keyboardLen = len(currentKeyboard)
+    let lastKeyboardLen = len(s:lastKeyboard)
+    
+    " Immediate update conditions:
+    " 1. Very short input (1-2 chars) - always immediate for responsiveness
+    " 2. Keyboard length changed (user added/removed chars) - immediate to show new results
+    " 3. Keyboard content changed (user typing) - immediate
+    if keyboardLen <= 2 || keyboardLen != lastKeyboardLen || currentKeyboard !=# s:lastKeyboard
+        " Cancel previous timer if exists
+        if s:updateCandidatesTimer >= 0
+            call timer_stop(s:updateCandidatesTimer)
+            let s:updateCandidatesTimer = -1
+        endif
+        " Update immediately
+        call s:updateCandidates()
+        return
+    endif
+    
+    " For longer input (3+ chars) with no change, use debounce to avoid excessive updates
+    " Cancel previous timer if exists
+    if s:updateCandidatesTimer >= 0
+        call timer_stop(s:updateCandidatesTimer)
+    endif
+    " Schedule update with 30ms delay (reduced from 50ms for better responsiveness)
+    let s:updateCandidatesTimer = timer_start(30, {-> s:updateCandidates()})
+endfunction
+
 function! s:omnifunc(start, keyboard)
     let s:enter_to_confirm = 1
     let s:hasInput = 1
@@ -1380,7 +1465,7 @@ function! s:omnifunc(start, keyboard)
         endif
         return s:start_column - 1
     else
-        call s:updateCandidates()
+        call s:updateCandidatesDebounced()
         return []
     endif
 endfunction
@@ -1734,7 +1819,7 @@ function! s:refreshAfterRemove(dictPath, db, removedFromMemory)
                     let s:match_list = []
                     let s:page = 0
                     let s:pageup_pagedown = 0
-                    call s:updateCandidates()
+                    call s:updateCandidatesDebounced()
                 endif
             endif
         else
@@ -1745,7 +1830,7 @@ function! s:refreshAfterRemove(dictPath, db, removedFromMemory)
                 let s:page = 0
                 let s:pageup_pagedown = 0
                 " Force update candidates (this will regenerate from updated database)
-                call s:updateCandidates()
+                call s:updateCandidatesDebounced()
             endif
         endif
     catch
@@ -1780,7 +1865,7 @@ function! s:updateCandidatesAfterReload()
             let s:page = 0
             let s:pageup_pagedown = 0
             " Force update candidates (this will regenerate from reloaded database)
-            call s:updateCandidates()
+            call s:updateCandidatesDebounced()
         endif
     catch
         " Ignore errors
