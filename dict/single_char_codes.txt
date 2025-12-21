@@ -1587,7 +1587,6 @@ mj 漫
 zh 漳
 pj 潘
 qr 潜
-rp 潤
 ck 潮
 hz 潶
 zk 澡
@@ -1937,7 +1936,7 @@ lk 老
 kk 考
 ze 者
 vr 而
-swv 耍
+sw 耍
 gg 耕
 hk 耗
 vb 耦
@@ -1961,7 +1960,6 @@ zi 肢
 fu 肤
 fz 肥
 jr 肩
-ah 肮
 yu 育
 fz 肺
 zs 肿
@@ -1985,7 +1983,6 @@ ye 腋
 fu 腐
 qd 腔
 yr 腕
-nf 腝
 nj 腩
 fu 腹
 ni 腻
@@ -2062,7 +2059,6 @@ bo 菠
 pu 菩
 tk 萄
 py 萍
-tx 萜
 yy 萤
 yy 营
 xc 萧
@@ -2353,7 +2349,6 @@ zs 重
 ye 野
 ld 量
 jn 金
-dq 銩
 zf 针
 dy 钉
 tl 钛
@@ -2363,7 +2358,6 @@ zs 钟
 gh 钢
 qn 钦
 jp 钧
-tb 钭
 cb 钮
 qr 钳
 bo 铂
@@ -2402,7 +2396,6 @@ zf 镇
 nx 镍
 jy 镜
 rp 閏
-rp 閠
 mf 门
 wf 问
 cd 闯

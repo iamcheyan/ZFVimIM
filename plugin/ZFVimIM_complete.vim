@@ -63,13 +63,7 @@ function! s:complete_match_alias(ret, key, db, matchLimit)
     endif
     let added = 0
     for entry in cache
-        call add(a:ret, {
-                    \   'dbId' : a:db['dbId'],
-                    \   'len' : len(a:key),
-                    \   'key' : entry['key'],
-                    \   'word' : entry['word'],
-                    \   'type' : 'match',
-                    \ })
+        call add(a:ret, s:newCandidate(a:db['dbId'], entry['key'], entry['word'], len(a:key), 'match'))
         let added += 1
         if added >= a:matchLimit
             break
@@ -231,6 +225,45 @@ function! s:aliasMatchLong(fullKey, aliasKey, wordLen)
     return 1
 endfunction
 
+" Dynamically shrink large limits for long keys to avoid decoding thousands of entries
+function! s:adaptiveLimit(limit, keyLen)
+    if a:limit == 0
+        return 0
+    endif
+    let baseLimit = abs(a:limit)
+    if baseLimit <= 0
+        return a:limit
+    endif
+    let adjusted = baseLimit
+    if a:keyLen >= 8
+        let adjusted = min([baseLimit, 40])
+    elseif a:keyLen >= 6
+        let adjusted = min([baseLimit, 80])
+    elseif a:keyLen >= 4
+        let adjusted = min([baseLimit, 120])
+    endif
+    return (a:limit > 0) ? adjusted : (0 - adjusted)
+endfunction
+
+function! s:itemWordFrequency(key, word)
+    if exists('*ZFVimIM_getWordFrequency')
+        return ZFVimIM_getWordFrequency(a:key, a:word)
+    endif
+    return 0
+endfunction
+
+function! s:newCandidate(dbId, key, word, wordLen, type, ...)
+    let freq = (a:0 >= 1 ? a:1 : s:itemWordFrequency(a:key, a:word))
+    return {
+                \   'dbId' : a:dbId,
+                \   'len' : a:wordLen,
+                \   'key' : a:key,
+                \   'word' : a:word,
+                \   'type' : a:type,
+                \   'freq' : freq,
+                \ }
+endfunction
+
 function! s:completeDefault(key, ...)
     let option = get(a:, 1, {})
     let db = get(option, 'db', {})
@@ -352,6 +385,11 @@ function! s:complete_crossDb(ret, key, option, db)
         return
     endif
 
+    " Skip cross-db for long keys to avoid recursive heavy lookups
+    if len(a:key) >= 6
+        return
+    endif
+
     let crossDbRetList = []
     for crossDbTmp in g:ZFVimIM_db
         if crossDbTmp['dbId'] == a:db['dbId']
@@ -423,6 +461,7 @@ endfunction
 
 function! s:complete_predict(ret, key, option, db)
     let predictLimit = get(a:option, 'predict', g:ZFVimIM_predictLimit)
+    let predictLimit = s:adaptiveLimit(predictLimit, len(a:key))
     if predictLimit <= 0
         return
     endif
@@ -447,13 +486,7 @@ function! s:complete_predict(ret, key, option, db)
         " found things to predict
         let wordIndex = 0
         while len(a:ret) < predictLimit
-            call add(a:ret, {
-                        \   'dbId' : a:db['dbId'],
-                        \   'len' : p,
-                        \   'key' : dbItem['key'],
-                        \   'word' : dbItem['wordList'][wordIndex],
-                        \   'type' : 'predict',
-                        \ })
+            call add(a:ret, s:newCandidate(a:db['dbId'], dbItem['key'], dbItem['wordList'][wordIndex], p, 'predict'))
             let wordIndex += 1
             if wordIndex < len(dbItem['wordList'])
                 continue
@@ -476,6 +509,7 @@ endfunction
 
 function! s:complete_match(matchRet, subMatchLongestRet, subMatchRet, key, option, db)
     let matchLimit = get(a:option, 'match', g:ZFVimIM_matchLimit)
+    let matchLimit = s:adaptiveLimit(matchLimit, len(a:key))
     if matchLimit < 0
         call s:complete_match_exact(a:matchRet, a:key, a:option, a:db, 0 - matchLimit)
     elseif matchLimit > 0
@@ -520,13 +554,7 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
         " Get the actual key from database
         let dbItemKey = dbItem['key']
         for word in dbItem['wordList']
-            let item = {
-                        \   'dbId' : a:db['dbId'],
-                        \   'len' : keyLen,
-                        \   'key' : dbItemKey,
-                        \   'word' : word,
-                        \   'type' : 'match',
-                        \ }
+            let item = s:newCandidate(a:db['dbId'], dbItemKey, word, keyLen, 'match')
             if len(word) == 1
                 call add(singleChars, item)
             else
@@ -632,13 +660,7 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
         " Get the actual key from database
         let dbItemKey = dbItem['key']
         for word in dbItem['wordList']
-            let item = {
-                        \   'dbId' : a:db['dbId'],
-                        \   'len' : p,
-                        \   'key' : dbItemKey,
-                        \   'word' : word,
-                        \   'type' : type,
-                        \ }
+            let item = s:newCandidate(a:db['dbId'], dbItemKey, word, p, type)
             if len(word) == 1
                 call add(singleChars, item)
             else
@@ -735,14 +757,7 @@ function! s:extractCommonFirstChar(multiChars, currentKey, db)
             for char in keys(firstChars)
                 if firstChars[char] >= 2
                     " Create new item with extracted char
-                    let newItem = {
-                                \   'dbId' : group[0]['dbId'],
-                                \   'len' : 2,
-                                \   'key' : currentKeyPrefix,
-                                \   'word' : char,
-                                \   'type' : 'match',
-                                \ }
-                    call add(extractedItems, newItem)
+                    call add(extractedItems, s:newCandidate(group[0]['dbId'], currentKeyPrefix, char, 2, 'match'))
                 endif
             endfor
         endif
@@ -799,17 +814,14 @@ endfunction
 " Sort function with frequency support
 " This function sorts items by frequency (higher frequency first)
 function! s:sortByFrequency(item1, item2)
-    " Get word frequency if available
-    let freq1 = 0
-    let freq2 = 0
-    
-    " Try to get frequency from global function
-    if exists('*ZFVimIM_getWordFrequency')
-        let freq1 = ZFVimIM_getWordFrequency(a:item1['key'], a:item1['word'])
-        let freq2 = ZFVimIM_getWordFrequency(a:item2['key'], a:item2['word'])
+    if !has_key(a:item1, 'freq')
+        let a:item1['freq'] = s:itemWordFrequency(get(a:item1, 'key', ''), get(a:item1, 'word', ''))
     endif
-    
-    " Sort by frequency (higher frequency first)
+    if !has_key(a:item2, 'freq')
+        let a:item2['freq'] = s:itemWordFrequency(get(a:item2, 'key', ''), get(a:item2, 'word', ''))
+    endif
+    let freq1 = a:item1['freq']
+    let freq2 = a:item2['freq']
     if freq1 > freq2
         return -1
     elseif freq1 < freq2

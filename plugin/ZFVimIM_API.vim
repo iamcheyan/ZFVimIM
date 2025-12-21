@@ -901,7 +901,16 @@ endfunction
 "     'wordList' : ['啊', '阿'],
 "     'countList' : [123],
 "   }
+if !exists('s:dbItemDecodeCache')
+    let s:dbItemDecodeCache = {}
+    let s:dbItemDecodeCacheKeys = []
+endif
+
 function! ZFVimIM_dbItemDecode(dbItemEncoded)
+    if has_key(s:dbItemDecodeCache, a:dbItemEncoded)
+        return deepcopy(s:dbItemDecodeCache[a:dbItemEncoded])
+    endif
+
     let split = split(a:dbItemEncoded, g:ZFVimIM_KEY_S_MAIN)
     let wordList = split(split[1], g:ZFVimIM_KEY_S_SUB)
     for i in range(len(wordList))
@@ -917,11 +926,30 @@ function! ZFVimIM_dbItemDecode(dbItemEncoded)
     while len(countList) < len(wordList)
         call add(countList, 0)
     endwhile
-    return {
+    let decoded = {
                 \   'key' : split[0],
                 \   'wordList' : wordList,
                 \   'countList' : countList,
                 \ }
+
+    let s:dbItemDecodeCache[a:dbItemEncoded] = decoded
+    call add(s:dbItemDecodeCacheKeys, a:dbItemEncoded)
+    if len(s:dbItemDecodeCacheKeys) > 5000
+        let removeCount = len(s:dbItemDecodeCacheKeys) - 5000
+        if removeCount > 0
+            let toRemove = remove(s:dbItemDecodeCacheKeys, 0, removeCount - 1)
+            for key in toRemove
+                call remove(s:dbItemDecodeCache, key)
+            endfor
+        endif
+    endif
+
+    return deepcopy(decoded)
+endfunction
+
+function! ZFVimIM_dbItemDecodeCacheClear()
+    let s:dbItemDecodeCache = {}
+    let s:dbItemDecodeCacheKeys = []
 endfunction
 
 function! ZFVimIM_dbItemEncode(dbItem)
@@ -1174,6 +1202,7 @@ endfunction
 function! ZFVimIM_dbSearchCacheClear(db)
     let a:db['dbSearchCache'] = {}
     let a:db['dbSearchCacheKeys'] = []
+    call ZFVimIM_dbItemDecodeCacheClear()
 endfunction
 
 " Clear all cache files for all dictionaries
