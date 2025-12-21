@@ -1,2535 +1,3109 @@
-丁
-丈
-上
-下
-不
-与
-丑
-专
-且
-世
-丘
-丙
-业
-丛
-东
-丝
-丟
-丢
-严
-个
-丫
-中
-丰
-串
-临
-丸
-丹
-为
-主
-丽
-举
-乃
-久
-么
-义
-之
-乌
-乍
-乎
-乏
-乐
-乒
-乔
-乖
-乘
-乙
-乞
-也
-习
-乡
-书
-买
-乱
-乳
-了
-予
-争
-事
-于
-亏
-云
-亚
-些
-亡
-交
-亦
-产
-亨
-亩
-享
-京
-亭
-亮
-亲
-人
-仅
-仆
-仇
-今
-介
-仍
-从
-仑
-仓
-仔
-他
-仗
-付
-仙
-代
-令
-以
-仪
-们
-仰
-仲
-件
-价
-任
-份
-仿
-企
-伊
-伏
-休
-众
-优
-伙
-会
-伞
-传
-伤
-伦
-伯
-伴
-伸
-似
-但
-位
-低
-佐
-佑
-体
-何
-余
-佛
-作
-你
-佣
-佩
-佬
-佳
-使
-例
-供
-依
-侠
-侥
-侧
-侨
-侮
-侯
-侵
-便
-促
-俊
-俏
-俗
-保
-信
-俭
-修
-俺
-倆
-倍
-倒
-候
-倚
-借
-倡
-倦
-倩
-倪
-债
-倾
-假
-偌
-偏
-做
-停
-健
-偶
-偷
-傍
-储
-催
-傲
-傻
-像
-儿
-元
-兄
-充
-先
-光
-克
-免
-兑
-兔
-党
-兜
-入
-全
-公
-兰
-共
-关
-兴
-兵
-其
-具
-典
-养
-兼
-兽
-内
-冈
-冉
-册
-再
-冒
-写
-军
-农
-冥
-冬
-冰
-冲
-决
-冷
-冻
-准
-凉
-凌
-减
-凑
-凤
-凭
-凯
-凳
-凶
-凹
-出
-刀
-刃
-分
-切
-刊
-刑
-划
-列
-刘
-则
-创
-初
-判
-刨
-利
-别
-到
-制
-刷
-刹
-刺
-刻
-剁
-削
-剌
-前
-剑
-剖
-剧
-剩
-剪
-副
-割
-力
-劝
-办
-功
-加
-务
-劢
-劣
-动
-努
-励
-劲
-劳
-势
-勉
-勒
-勘
-募
-勤
-勾
-勿
-匀
-包
-化
-北
-匠
-匪
-匮
-匹
-区
-医
-升
-午
-半
-华
-协
-卒
-单
-卖
-南
-博
-卜
-占
-卡
-卢
-卤
-卯
-却
-卷
-厂
-厅
-历
-厉
-压
-厌
-厕
-厘
-厚
-原
-厢
-厦
-厨
-去
-县
-参
-叉
-及
-友
-双
-反
-发
-取
-受
-变
-叙
-叛
-叠
-口
-古
-句
-另
-叩
-只
-叫
-召
-可
-台
-史
-右
-叶
-号
-司
-叹
-吁
-吃
-各
-吆
-合
-吉
-吊
-同
-后
-吏
-吐
-向
-吓
-吕
-吗
-君
-吞
-吟
-否
-吧
-吨
-吩
-含
-听
-吭
-启
-吴
-吵
-吶
-吸
-吹
-吼
-吾
-呀
-呆
-呈
-告
-呒
-呕
-呗
-员
-呜
-呢
-周
-味
-呵
-呼
-命
-咋
-和
-咏
-咐
-咒
-咔
-咖
-咧
-咪
-咬
-咯
-咱
-咳
-咸
-咽
-哀
-品
-哄
-哆
-哈
-响
-哑
-哗
-哟
-哥
-哦
-哨
-哪
-哭
-哲
-哺
-哼
-唆
-唉
-唐
-唔
-唠
-唤
-唬
-售
-唰
-唱
-啃
-商
-啊
-啜
-啤
-啦
-喀
-喂
-善
-喉
-喊
-喘
-喜
-喝
-喷
-喻
-嗓
-嗦
-嗨
-嗯
-嗲
-嘉
-嘎
-嘲
-嘿
-噔
-噶
-嚷
-囊
-回
-因
-团
-囤
-园
-困
-围
-囵
-固
-国
-图
-圆
-圈
-土
-在
-地
-场
-均
-坊
-坎
-坏
-坐
-坑
-块
-坚
-坝
-坟
-坠
-坡
-坤
-坦
-坨
-坪
-垂
-型
-垛
-垦
-垮
-埃
-埋
-城
-埔
-域
-埠
-培
-基
-堂
-堆
-堕
-堡
-堤
-堪
-堵
-塔
-塞
-填
-境
-墓
-墙
-增
-墨
-壕
-壤
-士
-壮
-声
-壶
-处
-备
-复
-夏
-夕
-外
-多
-夜
-够
-大
-天
-太
-夫
-夯
-失
-头
-夷
-夸
-夹
-夺
-奇
-奉
-奋
-奏
-契
-奔
-奖
-套
-奥
-女
-奴
-奶
-她
-好
-如
-妄
-妆
-妇
-妈
-妊
-妍
-妒
-妙
-妞
-妥
-妨
-妮
-妹
-妻
-姆
-始
-姌
-姐
-姑
-姓
-姗
-姚
-姜
-姨
-娃
-娇
-娘
-娜
-娱
-娶
-婆
-婚
-婴
-婷
-媒
-嫩
-嫰
-嬒
-嬢
-孃
-子
-孔
-存
-孙
-孝
-季
-学
-孩
-宁
-它
-宅
-宇
-守
-安
-宋
-完
-宏
-宕
-官
-宙
-定
-宛
-宜
-宝
-实
-宠
-审
-客
-宣
-室
-宪
-宫
-宰
-害
-宴
-宵
-家
-容
-宽
-宾
-宿
-寄
-密
-富
-寒
-寓
-寝
-察
-寸
-对
-寺
-寻
-导
-寿
-封
-射
-将
-小
-少
-尘
-尚
-尬
-就
-尼
-尽
-尿
-局
-屁
-层
-居
-屈
-届
-屋
-屑
-展
-属
-屠
-屯
-山
-岁
-岔
-岛
-岩
-岭
-岳
-岸
-峰
-峻
-崇
-崔
-崩
-川
-州
-巡
-巢
-工
-左
-巧
-巨
-巩
-差
-己
-已
-巴
-巷
-巾
-币
-市
-布
-帅
-帆
-师
-希
-帐
-帑
-帕
-帖
-帚
-帜
-帝
-带
-席
-帮
-常
-帽
-幂
-幅
-幌
-幕
-干
-平
-年
-并
-幸
-幻
-广
-庄
-庆
-床
-序
-库
-应
-底
-店
-庙
-府
-庞
-废
-度
-座
-庭
-康
-庸
-延
-建
-开
-异
-弃
-弄
-式
-引
-张
-弥
-弩
-弯
-弱
-弹
-强
-归
-当
-录
-形
-彦
-彩
-彭
-彰
-影
-役
-彻
-往
-征
-待
-很
-律
-徐
-徒
-得
-御
-德
-心
-必
-忆
-忌
-忍
-忑
-忒
-志
-忘
-忙
-忠
-快
-念
-忸
-忽
-忿
-怀
-态
-怅
-怎
-怒
-怕
-怖
-思
-怡
-急
-性
-怨
-怪
-怯
-总
-怼
-恁
-恋
-恐
-恒
-恤
-恩
-恭
-息
-恰
-恳
-恶
-恼
-悄
-悟
-患
-悦
-您
-悬
-悯
-悲
-情
-惜
-惠
-惦
-惩
-惯
-惰
-想
-惹
-愁
-意
-愚
-感
-愣
-愤
-愧
-愿
-慈
-慌
-慎
-慕
-慢
-慧
-憋
-懂
-懈
-懊
-戎
-戏
-成
-我
-戒
-或
-战
-戳
-戴
-户
-房
-所
-扇
-手
-扎
-扑
-扒
-打
-扔
-托
-扣
-执
-扩
-扫
-扭
-扮
-扯
-扰
-扳
-扶
-找
-承
-技
-抄
-把
-抑
-抒
-抓
-投
-抖
-折
-抚
-抛
-抝
-抠
-抡
-抢
-护
-报
-抬
-抱
-抵
-抹
-抽
-拂
-担
-拆
-拉
-拌
-拍
-拐
-拒
-拓
-拔
-拖
-拗
-拘
-招
-拜
-拟
-拢
-拥
-拦
-拧
-拨
-择
-括
-拯
-拱
-拳
-拷
-拼
-拽
-拿
-持
-挂
-指
-按
-挎
-挑
-挝
-挞
-挠
-挡
-挣
-挤
-挥
-挨
-挪
-挫
-振
-挺
-挽
-捂
-捆
-捍
-捎
-捏
-捐
-捕
-捞
-损
-捡
-换
-捣
-据
-捶
-捷
-掀
-授
-掉
-掌
-掏
-排
-掘
-探
-接
-控
-推
-掩
-措
-掸
-揉
-描
-提
-插
-握
-揣
-揪
-揭
-援
-搋
-搏
-搓
-搜
-搞
-搬
-搭
-携
-摄
-摆
-摇
-摊
-摔
-摘
-摧
-摩
-摸
-撒
-撞
-播
-撮
-撼
-操
-擒
-攘
-收
-改
-攻
-放
-政
-故
-敌
-敏
-救
-敖
-教
-敞
-敢
-散
-敬
-数
-敲
-整
-文
-斑
-斗
-料
-斜
-斧
-断
-斯
-新
-方
-施
-旁
-旅
-旋
-族
-旗
-无
-既
-日
-旦
-旧
-早
-旬
-旭
-时
-旷
-旺
-昂
-昆
-昊
-昌
-明
-昏
-易
-星
-映
-春
-昨
-是
-昼
-显
-晃
-晋
-晌
-晏
-晒
-晓
-晖
-晚
-晨
-普
-景
-晴
-晶
-智
-暂
-暑
-暖
-暗
-暴
-曲
-更
-曹
-曼
-曾
-替
-最
-月
-有
-服
-朔
-朗
-望
-朝
-期
-木
-本
-术
-朴
-朵
-机
-朽
-杀
-杂
-权
-杆
-杉
-李
-杏
-材
-村
-杖
-杜
-束
-杠
-条
-来
-杨
-杭
-杯
-杰
-松
-板
-极
-构
-枕
-林
-枘
-果
-枝
-枣
-枪
-枯
-架
-柏
-某
-染
-柔
-柚
-柜
-柠
-查
-柯
-柳
-柴
-标
-栈
-栋
-栏
-树
-校
-样
-核
-根
-格
-栽
-桂
-桃
-框
-案
-桌
-桐
-桑
-桔
-档
-桥
-桩
-梁
-梗
-梢
-梦
-梨
-梭
-梯
-械
-梳
-检
-棉
-棍
-棒
-棚
-棵
-椅
-植
-椎
-椒
-楚
-楼
-概
-榕
-榜
-榨
-榭
-槽
-模
-横
-次
-欢
-欧
-款
-歇
-歌
-止
-正
-此
-步
-武
-歪
-歹
-死
-殊
-段
-殿
-毅
-母
-每
-毒
-比
-毕
-毙
-毛
-民
-气
-氛
-氢
-氧
-水
-永
-汀
-求
-汉
-汕
-汗
-汛
-江
-池
-污
-汤
-汪
-汰
-汹
-汽
-沁
-沉
-沏
-沐
-沓
-沙
-沟
-没
-沦
-沪
-沫
-河
-油
-治
-沾
-沿
-況
-泄
-泊
-泌
-泛
-泞
-泡
-波
-泣
-泥
-泪
-泰
-泳
-泵
-泷
-泻
-泼
-泽
-洁
-洋
-洒
-洗
-洛
-洞
-津
-洪
-洲
-活
-洽
-派
-流
-浅
-浇
-测
-济
-浑
-浙
-浦
-浩
-浪
-浮
-浴
-海
-浸
-涂
-消
-涉
-涌
-涛
-涡
-润
-涨
-涮
-涵
-淀
-淆
-淋
-淘
-淡
-淮
-深
-混
-淹
-添
-清
-渐
-渔
-渠
-渡
-渣
-温
-港
-渴
-游
-湖
-湾
-溃
-源
-溜
-溢
-溪
-溶
-溺
-滑
-滕
-滚
-满
-滤
-滨
-滩
-滴
-漂
-漆
-漏
-演
-漠
-漫
-漳
-潘
-潜
-潮
-潶
-澡
-澳
-激
-灌
-火
-灭
-灯
-灰
-灵
-灶
-灾
-灿
-炉
-炊
-炎
-炒
-炕
-炖
-炙
-炭
-炮
-炸
-点
-炼
-炽
-烁
-烂
-烃
-烈
-烙
-烟
-烦
-烫
-烬
-热
-焊
-焕
-焖
-焚
-焦
-焰
-然
-煎
-煜
-煞
-煤
-照
-熄
-熊
-熔
-熙
-熟
-熬
-燃
-燕
-燥
-爆
-爪
-爬
-爱
-父
-爷
-爸
-爹
-爽
-片
-版
-牌
-牙
-牛
-牢
-物
-牲
-牵
-特
-牺
-犯
-状
-犷
-狂
-狈
-狐
-狗
-狠
-狡
-独
-狱
-狼
-猎
-猜
-猩
-猫
-献
-猴
-猾
-玄
-率
-玉
-王
-玛
-玩
-玫
-环
-现
-玲
-玻
-珊
-珍
-珠
-班
-球
-理
-琐
-琨
-琳
-琴
-琶
-瑞
-瑰
-瓜
-瓦
-瓶
-瓷
-甘
-甚
-甜
-生
-用
-甩
-田
-由
-申
-电
-男
-画
-畅
-界
-畏
-留
-畚
-畜
-略
-番
-疏
-疑
-疗
-疟
-疤
-疫
-疯
-疲
-疼
-疾
-病
-症
-痒
-痛
-痞
-痴
-瘦
-癌
-登
-白
-皂
-的
-皇
-皮
-皱
-盆
-盈
-益
-盎
-盏
-盐
-监
-盒
-盔
-盖
-盗
-盛
-盟
-目
-直
-相
-盼
-盾
-省
-眉
-看
-眜
-真
-眠
-眨
-眶
-眺
-眼
-着
-睁
-睡
-瞬
-知
-矫
-短
-矮
-石
-矿
-码
-砂
-砌
-砍
-研
-破
-砸
-础
-硕
-硝
-硬
-碌
-碍
-碎
-碗
-碟
-碰
-磁
-磅
-磋
-磨
-示
-礼
-社
-祖
-神
-祥
-票
-祷
-祸
-禁
-福
-离
-禾
-秀
-私
-秃
-秆
-秉
-秋
-种
-科
-秒
-秘
-租
-秤
-秦
-积
-称
-移
-稀
-程
-稍
-税
-稳
-稻
-稿
-穆
-究
-穷
-空
-穿
-突
-窃
-窄
-窍
-窗
-立
-竖
-站
-章
-童
-端
-笆
-笋
-笑
-笔
-笛
-符
-笨
-第
-笼
-筒
-答
-策
-筹
-签
-简
-箔
-算
-管
-箭
-箱
-篇
-篮
-篾
-簿
-米
-类
-粉
-粒
-粗
-粥
-粪
-粮
-粹
-粼
-精
-糕
-糖
-糟
-系
-素
-索
-紧
-累
-纠
-红
-约
-级
-纪
-纬
-纯
-纱
-纳
-纷
-纸
-纹
-纺
-纽
-线
-练
-组
-细
-织
-终
-绎
-经
-绑
-绒
-结
-绕
-绘
-给
-络
-绝
-绞
-统
-绣
-绦
-继
-绩
-绪
-续
-绰
-绳
-维
-绷
-绸
-绽
-绿
-缀
-缆
-缎
-缓
-编
-缘
-缝
-缠
-缤
-缩
-缪
-缮
-缴
-缺
-罐
-网
-罗
-罢
-罩
-置
-署
-羊
-美
-羞
-羡
-群
-翁
-翅
-翎
-翘
-老
-考
-者
-而
-耍
-耐
-耕
-耗
-耦
-耳
-耻
-耿
-聆
-聊
-聋
-职
-联
-聘
-聚
-聪
-肉
-肋
-肌
-肘
-肚
-肝
-肠
-股
-肢
-肤
-肥
-肩
-肯
-育
-肺
-肿
-胀
-胁
-胆
-背
-胎
-胖
-胜
-胞
-胡
-胫
-胴
-胶
-胸
-能
-脆
-脉
-脏
-脑
-脖
-脚
-脱
-脸
-脾
-腋
-腐
-腔
-腕
-腩
-腹
-腻
-腾
-腿
-膀
-膏
-膜
-臑
-自
-臭
-至
-致
-舅
-舌
-舍
-舒
-舔
-舛
-舟
-航
-般
-船
-艇
-良
-艰
-色
-艳
-艺
-艾
-节
-芋
-芍
-芒
-芝
-芥
-芦
-芬
-芭
-芯
-花
-芳
-芹
-芽
-苍
-苎
-苏
-苑
-苔
-苗
-苞
-若
-苦
-苯
-英
-茂
-范
-茄
-茅
-茧
-茨
-茫
-茶
-茹
-草
-荐
-荒
-荔
-荡
-荣
-荤
-药
-荷
-莉
-莎
-莓
-莫
-莲
-获
-莹
-莺
-莽
-菇
-菌
-菜
-菠
-菩
-萄
-萌
-萍
-萤
-营
-萧
-落
-葡
-董
-葫
-葬
-葶
-蒂
-蒙
-蒲
-蒸
-蓉
-蓝
-蓬
-蔓
-蔬
-蔷
-蔻
-薄
-薪
-薯
-藏
-藤
-虎
-虐
-虑
-虚
-虫
-虹
-虾
-蚁
-蚕
-蚝
-蛇
-蛋
-蛙
-蛮
-蜂
-蜓
-蜕
-蜜
-蝉
-蝴
-蝶
-融
-蟀
-蟒
-血
-行
-街
-衡
-衣
-补
-表
-衫
-衬
-衰
-衷
-袁
-袄
-袋
-袍
-袒
-袖
-袜
-被
-袭
-裁
-裂
-装
-裉
-裕
-裙
-裤
-裱
-褪
-西
-要
-见
-观
-规
-视
-览
-觉
-角
-解
-触
-言
-誉
-謀
-謬
-警
-譬
-计
-订
-认
-讨
-让
-训
-议
-讯
-记
-讲
-讳
-讶
-许
-论
-设
-访
-证
-评
-识
-诈
-诉
-诊
-词
-译
-试
-诗
-诙
-诚
-话
-诞
-询
-诧
-语
-诱
-诲
-说
-诶
-请
-诺
-读
-课
-谁
-调
-谅
-谆
-谈
-谊
-谋
-谍
-谎
-谐
-谚
-谢
-谣
-谨
-谬
-谱
-谷
-豁
-豆
-豉
-豪
-豫
-豹
-賊
-贝
-负
-贡
-财
-责
-贤
-败
-账
-货
-质
-贪
-贫
-贬
-购
-贱
-贴
-贵
-贷
-贸
-费
-贺
-贼
-贾
-贿
-赁
-赃
-赋
-赌
-赏
-赐
-赔
-赘
-赚
-赞
-赡
-赤
-赦
-赫
-走
-赴
-赵
-赶
-起
-趁
-超
-越
-趋
-趣
-足
-跃
-跆
-跋
-跌
-跑
-距
-跟
-跨
-跪
-路
-跳
-践
-跷
-跺
-踏
-踔
-踢
-踩
-踹
-蹄
-蹈
-蹉
-蹦
-躁
-身
-躲
-躺
-车
-轨
-轩
-转
-轮
-软
-轴
-轻
-载
-较
-辅
-辆
-辈
-辉
-辊
-辍
-输
-辖
-辛
-辞
-辣
-辨
-辩
-辱
-边
-辽
-达
-迁
-迅
-过
-迈
-迎
-运
-近
-返
-还
-这
-进
-远
-违
-连
-迟
-迪
-迫
-述
-迷
-追
-退
-适
-逃
-逆
-选
-透
-递
-途
-逗
-通
-逛
-逞
-速
-造
-逢
-逮
-逸
-逻
-遇
-遍
-道
-遗
-遛
-遣
-遥
-遭
-遮
-避
-邓
-邛
-那
-邦
-邮
-邱
-邻
-郁
-郊
-郎
-郝
-郡
-部
-郭
-都
-鄙
-配
-酒
-酬
-酱
-酵
-酷
-酿
-醋
-醒
-醸
-釀
-采
-里
-重
-野
-量
-金
-针
-钉
-钓
-钛
-钝
-钞
-钟
-钢
-钥
-钦
-钧
-钩
-钮
-钱
-钳
-铁
-铂
-铃
-铅
-铆
-铒
-铓
-铛
-铜
-铝
-铤
-铥
-铲
-铺
-链
-铿
-销
-锁
-锅
-锈
-锋
-锌
-锐
-错
-锚
-锡
-锣
-锤
-锥
-锦
-键
-锯
-镀
-镁
-镇
-镍
-镑
-镜
-长
-閏
-门
-闪
-闭
-问
-闯
-闰
-闲
-间
-闷
-闸
-闹
-阁
-阅
-阔
-队
-阬
-阮
-防
-阳
-阵
-阶
-阻
-陀
-附
-际
-陈
-降
-限
-陕
-陡
-院
-除
-险
-陪
-陵
-陶
-陷
-隆
-隔
-隙
-障
-隶
-雀
-雁
-雄
-雅
-集
-雇
-雕
-雨
-雪
-雷
-需
-霆
-震
-霉
-霍
-霜
-露
-霸
-青
-静
-非
-靠
-面
-革
-靶
-鞋
-韦
-韩
-页
-顶
-项
-顺
-须
-顽
-顾
-顿
-颁
-颂
-预
-领
-颈
-频
-颓
-颖
-颗
-题
-颜
-颤
-风
-飑
-飘
-飙
-飞
-食
-餐
-餮
-饥
-饨
-饪
-饭
-饮
-饰
-饱
-饶
-饺
-饼
-饽
-饿
-馁
-馃
-馄
-馅
-馆
-馋
-馒
-馕
-首
-香
-马
-驱
-驳
-驴
-驶
-驼
-驾
-骂
-骄
-骆
-验
-骏
-骑
-骗
-骨
-骰
-髋
-高
-鬼
-魂
-魄
-魅
-魔
-鱼
-鲁
-鲍
-鲜
-鲤
-鲨
-鳴
-鸟
-鸡
-鸣
-鸦
-鸭
-鸽
-鸿
-鹤
-鹰
-鹿
-麦
-麻
-黄
-黎
-黑
-黒
-默
-鼎
-鼓
-鼠
-鼻
-齐
-龄
-龙
+yi 一
+ding 丁
+qi 七
+wan 万
+zhang 丈
+san 三
+shang 上
+xia 下
+bu 不
+yu 与
+gai 丐
+chou 丑
+zhuan 专
+qie 且
+shi 世
+qiu 丘
+bing 丙
+ye 业
+cong 丛
+dong 东
+si 丝
+diu 丟
+diu 丢
+liang 两
+yan 严
+sang 丧
+gun 丨
+ge 个
+ya 丫
+zhong 中
+feng 丰
+chuan 串
+lin 临
+zhu 丶
+wan 丸
+dan 丹
+wei 为
+zhu 主
+li 丽
+ju 举
+pie 丿
+nai 乃
+jiu 久
+me 么
+yi 义
+zhi 之
+wu 乌
+zha 乍
+hu 乎
+fa 乏
+le 乐
+ping 乒
+qiao 乔
+guai 乖
+cheng 乘
+yi 乙
+ya 乛
+jiu 九
+qi 乞
+ye 也
+xi 习
+xiang 乡
+shu 书
+mai 买
+luan 乱
+ru 乳
+le 了
+yu 予
+zheng 争
+shi 事
+er 二
+yu 于
+kui 亏
+yun 云
+hu 互
+wu 五
+jing 井
+ya 亚
+xie 些
+wang 亡
+jiao 交
+yi 亦
+chan 产
+heng 亨
+mu 亩
+xiang 享
+jing 京
+ting 亭
+liang 亮
+qin 亲
+ren 人
+yi 亿
+shen 什
+ren 仁
+jin 仅
+pu 仆
+chou 仇
+jin 今
+jie 介
+reng 仍
+cong 从
+lun 仑
+cang 仓
+zai 仔
+ta 他
+zhang 仗
+fu 付
+xian 仙
+dai 代
+ling 令
+yi 以
+sa 仨
+yi 仪
+men 们
+yang 仰
+zhong 仲
+jian 件
+jia 价
+ren 任
+fen 份
+fang 仿
+qi 企
+yi 伊
+wu 伍
+fu 伏
+fa 伐
+xiu 休
+zhong 众
+you 优
+huo 伙
+hui 会
+san 伞
+wei 伟
+chuan 传
+shang 伤
+lun 伦
+bo 伯
+gu 估
+ban 伴
+shen 伸
+shi 似
+dan 但
+wei 位
+di 低
+zhu 住
+zuo 佐
+you 佑
+ti 体
+he 何
+yu 余
+fu 佛
+zuo 作
+ni 你
+yong 佣
+pei 佩
+lao 佬
+jia 佳
+tiao 佻
+shi 使
+li 例
+shi 侍
+gong 供
+yi 依
+xia 侠
+lv 侣
+jiao 侥
+ce 侧
+qiao 侨
+wu 侮
+hou 侯
+qin 侵
+bian 便
+cu 促
+e 俄
+jun 俊
+qiao 俏
+su 俗
+bao 保
+xin 信
+lia 俩
+jian 俭
+xiu 修
+ju 俱
+an 俺
+lia 倆
+bei 倍
+dao 倒
+hou 候
+yi 倚
+ti 倜
+jie 借
+chang 倡
+juan 倦
+qian 倩
+ni 倪
+zhai 债
+zhi 值
+qing 倾
+jia 假
+ruo 偌
+pian 偏
+zuo 做
+ting 停
+jian 健
+ou 偶
+tou 偷
+chang 偿
+bang 傍
+chu 储
+cui 催
+song 傱
+ao 傲
+sha 傻
+xiang 像
+pi 僻
+er 儿
+yun 允
+yuan 元
+xiong 兄
+chong 充
+xian 先
+guang 光
+ke 克
+mian 免
+dui 兑
+tu 兔
+dang 党
+dou 兜
+ru 入
+quan 全
+ba 八
+gong 公
+liu 六
+xi 兮
+lan 兰
+gong 共
+guan 关
+xing 兴
+bing 兵
+qi 其
+ju 具
+dian 典
+yang 养
+jian 兼
+shou 兽
+nei 内
+gang 冈
+ran 冉
+ce 册
+zai 再
+mao 冒
+rong 冗
+xie 写
+jun 军
+nong 农
+guan 冠
+yuan 冤
+ming 冥
+dong 冬
+bing 冰
+chong 冲
+jue 决
+kuang 况
+leng 冷
+dong 冻
+jing 净
+qi 凄
+zhun 准
+liang 凉
+ling 凌
+jian 减
+cou 凑
+ji 几
+fan 凡
+feng 凤
+ping 凭
+kai 凯
+huang 凰
+deng 凳
+xiong 凶
+tu 凸
+ao 凹
+chu 出
+ji 击
+han 函
+dao 刀
+ren 刃
+fen 分
+qie 切
+kan 刊
+xing 刑
+hua 划
+lie 列
+liu 刘
+ze 则
+gang 刚
+chuang 创
+chu 初
+shan 删
+pan 判
+pao 刨
+li 利
+bie 别
+dao 到
+zhi 制
+shua 刷
+quan 券
+sha 刹
+ci 刺
+ke 刻
+duo 剁
+ti 剃
+xue 削
+la 剌
+qian 前
+jian 剑
+ti 剔
+pou 剖
+bo 剥
+ju 剧
+sheng 剩
+jian 剪
+fu 副
+ge 割
+li 力
+quan 劝
+ban 办
+gong 功
+jia 加
+wu 务
+mai 劢
+lie 劣
+dong 动
+zhu 助
+nu 努
+li 励
+jin 劲
+lao 劳
+shi 势
+bo 勃
+yong 勇
+mian 勉
+lei 勒
+kan 勘
+mu 募
+qin 勤
+gou 勾
+wu 勿
+yun 匀
+bao 包
+hua 化
+bei 北
+jiang 匠
+fei 匪
+kui 匮
+pi 匹
+qu 区
+yi 医
+ni 匿
+shi 十
+qian 千
+sheng 升
+wu 午
+ban 半
+hua 华
+xie 协
+zu 卒
+zhuo 卓
+dan 单
+mai 卖
+nan 南
+bo 博
+bo 卜
+zhan 占
+ka 卡
+lu 卢
+lu 卤
+gua 卦
+wo 卧
+wei 卫
+mao 卯
+yin 印
+wei 危
+ji 即
+que 却
+juan 卷
+xie 卸
+chang 厂
+e 厄
+ting 厅
+li 历
+li 厉
+ya 压
+yan 厌
+ce 厕
+li 厘
+hou 厚
+cuo 厝
+yuan 原
+xiang 厢
+sha 厦
+chu 厨
+qu 去
+xian 县
+san 叁
+can 参
+you 又
+cha 叉
+ji 及
+you 友
+shuang 双
+fan 反
+fa 发
+shu 叔
+qu 取
+shou 受
+bian 变
+xu 叙
+pan 叛
+die 叠
+kou 口
+gu 古
+ju 句
+ling 另
+dao 叨
+kou 叩
+zhi 只
+jiao 叫
+zhao 召
+ba 叭
+ke 可
+tai 台
+shi 史
+you 右
+ye 叶
+hao 号
+si 司
+tan 叹
+diao 叼
+xu 吁
+chi 吃
+ge 各
+yao 吆
+he 合
+ji 吉
+diao 吊
+tong 同
+ming 名
+hou 后
+li 吏
+tu 吐
+xiang 向
+xia 吓
+lv 吕
+ya 吖
+ma 吗
+jun 君
+tun 吞
+yin 吟
+fou 否
+ba 吧
+dun 吨
+fen 吩
+han 含
+ting 听
+keng 吭
+qi 启
+wu 吴
+chao 吵
+na 吶
+xi 吸
+chui 吹
+wen 吻
+hou 吼
+wu 吾
+ya 呀
+e 呃
+dai 呆
+cheng 呈
+gao 告
+na 呐
+wu 呒
+ou 呕
+bei 呗
+yuan 员
+qiang 呛
+wu 呜
+ne 呢
+zhou 周
+wei 味
+he 呵
+hu 呼
+ming 命
+za 咋
+he 和
+yong 咏
+fu 咐
+zhou 咒
+ka 咔
+ka 咖
+dong 咚
+yi 咦
+lie 咧
+zi 咨
+mi 咪
+yao 咬
+ge 咯
+zan 咱
+ke 咳
+xian 咸
+yan 咽
+ai 哀
+pin 品
+hong 哄
+duo 哆
+wa 哇
+ha 哈
+xiang 响
+ya 哑
+da 哒
+bi 哔
+hua 哗
+kuai 哙
+yo 哟
+ge 哥
+o 哦
+shao 哨
+li 哩
+na 哪
+ku 哭
+zhe 哲
+bu 哺
+heng 哼
+suo 唆
+ai 唉
+tang 唐
+wu 唔
+lao 唠
+huan 唤
+hu 唬
+shou 售
+wei 唯
+shua 唰
+chang 唱
+ken 啃
+shang 商
+a 啊
+chuai 啜
+pi 啤
+sha 啥
+la 啦
+ze 啧
+ka 喀
+wei 喂
+shan 善
+la 喇
+hou 喉
+han 喊
+die 喋
+chuan 喘
+xi 喜
+he 喝
+pen 喷
+yu 喻
+a 嗄
+sang 嗓
+si 嗣
+suo 嗦
+hai 嗨
+n 嗯
+die 嗲
+ao 嗷
+sou 嗽
+jia 嘉
+ga 嘎
+ma 嘛
+du 嘟
+chao 嘲
+zui 嘴
+xi 嘻
+hei 嘿
+deng 噔
+qi 器
+e 噩
+ga 噶
+hao 嚎
+ca 嚓
+rang 嚷
+jue 嚼
+nang 囊
+si 四
+hui 回
+yin 因
+tuan 团
+dun 囤
+jiong 囧
+yuan 园
+kun 困
+wei 围
+lun 囵
+gu 固
+guo 国
+tu 图
+yuan 圆
+quan 圈
+tu 土
+sheng 圣
+zai 在
+di 地
+zhen 圳
+chang 场
+ji 圾
+zhi 址
+jun 均
+fang 坊
+kan 坎
+huai 坏
+zuo 坐
+keng 坑
+kuai 块
+jian 坚
+tan 坛
+ba 坝
+fen 坟
+zhui 坠
+po 坡
+kun 坤
+tan 坦
+tuo 坨
+ping 坪
+ke 坷
+chui 垂
+la 垃
+xing 型
+duo 垛
+ken 垦
+dian 垫
+kua 垮
+ai 埃
+mai 埋
+cheng 城
+pu 埔
+yu 域
+bu 埠
+pei 培
+ji 基
+tang 堂
+dui 堆
+duo 堕
+bao 堡
+di 堤
+kan 堪
+du 堵
+ta 塌
+su 塑
+ta 塔
+sai 塞
+tian 填
+jing 境
+mu 墓
+qiang 墙
+zeng 增
+mo 墨
+bi 壁
+hao 壕
+rang 壤
+shi 士
+zhuang 壮
+sheng 声
+ke 壳
+hu 壶
+chu 处
+bei 备
+fu 复
+xia 夏
+xi 夕
+wai 外
+duo 多
+ye 夜
+gou 够
+da 大
+tian 天
+tai 太
+fu 夫
+yang 央
+hang 夯
+shi 失
+tou 头
+yi 夷
+kua 夸
+jia 夹
+duo 夺
+qi 奇
+nai 奈
+feng 奉
+fen 奋
+zou 奏
+qi 契
+ben 奔
+jiang 奖
+tao 套
+zang 奘
+ao 奥
+nv 女
+nu 奴
+nai 奶
+ta 她
+hao 好
+ru 如
+wang 妄
+zhuang 妆
+fu 妇
+ma 妈
+ren 妊
+yan 妍
+du 妒
+miao 妙
+niu 妞
+tuo 妥
+fang 妨
+ni 妮
+mei 妹
+qi 妻
+mu 姆
+shi 始
+ran 姌
+jie 姐
+gu 姑
+xing 姓
+wei 委
+shan 姗
+yao 姚
+jiang 姜
+yi 姨
+kua 姱
+zi 姿
+wei 威
+wa 娃
+jiao 娇
+wei 娓
+niang 娘
+na 娜
+yu 娱
+xian 娴
+qu 娶
+dong 娻
+po 婆
+wan 婉
+hun 婚
+ying 婴
+ting 婷
+mei 媒
+xi 媳
+ji 嫉
+xian 嫌
+nen 嫩
+nen 嫰
+xi 嬉
+hui 嬒
+niang 嬢
+shuang 孀
+niang 孃
+zi 子
+kong 孔
+zi 字
+cun 存
+sun 孙
+xiao 孝
+meng 孟
+ji 季
+gu 孤
+xue 学
+hai 孩
+fu 孵
+ning 宁
+ta 它
+zhai 宅
+yu 宇
+shou 守
+an 安
+song 宋
+wan 完
+hong 宏
+dang 宕
+guan 官
+zhou 宙
+ding 定
+wan 宛
+yi 宜
+bao 宝
+shi 实
+chong 宠
+shen 审
+ke 客
+xuan 宣
+shi 室
+xian 宪
+gong 宫
+zai 宰
+hai 害
+yan 宴
+xiao 宵
+jia 家
+rong 容
+kuan 宽
+bin 宾
+su 宿
+ji 寂
+ji 寄
+mi 密
+fu 富
+han 寒
+yu 寓
+qin 寝
+mo 寞
+cha 察
+gua 寡
+zhai 寨
+cun 寸
+dui 对
+si 寺
+xun 寻
+dao 导
+shou 寿
+feng 封
+she 射
+jiang 将
+zun 尊
+xiao 小
+shao 少
+er 尔
+jian 尖
+chen 尘
+shang 尚
+chang 尝
+you 尤
+ga 尬
+jiu 就
+shi 尸
+chi 尺
+ni 尼
+jin 尽
+wei 尾
+niao 尿
+ju 局
+pi 屁
+ceng 层
+ju 居
+qu 屈
+ti 屉
+jie 届
+wu 屋
+shi 屎
+ping 屏
+xie 屑
+zhan 展
+shu 属
+tu 屠
+lv 履
+tun 屯
+shan 山
+sui 岁
+qi 岂
+cha 岔
+gang 岗
+dao 岛
+yan 岩
+ling 岭
+yue 岳
+an 岸
+xia 峡
+feng 峰
+jun 峻
+kong 崆
+chong 崇
+qi 崎
+cui 崔
+beng 崩
+zhan 崭
+qian 嵌
+chuan 川
+zhou 州
+xun 巡
+chao 巢
+gong 工
+zuo 左
+qiao 巧
+ju 巨
+gong 巩
+wu 巫
+cha 差
+ji 己
+yi 已
+ba 巴
+xiang 巷
+jin 巾
+bi 币
+shi 市
+bu 布
+shuai 帅
+fan 帆
+shi 师
+xi 希
+zhang 帐
+tang 帑
+pa 帕
+tie 帖
+zhou 帚
+zhi 帜
+di 帝
+dai 带
+zhen 帧
+xi 席
+bang 帮
+chang 常
+mao 帽
+mi 幂
+fu 幅
+huang 幌
+mu 幕
+gan 干
+ping 平
+nian 年
+bing 并
+xing 幸
+huan 幻
+you 幼
+you 幽
+guang 广
+zhuang 庄
+qing 庆
+chuang 床
+xu 序
+ku 库
+ying 应
+di 底
+dian 店
+miao 庙
+fu 府
+pang 庞
+fei 废
+du 度
+zuo 座
+ting 庭
+kang 康
+yong 庸
+lian 廉
+yan 延
+jian 建
+kai 开
+yi 异
+qi 弃
+nong 弄
+shi 式
+yin 引
+di 弟
+zhang 张
+mi 弥
+nu 弩
+wan 弯
+ruo 弱
+dan 弹
+qiang 强
+gui 归
+dang 当
+lu 录
+xing 形
+yan 彦
+cai 彩
+biao 彪
+peng 彭
+zhang 彰
+ying 影
+yi 役
+che 彻
+bi 彼
+wang 往
+zheng 征
+jing 径
+dai 待
+xun 徇
+hen 很
+lv 律
+xu 徐
+tu 徒
+de 得
+yu 御
+xun 循
+wei 微
+de 德
+xin 心
+bi 必
+yi 忆
+ji 忌
+ren 忍
+tan 忐
+te 忑
+te 忒
+cun 忖
+zhi 志
+wang 忘
+mang 忙
+zhong 忠
+you 忧
+kuai 快
+nian 念
+niu 忸
+hu 忽
+fen 忿
+huai 怀
+tai 态
+song 怂
+chang 怅
+zen 怎
+nu 怒
+pa 怕
+bu 怖
+lian 怜
+si 思
+yi 怡
+ji 急
+xing 性
+yuan 怨
+guai 怪
+qie 怯
+zong 总
+dui 怼
+nen 恁
+lian 恋
+huang 恍
+kong 恐
+heng 恒
+hui 恢
+xu 恤
+hen 恨
+en 恩
+gong 恭
+xi 息
+qia 恰
+ken 恳
+e 恶
+nao 恼
+yong 恿
+qiao 悄
+xi 悉
+hui 悔
+wu 悟
+you 悠
+huan 患
+yue 悦
+nin 您
+xuan 悬
+min 悯
+bei 悲
+kong 悾
+qing 情
+jing 惊
+huo 惑
+xi 惜
+hui 惠
+dian 惦
+can 惨
+cheng 惩
+qie 惬
+guan 惯
+duo 惰
+xiang 想
+re 惹
+chou 愁
+yi 意
+yu 愚
+gan 感
+leng 愣
+fen 愤
+kui 愧
+yuan 愿
+ci 慈
+huang 慌
+shen 慎
+mu 慕
+man 慢
+hui 慧
+kai 慨
+wei 慰
+bie 憋
+zeng 憎
+dong 懂
+xie 懈
+ao 懊
+lan 懒
+nuo 懦
+rong 戎
+xi 戏
+cheng 成
+wo 我
+jie 戒
+huo 或
+zhan 战
+kan 戡
+jie 截
+chuo 戳
+dai 戴
+hu 户
+fang 房
+suo 所
+bian 扁
+shan 扇
+shou 手
+cai 才
+zha 扎
+pu 扑
+ba 扒
+da 打
+reng 扔
+tuo 托
+kou 扣
+den 扥
+zhi 执
+kuo 扩
+sao 扫
+yang 扬
+niu 扭
+ban 扮
+che 扯
+rao 扰
+ban 扳
+fu 扶
+pi 批
+zhao 找
+cheng 承
+ji 技
+chao 抄
+ba 把
+yi 抑
+shu 抒
+zhua 抓
+tou 投
+dou 抖
+kang 抗
+zhe 折
+fu 抚
+pao 抛
+ao 抝
+kou 抠
+lun 抡
+qiang 抢
+hu 护
+bao 报
+tai 抬
+bao 抱
+di 抵
+mo 抹
+chou 抽
+fu 拂
+dan 担
+chai 拆
+la 拉
+ban 拌
+pai 拍
+guai 拐
+ju 拒
+tuo 拓
+ba 拔
+tuo 拖
+ao 拗
+ju 拘
+zhuo 拙
+zhao 招
+bai 拜
+ni 拟
+long 拢
+yong 拥
+lan 拦
+ning 拧
+bo 拨
+ze 择
+kuo 括
+zheng 拯
+gong 拱
+quan 拳
+kao 拷
+pin 拼
+zhuai 拽
+shi 拾
+na 拿
+chi 持
+gua 挂
+zhi 指
+an 按
+kua 挎
+tiao 挑
+wo 挝
+ta 挞
+nao 挠
+dang 挡
+zheng 挣
+ji 挤
+hui 挥
+ai 挨
+nuo 挪
+cuo 挫
+zhen 振
+ting 挺
+wan 挽
+wu 捂
+tong 捅
+kun 捆
+lv 捋
+han 捍
+shao 捎
+nie 捏
+juan 捐
+bu 捕
+lao 捞
+sun 损
+jian 捡
+huan 换
+dao 捣
+ju 据
+chui 捶
+jie 捷
+na 捺
+xian 掀
+dian 掂
+duo 掇
+shou 授
+diao 掉
+zhang 掌
+tao 掏
+pai 排
+jue 掘
+tan 探
+jie 接
+kong 控
+tui 推
+yan 掩
+cuo 措
+dan 掸
+can 掺
+rou 揉
+zou 揍
+miao 描
+ti 提
+cha 插
+wo 握
+chuai 揣
+jiu 揪
+jie 揭
+yuan 援
+chuai 搋
+bo 搏
+cuo 搓
+sou 搜
+gao 搞
+ban 搬
+da 搭
+xie 携
+she 摄
+bai 摆
+yao 摇
+tan 摊
+shuai 摔
+zhai 摘
+cui 摧
+mo 摩
+mo 摸
+cheng 撑
+sa 撒
+si 撕
+zhuang 撞
+che 撤
+bo 播
+cuo 撮
+zhuan 撰
+lu 撸
+han 撼
+shan 擅
+cao 操
+qing 擎
+qin 擒
+ca 擦
+pan 攀
+zan 攒
+rang 攘
+zhi 支
+shou 收
+gai 改
+gong 攻
+fang 放
+zheng 政
+gu 故
+xiao 效
+di 敌
+min 敏
+jiu 救
+ao 敖
+jiao 教
+chang 敞
+gan 敢
+san 散
+jing 敬
+shu 数
+qiao 敲
+zheng 整
+wen 文
+ban 斑
+dou 斗
+liao 料
+xie 斜
+zhen 斟
+jin 斤
+fu 斧
+zhan 斩
+duan 断
+si 斯
+xin 新
+fang 方
+shi 施
+pang 旁
+lv 旅
+xuan 旋
+zu 族
+qi 旗
+wu 无
+ji 既
+ri 日
+dan 旦
+jiu 旧
+zao 早
+xun 旬
+xu 旭
+shi 时
+kuang 旷
+wang 旺
+ang 昂
+kun 昆
+hao 昊
+chang 昌
+ming 明
+hun 昏
+yi 易
+xin 昕
+xing 星
+ying 映
+chun 春
+mei 昧
+zuo 昨
+zhao 昭
+shi 是
+zhou 昼
+xian 显
+huang 晃
+jin 晋
+shang 晌
+yan 晏
+shai 晒
+xiao 晓
+yun 晕
+hui 晖
+wan 晚
+hui 晦
+chen 晨
+pu 普
+jing 景
+xi 晰
+qing 晴
+jing 晶
+zhi 智
+zan 暂
+shu 暑
+nuan 暖
+an 暗
+ai 暧
+bao 暴
+yue 曰
+qu 曲
+geng 更
+cao 曹
+man 曼
+ceng 曾
+ti 替
+zui 最
+yue 月
+you 有
+peng 朋
+fu 服
+shuo 朔
+lang 朗
+wang 望
+chao 朝
+qi 期
+meng 朦
+mu 木
+wei 未
+mo 末
+ben 本
+shu 术
+zhu 朱
+pu 朴
+duo 朵
+ji 机
+xiu 朽
+sha 杀
+za 杂
+quan 权
+gan 杆
+shan 杉
+li 李
+xing 杏
+cai 材
+cun 村
+zhang 杖
+du 杜
+shu 束
+gang 杠
+tiao 条
+lai 来
+yang 杨
+hang 杭
+bei 杯
+jie 杰
+song 松
+ban 板
+ji 极
+gou 构
+wang 枉
+xi 析
+zhen 枕
+lin 林
+rui 枘
+mei 枚
+guo 果
+zhi 枝
+zao 枣
+qiang 枪
+feng 枫
+ku 枯
+jia 架
+bing 柄
+bai 柏
+mou 某
+ran 染
+rou 柔
+you 柚
+gui 柜
+ning 柠
+cha 查
+ke 柯
+zhu 柱
+liu 柳
+chai 柴
+biao 标
+zhan 栈
+dong 栋
+lan 栏
+shu 树
+li 栗
+xiao 校
+yang 样
+he 核
+gen 根
+ge 格
+zai 栽
+gui 桂
+tao 桃
+kuang 框
+an 案
+zhuo 桌
+tong 桐
+sang 桑
+huan 桓
+ju 桔
+dang 档
+qiao 桥
+zhuang 桩
+tong 桶
+liang 梁
+mei 梅
+geng 梗
+shao 梢
+meng 梦
+li 梨
+suo 梭
+ti 梯
+xie 械
+shu 梳
+jian 检
+mian 棉
+gun 棍
+bang 棒
+zong 棕
+peng 棚
+leng 棱
+ke 棵
+guan 棺
+yi 椅
+zhi 植
+chui 椎
+jiao 椒
+du 椟
+chu 楚
+lou 楼
+gai 概
+yu 榆
+rong 榕
+bang 榜
+zha 榨
+xie 榭
+kan 槛
+cao 槽
+mo 模
+heng 横
+ying 樱
+cheng 橙
+xiang 橡
+meng 檬
+qian 欠
+ci 次
+huan 欢
+xin 欣
+ou 欧
+yu 欲
+qi 欺
+kuan 款
+xie 歇
+qian 歉
+ge 歌
+zhi 止
+zheng 正
+ci 此
+bu 步
+wu 武
+wai 歪
+dai 歹
+si 死
+shang 殇
+shu 殊
+can 残
+duan 段
+yin 殷
+dian 殿
+hui 毁
+yi 毅
+mu 母
+mei 每
+du 毒
+bi 比
+bi 毕
+bi 毙
+mao 毛
+hao 毫
+min 民
+qi 气
+fen 氛
+qing 氢
+yang 氧
+shui 水
+yong 永
+dang 氹
+ting 汀
+qiu 求
+hui 汇
+han 汉
+shan 汕
+han 汗
+xun 汛
+jiang 江
+chi 池
+wu 污
+tang 汤
+wang 汪
+tai 汰
+xiong 汹
+qi 汽
+qin 沁
+chen 沉
+qi 沏
+mu 沐
+da 沓
+sha 沙
+gou 沟
+mei 没
+lun 沦
+hu 沪
+mo 沫
+he 河
+you 油
+zhi 治
+zhan 沾
+yan 沿
+kuang 況
+xie 泄
+quan 泉
+po 泊
+mi 泌
+fa 法
+fan 泛
+ning 泞
+pao 泡
+bo 波
+qi 泣
+ni 泥
+zhu 注
+lei 泪
+tai 泰
+yong 泳
+beng 泵
+long 泷
+xie 泻
+po 泼
+ze 泽
+jie 洁
+yang 洋
+sa 洒
+xi 洗
+luo 洛
+dong 洞
+jin 津
+hong 洪
+zhou 洲
+huo 活
+qia 洽
+pai 派
+liu 流
+qian 浅
+jiao 浇
+zhuo 浊
+ce 测
+ji 济
+liu 浏
+hun 浑
+nong 浓
+zhe 浙
+pu 浦
+hao 浩
+lang 浪
+fu 浮
+yu 浴
+hai 海
+jin 浸
+tu 涂
+xiao 消
+she 涉
+yong 涌
+tao 涛
+wo 涡
+run 润
+zhang 涨
+se 涩
+shuan 涮
+ye 液
+han 涵
+he 涸
+dian 淀
+xiao 淆
+lin 淋
+tang 淌
+tao 淘
+dan 淡
+yin 淫
+huai 淮
+shen 深
+hun 混
+yan 淹
+tian 添
+qing 清
+yuan 渊
+jian 渐
+yu 渔
+qu 渠
+du 渡
+zha 渣
+wen 温
+gang 港
+xuan 渲
+ke 渴
+you 游
+hu 湖
+wan 湾
+kui 溃
+yuan 源
+liu 溜
+yi 溢
+xi 溪
+su 溯
+rong 溶
+ni 溺
+zi 滋
+hua 滑
+tao 滔
+teng 滕
+gun 滚
+yan 滟
+man 满
+lv 滤
+bin 滨
+tan 滩
+di 滴
+piao 漂
+qi 漆
+lou 漏
+yan 演
+mo 漠
+man 漫
+zhang 漳
+lian 潋
+pan 潘
+qian 潜
+chao 潮
+hei 潶
+che 澈
+zao 澡
+ao 澳
+ji 激
+bin 濒
+guan 灌
+huo 火
+mie 灭
+deng 灯
+hui 灰
+ling 灵
+zao 灶
+zai 灾
+can 灿
+jiong 炅
+lu 炉
+chui 炊
+yan 炎
+chao 炒
+kang 炕
+dun 炖
+zhi 炙
+xuan 炫
+tan 炭
+pao 炮
+jiong 炯
+zha 炸
+dian 点
+lian 炼
+chi 炽
+shuo 烁
+lan 烂
+ting 烃
+lie 烈
+lao 烙
+yan 烟
+kao 烤
+fan 烦
+shao 烧
+tang 烫
+jin 烬
+re 热
+yan 焉
+han 焊
+huan 焕
+men 焖
+fen 焚
+jiao 焦
+ruo 焫
+yan 焰
+ran 然
+xiong 焸
+jian 煎
+yu 煜
+sha 煞
+mei 煤
+zhao 照
+xi 熄
+xiong 熊
+rong 熔
+xi 熙
+shu 熟
+ao 熬
+ran 燃
+yan 燕
+zao 燥
+bao 爆
+zhao 爪
+pa 爬
+ai 爱
+jue 爵
+fu 父
+ye 爷
+ba 爸
+die 爹
+shuang 爽
+pian 片
+ban 版
+pai 牌
+ya 牙
+niu 牛
+lao 牢
+mu 牧
+wu 物
+sheng 牲
+qian 牵
+te 特
+xi 牺
+xi 犀
+li 犁
+fan 犯
+zhuang 状
+guang 犷
+you 犹
+kuang 狂
+bei 狈
+hu 狐
+gou 狗
+hen 狠
+jiao 狡
+du 独
+shi 狮
+yu 狱
+li 狸
+lang 狼
+pai 猅
+lie 猎
+meng 猛
+cai 猜
+xing 猩
+zhu 猪
+mao 猫
+xian 献
+tuan 猯
+hou 猴
+hua 猾
+shuo 獡
+xuan 玄
+lv 率
+yu 玉
+wang 王
+ma 玛
+wan 玩
+mei 玫
+huan 环
+xian 现
+ling 玲
+bo 玻
+po 珀
+shan 珊
+zhen 珍
+long 珑
+zhu 珠
+ban 班
+qiu 球
+li 理
+suo 琐
+zuo 琢
+kun 琨
+lin 琳
+qin 琴
+pa 琶
+xia 瑕
+rui 瑞
+gui 瑰
+li 璃
+zhang 璋
+zeng 璔
+gua 瓜
+ban 瓣
+wa 瓦
+ping 瓶
+ci 瓷
+meng 甍
+gan 甘
+shen 甚
+tian 甜
+sheng 生
+sheng 甥
+yong 用
+shuai 甩
+tian 田
+you 由
+jia 甲
+shen 申
+dian 电
+nan 男
+hua 画
+chang 畅
+jie 界
+wei 畏
+liu 留
+ben 畚
+chu 畜
+lve 略
+fan 番
+tuan 疃
+jiang 疆
+shu 疏
+yi 疑
+liao 疗
+nve 疟
+ba 疤
+yi 疫
+chuang 疮
+feng 疯
+pi 疲
+ci 疵
+teng 疼
+ji 疾
+bing 病
+zheng 症
+yang 痒
+hen 痕
+dou 痘
+tong 痛
+pi 痞
+cuo 痤
+chi 痴
+shou 瘦
+zhang 瘴
+ai 癌
+deng 登
+bai 白
+bai 百
+zao 皂
+de 的
+huang 皇
+pi 皮
+zhou 皱
+pen 盆
+ying 盈
+yi 益
+ang 盎
+zhan 盏
+yan 盐
+jian 监
+he 盒
+kui 盔
+gai 盖
+dao 盗
+pan 盘
+sheng 盛
+meng 盟
+mu 目
+ding 盯
+mang 盲
+zhi 直
+xiang 相
+dun 盹
+pan 盼
+dun 盾
+sheng 省
+mei 眉
+kan 看
+mo 眜
+zhen 真
+mian 眠
+zha 眨
+xuan 眩
+kuang 眶
+juan 眷
+tiao 眺
+yan 眼
+zhe 着
+zheng 睁
+jing 睛
+shui 睡
+du 督
+rui 睿
+chou 瞅
+xia 瞎
+pie 瞥
+qiao 瞧
+shun 瞬
+mao 矛
+shi 矢
+zhi 知
+ju 矩
+jiao 矫
+duan 短
+ai 矮
+shi 石
+kuang 矿
+ma 码
+sha 砂
+qi 砌
+kan 砍
+yan 研
+zhuan 砖
+po 破
+za 砸
+chu 础
+shuo 硕
+xiao 硝
+ying 硬
+que 确
+lu 碌
+ai 碍
+sui 碎
+bei 碑
+wan 碗
+die 碟
+peng 碰
+tan 碳
+ci 磁
+bang 磅
+cuo 磋
+ke 磕
+mo 磨
+deng 磴
+shi 示
+li 礼
+she 社
+qi 祁
+zu 祖
+zhu 祝
+shen 神
+xiang 祥
+piao 票
+dao 祷
+huo 祸
+jin 禁
+chan 禅
+fu 福
+ti 禵
+li 离
+he 禾
+xiu 秀
+si 私
+tu 秃
+gan 秆
+bing 秉
+qiu 秋
+zhong 种
+ke 科
+miao 秒
+mi 秘
+zu 租
+cheng 秤
+qin 秦
+ji 积
+cheng 称
+yi 移
+xi 稀
+cheng 程
+shao 稍
+shui 税
+zhi 稚
+wen 稳
+dao 稻
+gao 稿
+mu 穆
+xue 穴
+jiu 究
+qiong 穷
+kong 空
+chuan 穿
+tu 突
+qie 窃
+zhai 窄
+qiao 窍
+zhi 窒
+chuang 窗
+jiong 窘
+wo 窝
+li 立
+shu 竖
+zhan 站
+jing 竞
+jing 竟
+zhang 章
+tong 童
+duan 端
+zhu 竹
+ba 笆
+sun 笋
+xiao 笑
+bi 笔
+di 笛
+fu 符
+ben 笨
+di 第
+long 笼
+deng 等
+jin 筋
+tong 筒
+da 答
+ce 策
+shai 筛
+zheng 筝
+chou 筹
+qian 签
+jian 简
+bo 箔
+suan 算
+guan 管
+xiao 箫
+jian 箭
+xiang 箱
+zhen 箴
+pian 篇
+lou 篓
+lan 篮
+mie 篾
+huang 簧
+bu 簿
+ji 籍
+mi 米
+lei 类
+zi 籽
+fen 粉
+li 粒
+cu 粗
+zhan 粘
+zhou 粥
+fen 粪
+liang 粮
+cui 粹
+lin 粼
+jing 精
+hu 糊
+gao 糕
+tang 糖
+zao 糟
+xi 系
+su 素
+suo 索
+jin 紧
+zi 紫
+lei 累
+gua 絓
+fan 繁
+jiu 纠
+hong 红
+zhou 纣
+xian 纤
+yue 约
+ji 级
+wan 纨
+ji 纪
+wei 纬
+chun 纯
+sha 纱
+gang 纲
+na 纳
+fen 纷
+zhi 纸
+wen 纹
+fang 纺
+niu 纽
+xian 线
+lian 练
+zu 组
+shen 绅
+xi 细
+zhi 织
+zhong 终
+ban 绊
+shao 绍
+yi 绎
+jing 经
+bang 绑
+rong 绒
+jie 结
+rao 绕
+hang 绗
+hui 绘
+gei 给
+xuan 绚
+luo 络
+jue 绝
+jiao 绞
+tong 统
+xiu 绣
+tao 绦
+ji 继
+ji 绩
+xu 绪
+xu 续
+chuo 绰
+sheng 绳
+wei 维
+mian 绵
+beng 绷
+chou 绸
+zong 综
+zhan 绽
+lv 绿
+zhui 缀
+lan 缆
+duan 缎
+huan 缓
+bian 编
+yuan 缘
+feng 缝
+gao 缟
+chan 缠
+bin 缤
+suo 缩
+mou 缪
+liao 缭
+shan 缮
+jiao 缴
+que 缺
+guan 罐
+wang 网
+luo 罗
+fa 罚
+ba 罢
+zhao 罩
+zui 罪
+zhi 置
+shu 署
+ji 羁
+yang 羊
+mei 美
+xiu 羞
+xian 羡
+qun 群
+weng 翁
+chi 翅
+pi 翍
+ling 翎
+xi 翕
+qiao 翘
+fan 翻
+lao 老
+kao 考
+zhe 者
+er 而
+shua 耍
+nai 耐
+geng 耕
+hao 耗
+ba 耙
+ou 耦
+nou 耨
+er 耳
+song 耸
+chi 耻
+dan 耽
+geng 耿
+ling 聆
+liao 聊
+long 聋
+zhi 职
+lian 联
+pin 聘
+ju 聚
+cong 聪
+su 肃
+yi 肄
+rou 肉
+le 肋
+ji 肌
+huang 肓
+zhou 肘
+du 肚
+gan 肝
+chang 肠
+gu 股
+zhi 肢
+fu 肤
+fei 肥
+jian 肩
+ken 肯
+ran 肰
+yu 育
+fei 肺
+shen 肾
+zhong 肿
+zhang 胀
+xie 胁
+wei 胃
+dan 胆
+bei 背
+tai 胎
+pang 胖
+sheng 胜
+bao 胞
+hu 胡
+long 胧
+jing 胫
+yi 胰
+guang 胱
+ge 胳
+dong 胴
+jiao 胶
+xiong 胸
+neng 能
+cui 脆
+mai 脉
+zang 脏
+nao 脑
+bo 脖
+jiao 脚
+cuo 脞
+pu 脯
+tuo 脱
+lian 脸
+pi 脾
+la 腊
+ye 腋
+yan 腌
+fu 腐
+qiang 腔
+wan 腕
+nan 腩
+rou 腬
+sai 腮
+yao 腰
+fu 腹
+ni 腻
+teng 腾
+tui 腿
+bang 膀
+bo 膊
+gao 膏
+bin 膑
+mo 膜
+bi 臂
+nao 臑
+chen 臣
+zi 自
+chou 臭
+zhi 至
+zhi 致
+xi 舄
+jiu 舅
+she 舌
+she 舍
+shu 舒
+tian 舔
+chuan 舛
+wu 舞
+zhou 舟
+hang 航
+ban 般
+jian 舰
+chuan 船
+ting 艇
+liang 良
+jian 艰
+se 色
+yan 艳
+yi 艺
+ai 艾
+jie 节
+yu 芋
+shao 芍
+mang 芒
+pi 芘
+zhi 芝
+jie 芥
+lu 芦
+fen 芬
+ba 芭
+xin 芯
+hua 花
+fang 芳
+qin 芹
+ya 芽
+cang 苍
+zhu 苎
+su 苏
+yuan 苑
+tai 苔
+miao 苗
+bao 苞
+pie 苤
+ruo 若
+ku 苦
+ben 苯
+ying 英
+ping 苹
+mao 茂
+fan 范
+jia 茄
+mao 茅
+jian 茧
+ci 茨
+mang 茫
+yin 茵
+cha 茶
+ru 茹
+cao 草
+jian 荐
+huang 荒
+li 荔
+dang 荡
+rong 荣
+hun 荤
+yao 药
+he 荷
+li 莉
+sha 莎
+mei 莓
+mo 莫
+lai 莱
+lian 莲
+huo 获
+ying 莹
+ying 莺
+mang 莽
+gu 菇
+jun 菌
+cai 菜
+bo 菠
+pu 菩
+cui 萃
+tao 萄
+meng 萌
+ping 萍
+wei 萎
+luo 萝
+ying 萤
+ying 营
+xiao 萧
+sa 萨
+xuan 萱
+luo 落
+zhu 著
+pu 葡
+dong 董
+pa 葩
+hu 葫
+zang 葬
+ting 葶
+di 蒂
+jiang 蒋
+meng 蒙
+pu 蒲
+zheng 蒸
+xu 蓄
+rong 蓉
+lan 蓝
+peng 蓬
+man 蔓
+shu 蔬
+qiang 蔷
+kou 蔻
+bi 蔽
+yun 蕴
+bao 薄
+xin 薪
+shu 薯
+cang 藏
+teng 藤
+fan 藩
+hu 虎
+nve 虐
+lv 虑
+xu 虚
+chong 虫
+hong 虹
+sui 虽
+xia 虾
+chai 虿
+yi 蚁
+bang 蚌
+can 蚕
+hao 蚝
+zao 蚤
+she 蛇
+dan 蛋
+wa 蛙
+zhu 蛛
+jiao 蛟
+yi 蛡
+ha 蛤
+man 蛮
+shu 蜀
+feng 蜂
+li 蜊
+ting 蜓
+tui 蜕
+zhi 蜘
+mi 蜜
+chan 蝉
+huang 蝗
+hu 蝴
+die 蝶
+lang 螂
+weng 螉
+rong 融
+luo 螺
+shuai 蟀
+zhang 蟑
+mang 蟒
+xue 血
+xing 行
+yan 衍
+jie 街
+ya 衙
+heng 衡
+yi 衣
+bu 补
+biao 表
+cha 衩
+shan 衫
+chen 衬
+shuai 衰
+zhong 衷
+yuan 袁
+ao 袄
+dai 袋
+pao 袍
+tan 袒
+xiu 袖
+wa 袜
+bei 被
+xi 袭
+ku 袴
+cai 裁
+lie 裂
+zhuang 装
+ken 裉
+yi 裔
+yu 裕
+qun 裙
+ku 裤
+biao 裱
+pei 裴
+luo 裸
+guo 裹
+he 褐
+ta 褟
+tui 褪
+zhe 褶
+xi 西
+yao 要
+fu 覆
+jian 见
+guan 观
+gui 规
+shi 视
+lan 览
+jue 觉
+jiao 角
+jie 解
+chu 触
+yan 言
+yu 誉
+shi 誓
+keng 誙
+mou 謀
+miu 謬
+jing 警
+pi 譬
+ji 计
+ding 订
+ren 认
+tao 讨
+rang 让
+xun 训
+yi 议
+xun 讯
+ji 记
+jiang 讲
+hui 讳
+ya 讶
+xu 许
+lun 论
+feng 讽
+she 设
+fang 访
+zheng 证
+ping 评
+shi 识
+zha 诈
+su 诉
+zhen 诊
+ci 词
+yi 译
+shi 试
+shi 诗
+hui 诙
+cheng 诚
+hua 话
+dan 诞
+gui 诡
+xun 询
+gai 该
+xiang 详
+cha 诧
+yu 语
+wu 误
+you 诱
+hui 诲
+shuo 说
+song 诵
+ei 诶
+qing 请
+nuo 诺
+du 读
+ke 课
+shui 谁
+diao 调
+liang 谅
+zhun 谆
+tan 谈
+yi 谊
+mou 谋
+die 谍
+huang 谎
+xie 谐
+wei 谓
+yan 谚
+xie 谢
+yao 谣
+jin 谨
+miu 谬
+pu 谱
+gu 谷
+huo 豁
+dou 豆
+shi 豉
+tun 豚
+xiang 象
+hao 豪
+yu 豫
+bao 豹
+chai 豺
+mao 貌
+zei 賊
+bei 贝
+fu 负
+gong 贡
+cai 财
+ze 责
+xian 贤
+bai 败
+zhang 账
+huo 货
+zhi 质
+tan 贪
+pin 贫
+bian 贬
+gou 购
+guan 贯
+jian 贱
+tie 贴
+gui 贵
+dai 贷
+mao 贸
+fei 费
+he 贺
+zei 贼
+jia 贾
+hui 贿
+lin 赁
+zang 赃
+zi 资
+gai 赅
+fu 赋
+du 赌
+shang 赏
+ci 赐
+pei 赔
+lai 赖
+zhui 赘
+zhuan 赚
+sai 赛
+zan 赞
+shan 赡
+chi 赤
+she 赦
+he 赫
+zhe 赭
+zou 走
+fu 赴
+zhao 赵
+gan 赶
+qi 起
+chen 趁
+chao 超
+yue 越
+qu 趋
+qu 趣
+zu 足
+zhi 趾
+yue 跃
+tai 跆
+ba 跋
+die 跌
+pao 跑
+ju 距
+gen 跟
+kua 跨
+gui 跪
+lu 路
+tiao 跳
+jian 践
+qiao 跷
+duo 跺
+ta 踏
+chuo 踔
+ti 踢
+cai 踩
+zong 踪
+duo 踱
+zhong 踵
+chuai 踹
+ti 蹄
+dao 蹈
+cuo 蹉
+nie 蹑
+beng 蹦
+dun 蹲
+zao 躁
+chu 躇
+shen 身
+gong 躬
+duo 躲
+tang 躺
+che 车
+gui 轨
+xuan 轩
+zhuan 转
+lun 轮
+ruan 软
+zhou 轴
+qing 轻
+zai 载
+jiao 轿
+jiao 较
+fu 辅
+liang 辆
+bei 辈
+hui 辉
+gun 辊
+chuo 辍
+fu 辐
+ji 辑
+shu 输
+xia 辖
+xin 辛
+ci 辞
+la 辣
+bian 辨
+bian 辩
+bian 辫
+ru 辱
+bian 边
+liao 辽
+da 达
+qian 迁
+xun 迅
+guo 过
+mai 迈
+ying 迎
+yun 运
+jin 近
+fan 返
+hai 还
+zhe 这
+jin 进
+yuan 远
+wei 违
+lian 连
+chi 迟
+jiong 迥
+di 迪
+po 迫
+die 迭
+shu 述
+mi 迷
+ji 迹
+zhui 追
+tui 退
+song 送
+shi 适
+tao 逃
+ni 逆
+xuan 选
+xun 逊
+tou 透
+zhu 逐
+di 递
+tu 途
+dou 逗
+tong 通
+guang 逛
+cheng 逞
+su 速
+zao 造
+feng 逢
+dai 逮
+yi 逸
+luo 逻
+bi 逼
+sui 遂
+yu 遇
+bian 遍
+huang 遑
+dao 道
+yi 遗
+liu 遛
+qian 遣
+yao 遥
+zao 遭
+zhe 遮
+bi 避
+yao 邀
+deng 邓
+qiong 邛
+na 那
+bang 邦
+you 邮
+qiu 邱
+lin 邻
+yu 郁
+jiao 郊
+lang 郎
+zheng 郑
+hao 郝
+jun 郡
+bu 部
+guo 郭
+dou 都
+bi 鄙
+zhuo 酌
+pei 配
+jiu 酒
+chou 酬
+jiang 酱
+jiao 酵
+mei 酶
+ku 酷
+niang 酿
+cu 醋
+xing 醒
+niang 醸
+niang 釀
+cai 采
+shi 释
+li 里
+zhong 重
+ye 野
+liang 量
+jin 金
+a 錒
+zhen 针
+ding 钉
+shan 钐
+diao 钓
+tai 钛
+dun 钝
+chao 钞
+zhong 钟
+gang 钢
+yao 钥
+qin 钦
+jun 钧
+gou 钩
+niu 钮
+qian 钱
+qian 钳
+zuan 钻
+tie 铁
+bo 铂
+ling 铃
+qian 铅
+mao 铆
+er 铒
+mang 铓
+dang 铛
+tong 铜
+lv 铝
+ding 铤
+diu 铥
+ming 铭
+chan 铲
+yin 银
+ru 铷
+zhu 铸
+pu 铺
+lian 链
+keng 铿
+xiao 销
+suo 锁
+guo 锅
+xiu 锈
+cuo 锉
+feng 锋
+xin 锌
+rui 锐
+a 锕
+zhe 锗
+cuo 错
+mao 锚
+xi 锡
+luo 锣
+chui 锤
+zhui 锥
+jin 锦
+jian 键
+ju 锯
+du 镀
+mei 镁
+zhen 镇
+nie 镍
+bang 镑
+biao 镖
+jing 镜
+deng 镫
+xiang 镶
+zhang 长
+run 閏
+men 门
+shan 闪
+bi 闭
+wen 问
+chuang 闯
+run 闰
+xian 闲
+jian 间
+men 闷
+zha 闸
+nao 闹
+wen 闻
+ge 阁
+yue 阅
+kuo 阔
+dui 队
+keng 阬
+ruan 阮
+fang 防
+yang 阳
+yin 阴
+zhen 阵
+jie 阶
+qu 阹
+zu 阻
+a 阿
+tuo 陀
+fu 附
+ji 际
+lu 陆
+chen 陈
+lou 陋
+mo 陌
+jiang 降
+xian 限
+shan 陕
+dou 陡
+yuan 院
+chu 除
+xian 险
+pei 陪
+ling 陵
+tao 陶
+xian 陷
+long 隆
+sui 随
+yin 隐
+ge 隔
+xi 隙
+zhang 障
+li 隶
+nan 难
+que 雀
+yan 雁
+xiong 雄
+ya 雅
+ji 集
+gu 雇
+diao 雕
+yu 雨
+xue 雪
+ling 零
+lei 雷
+xu 需
+ting 霆
+zhen 震
+mei 霉
+huo 霍
+shuang 霜
+lu 露
+ba 霸
+qing 青
+jing 靓
+jing 静
+fei 非
+kao 靠
+mi 靡
+mian 面
+ge 革
+xue 靴
+ba 靶
+xie 鞋
+ju 鞠
+bian 鞭
+wei 韦
+han 韩
+yin 音
+ye 页
+ding 顶
+xiang 项
+shun 顺
+xu 须
+wan 顽
+gu 顾
+dun 顿
+ban 颁
+song 颂
+yu 预
+ling 领
+jing 颈
+pin 频
+tui 颓
+ying 颖
+ke 颗
+ti 题
+yan 颜
+e 额
+dian 颠
+chan 颤
+feng 风
+biao 飑
+piao 飘
+biao 飙
+fei 飞
+shi 食
+can 餐
+tie 餮
+ji 饥
+tun 饨
+ren 饪
+fan 饭
+yin 饮
+shi 饰
+bao 饱
+rao 饶
+jiao 饺
+bing 饼
+bo 饽
+e 饿
+nei 馁
+guo 馃
+hun 馄
+xian 馅
+guan 馆
+kui 馈
+chan 馋
+man 馒
+nang 馕
+shou 首
+xiang 香
+xin 馨
+ma 马
+qu 驱
+bo 驳
+lv 驴
+shi 驶
+zhu 驻
+tuo 驼
+jia 驾
+ma 骂
+jiao 骄
+luo 骆
+yan 验
+jun 骏
+qi 骑
+pian 骗
+sao 骚
+zhou 骤
+ji 骥
+gu 骨
+tou 骰
+kuan 髋
+gao 高
+gui 鬼
+hun 魂
+po 魄
+mei 魅
+mo 魔
+cheng 鯎
+yu 鱼
+lu 鲁
+bao 鲍
+xian 鲜
+li 鲤
+sha 鲨
+bian 鳊
+guan 鳏
+lin 鳞
+ming 鳴
+bi 鵖
+niao 鸟
+ji 鸡
+ming 鸣
+ya 鸦
+bao 鸨
+ya 鸭
+ge 鸽
+hong 鸿
+peng 鹏
+he 鹤
+ying 鹰
+lu 鹿
+mai 麦
+ma 麻
+huang 黄
+li 黎
+hei 黑
+hei 黒
+mo 默
+ding 鼎
+gu 鼓
+shu 鼠
+bi 鼻
+qi 齐
+chi 齿
+ling 龄
+long 龙
+gong 龚
+gui 龟
