@@ -154,8 +154,8 @@ def dbLoadSqlitePy(dbFile, dbCountFile):
         
         # Second pass: encode all items at once (much faster than per-row encoding)
         for key, wordFreqList in keyWordsMap.items():
-                                                if key[0] not in pyMap:
-                                                    pyMap[key[0]] = {}
+            if key[0] not in pyMap:
+                pyMap[key[0]] = {}
             # Sort by frequency (descending) to maintain order
             # This ensures words with higher frequency appear first
             wordFreqList.sort(key=lambda x: x[1], reverse=True)
@@ -163,8 +163,8 @@ def dbLoadSqlitePy(dbFile, dbCountFile):
             countList = [wf[1] for wf in wordFreqList]
             # Encode and then reorder (dbItemReorder will handle final sorting)
             dbItem = {
-                                                        'key' : key,
-                                                        'wordList' : wordList,
+                'key' : key,
+                'wordList' : wordList,
                 'countList' : countList,
             }
             dbItemReorder(dbItem)  # Sort by frequency with threshold
@@ -264,7 +264,7 @@ def dbLoadNormalizePy(dbFile):
                         existingItem['wordList'].append(word)
                         existingItem['countList'].append(0)
                 normalizedMap[normalizedKey[0]][normalizedKey] = dbItemEncode(existingItem)
-                    else:
+            else:
                 normalizedMap[normalizedKey[0]][normalizedKey] = dbItemEncode({
                     'key' : normalizedKey,
                     'wordList' : dbItem['wordList'],
@@ -315,10 +315,10 @@ def dbSavePy(pyMap, dbFile, dbCountFile, cachePath):
     if len(txtLines) > 0:
         dbFilePtr.write(('\n'.join(txtLines) + '\n').encode('utf-8'))
     dbFilePtr.close()
-        shutil.move(tmpFile, dbFile)
-        
-        # Save count file if needed (still as text format for compatibility)
-        if len(dbCountFile) > 0:
+    shutil.move(tmpFile, dbFile)
+    
+    # Save count file if needed (still as text format for compatibility)
+    if len(dbCountFile) > 0:
             dbCountFilePtr = io.open(cachePath + '/dbCountFileTmp', 'wb')
             countLines = []
             for c in pyMap.keys():
