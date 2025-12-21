@@ -24,9 +24,11 @@ def add_word_to_db(db_file, key, word):
         key: 编码
         word: 词
     """
+    # 如果数据库文件不存在，创建目录和文件
     if not os.path.exists(db_file):
-        print(f'错误: 数据库文件不存在: {db_file}')
-        return False
+        db_dir = os.path.dirname(db_file)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
     
     try:
         conn = sqlite3.connect(db_file)

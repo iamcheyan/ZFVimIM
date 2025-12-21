@@ -18,9 +18,7 @@
 import sys
 import os
 import sqlite3
-import shutil
 from collections import defaultdict
-from datetime import datetime
 
 
 def clean_and_sort_txt_file(txt_file):
@@ -42,12 +40,6 @@ def clean_and_sort_txt_file(txt_file):
     
     print('正在整理 YAML 文件...')
     print('=' * 60)
-    
-    # 创建备份
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = f'{txt_file}.backup.{timestamp}'
-    shutil.copy(txt_file, backup_file)
-    print(f'创建备份文件: {backup_file}')
     
     # 读取并处理文件
     key_to_words = {}  # key -> list of words (去重)
@@ -111,7 +103,6 @@ def clean_and_sort_txt_file(txt_file):
             f.write(f'{key} {" ".join(escaped_words)}\n')
     
     print(f'整理完成！')
-    print(f'备份文件: {backup_file}')
     print('=' * 60)
     return True
 

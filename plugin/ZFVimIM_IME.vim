@@ -1660,6 +1660,26 @@ function! s:savePendingDicts()
     let s:pendingSaveDicts = {}
     " Note: pendingAutoAddWords are cleared in asyncSaveDict after processing
 endfunction
+
+" Save all pending dictionaries synchronously (for VimLeavePre)
+function! s:savePendingDictsSync()
+    if empty(s:pendingSaveDicts)
+        return
+    endif
+    
+    " Save each dictionary synchronously (blocking, but necessary on exit)
+    for dictPath in keys(s:pendingSaveDicts)
+        let db = s:pendingSaveDicts[dictPath]
+        try
+            call s:asyncSaveDict(db, dictPath)
+        catch
+            " Silently ignore save errors on exit
+        endtry
+    endfor
+    
+    " Clear pending saves
+    let s:pendingSaveDicts = {}
+endfunction
 function! s:OnCursorMovedI()
     if get(g:, 'ZFJobTimerFallbackCursorMoving', 0) > 0
         return
@@ -1748,10 +1768,8 @@ function! s:asyncSaveDict(db, dictPath)
     try
         " Get database file path (.db file)
         let dbPath = substitute(a:dictPath, '\.yaml$', '.db', '')
-        if !filereadable(dbPath)
-            " Database doesn't exist, skip
-            return
-        endif
+        " Note: db_add_word.py will create the database if it doesn't exist
+        " So we don't need to check if it exists here
         
         " Get words to add from pending list
         let wordsToAdd = get(s:pendingAutoAddWords, a:dictPath, [])
@@ -1779,12 +1797,19 @@ function! s:asyncSaveDict(db, dictPath)
         
         " Add each word to database
         let addedCount = 0
+        let failedCount = 0
         for wordItem in wordsToAdd
             let cmd = pythonCmd . ' "' . scriptPath . '" "' . dbPath . '" "' . wordItem['key'] . '" "' . wordItem['word'] . '"'
             let result = system(cmd)
             let result = substitute(result, '[\r\n]', '', 'g')
-            if result ==# 'OK'
+            if result ==# 'OK' || result ==# 'EXISTS'
                 let addedCount += 1
+            else
+                let failedCount += 1
+                " Log error for debugging (only if not silent)
+                if !exists('g:ZFVimIM_silent_save') || !g:ZFVimIM_silent_save
+                    echom '[ZFVimIM] Failed to add word: ' . wordItem['word'] . ' (' . result . ')'
+                endif
             endif
         endfor
         
@@ -2317,6 +2342,8 @@ augroup ZFVimIM_frequency
     autocmd!
     autocmd VimLeavePre * call s:saveWordFrequency()
     autocmd VimLeavePre * call s:cleanupDictionaryOnExit()
+    " Also save pending dictionaries on exit
+    autocmd VimLeavePre * call s:savePendingDictsSync()
 augroup END
 
 " Cleanup dictionary on exit
