@@ -7,3 +7,9 @@ __pycache__
 *.db
 dict/*.db
 dict/**/*.db
+
+# Neovim log files
+.nvimlog
+
+# Test scripts
+freqtest.vim

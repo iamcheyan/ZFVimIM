@@ -22,6 +22,8 @@
 
 ### 2. 配置词库路径
 
+> 💡 **快速配置**：你可以直接复制插件目录下的配置文件 [`assast/config/zfvimim.lua`](assast/config/zfvimim.lua) 到你的 Neovim 配置目录 `~/.config/nvim/lua/plugins/zfvimim.lua`，然后根据你的词库名称修改 `vim.g.zfvimim_default_dict_name` 即可。
+
 #### 方法 1：使用插件目录下的词库（推荐，最简单）
 
 编辑 `~/.config/nvim/lua/plugins/zfvimim.lua` 文件：
@@ -122,6 +124,25 @@ ceshi: [测试, 测时]
 ![](assast/preview.gif)
 
 ## 配置说明
+
+### 快速部署
+
+**最简单的方式**：直接复制插件自带的配置文件！
+
+1. 复制配置文件：
+   ```bash
+   cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua/plugins/zfvimim.lua
+   ```
+
+2. 编辑配置文件，修改词库名称：
+   ```lua
+   -- 修改这一行为你的词库名称（不含扩展名）
+   vim.g.zfvimim_default_dict_name = "sbxlm.sbzr"  -- 改为你的词库名称
+   ```
+
+3. 重启 Neovim 即可使用！
+
+**配置文件位置**：[`assast/config/zfvimim.lua`](assast/config/zfvimim.lua)
 
 ### 词库路径配置
 
@@ -749,6 +770,8 @@ ZFVimIM: Cleanup failed: Error loading dictionary: 'utf-8' codec can't decode by
 
 ## 配置示例
 
+> 💡 **提示**：你可以直接复制插件自带的配置文件 [`assast/config/zfvimim.lua`](assast/config/zfvimim.lua) 到 `~/.config/nvim/lua/plugins/zfvimim.lua`，然后修改词库名称即可快速部署！
+
 ### 完整配置示例
 
 #### 示例 1：使用插件目录下的词库（推荐，最简单）
@@ -766,6 +789,15 @@ return {
     lazy = false,
   },
 }
+```
+
+**或者直接复制配置文件**：
+```bash
+# 复制配置文件
+cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua/plugins/zfvimim.lua
+
+# 然后编辑配置文件，修改词库名称
+# vim ~/.config/nvim/lua/plugins/zfvimim.lua
 ```
 
 **说明**：
