@@ -20,6 +20,103 @@ if !exists('g:ZFVimIME_autoStopOnInsertLeave')
 endif
 
 " ============================================================
+" Get database directory path (in user config directory)
+function! s:ZFVimIM_getDbDir()
+    let dbDir = stdpath('config') . '/zfvimim_db'
+    " Ensure directory exists
+    if !isdirectory(dbDir)
+        call mkdir(dbDir, 'p')
+    endif
+    return dbDir
+endfunction
+
+" Get database file path from YAML file path
+" Database files are stored in ~/.config/nvim/zfvimim_db/
+function! s:ZFVimIM_getDbPath(yamlPath)
+    if empty(a:yamlPath)
+        return ''
+    endif
+    
+    " Get database directory
+    let dbDir = s:ZFVimIM_getDbDir()
+    
+    " Get base filename from YAML path
+    let yamlName = fnamemodify(a:yamlPath, ':t')
+    let dbName = substitute(yamlName, '\.yaml$', '.db', '')
+    if dbName ==# yamlName
+        " No .yaml extension, add .db
+        let dbName = dbName . '.db'
+    endif
+    
+    return dbDir . '/' . dbName
+endfunction
+
+" Get YAML file path from database file path
+" Try to find original YAML path from database name
+function! s:ZFVimIM_getYamlPath(dbPath)
+    if empty(a:dbPath)
+        return ''
+    endif
+    
+    " First, try to get from loaded dictionaries
+    if exists('g:ZFVimIM_db')
+        for db in g:ZFVimIM_db
+            if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                if db['implData']['dictPath'] ==# a:dbPath
+                    " Found matching DB, return its YAML path
+                    if has_key(db['implData'], 'yamlPath')
+                        return db['implData']['yamlPath']
+                    endif
+                endif
+            endif
+        endfor
+    endif
+    
+    " Fallback: try to find YAML file in dict directory
+    let dbName = fnamemodify(a:dbPath, ':t')
+    let yamlName = substitute(dbName, '\.db$', '.yaml', '')
+    if yamlName ==# dbName
+        let yamlName = yamlName . '.yaml'
+    endif
+    
+    " Try plugin dict directory
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    let yamlPath = dictDir . '/' . yamlName
+    
+    " Check if file exists
+    if filereadable(yamlPath)
+        return yamlPath
+    endif
+    
+    " Try with default_dict_name if set
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.yaml$'
+            let defaultDictName = defaultDictName . '.yaml'
+        endif
+        let yamlPath = dictDir . '/' . defaultDictName
+        if filereadable(yamlPath)
+            return yamlPath
+        endif
+    endif
+    
+    " Try zfvimim_dict_path if set
+    if exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let yamlPath = expand(g:zfvimim_dict_path)
+        if filereadable(yamlPath)
+            return yamlPath
+        endif
+    endif
+    
+    " Last resort: return dict directory path
+    return yamlPath
+endfunction
+
 " Auto load default dictionary if zfvimim_dict_path is set or use default
 function! s:ZFVimIM_autoLoadDict()
     let dictPath = ''
@@ -73,7 +170,7 @@ function! s:ZFVimIM_autoLoadDict()
         " Always use .db file - convert .yaml to .db if needed
         let actualDbPath = dictPath
         if dictPath =~ '\.yaml$'
-            let actualDbPath = substitute(dictPath, '\.yaml$', '.db', '')
+            let actualDbPath = s:ZFVimIM_getDbPath(dictPath)
             
             " Auto-generate .db file if it doesn't exist
             if !filereadable(actualDbPath)
@@ -127,7 +224,7 @@ function! s:ZFVimIM_autoLoadDict()
                     " Convert to DB path if YAML is specified
                     let actualDbPath = dictPath
                     if dictPath =~ '\.yaml$'
-                        let actualDbPath = substitute(dictPath, '\.yaml$', '.db', '')
+                        let actualDbPath = s:ZFVimIM_getDbPath(dictPath)
                         
                         " Auto-generate .db file if it doesn't exist
                         if !filereadable(actualDbPath)
@@ -1885,7 +1982,7 @@ endfunction
 function! s:asyncSaveDict(db, dictPath)
     try
         " Get database file path (.db file)
-        let dbPath = substitute(a:dictPath, '\.yaml$', '.db', '')
+        let dbPath = s:ZFVimIM_getDbPath(a:dictPath)
         " Note: db_add_word.py will create the database if it doesn't exist
         " So we don't need to check if it exists here
         
@@ -2368,7 +2465,7 @@ function! s:updateWordFrequencyInDb(key, word, increment)
     endif
     
     " Get database file path (.db file)
-    let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
+    let dbPath = s:ZFVimIM_getDbPath(dictPath)
     if !filereadable(dbPath)
         return
     endif
@@ -2485,7 +2582,7 @@ function! s:cleanupDictionaryOnExit()
         let dictPath = expand(g:zfvimim_dict_path)
         " Ensure it's .yaml file for cleanup script
         if dictPath =~ '\.db$'
-            let dictPath = substitute(dictPath, '\.db$', '.yaml', '')
+            let dictPath = s:ZFVimIM_getYamlPath(dictPath)
         endif
     else
         let dictPath = dictDir . '/default.yaml'
@@ -2619,10 +2716,6 @@ endif
 " Create user command for reloading
 " Reload plugin
 command! -nargs=0 IMReload :call ZFVimIM_reload()
-" Legacy command (deprecated, use IMReload instead)
-if !exists(':ZFVimIMReload')
-    command! ZFVimIMReload :call ZFVimIM_reload()
-endif
 
 " Cache management commands - removed, use ZFVimIMClear instead
 " if !exists(':ZFVimIMCacheClear')
@@ -2698,7 +2791,7 @@ function! ZFVimIM_cleanupDictionary()
         let dictPath = db['implData']['dictPath']
         " Cleanup script only works with .yaml files, so convert .db to .yaml
         if dictPath =~ '\.db$'
-            let dictPath = substitute(dictPath, '\.db$', '.yaml', '')
+            let dictPath = s:ZFVimIM_getYamlPath(dictPath)
         endif
     else
         " Try to get from autoLoadDict logic
@@ -2720,7 +2813,7 @@ function! ZFVimIM_cleanupDictionary()
             let dictPath = expand(g:zfvimim_dict_path)
             " Ensure it's .yaml file for cleanup script
             if dictPath =~ '\.db$'
-                let dictPath = substitute(dictPath, '\.db$', '.yaml', '')
+                let dictPath = s:ZFVimIM_getYamlPath(dictPath)
             endif
         else
             " Default dictionary: default.yaml
@@ -2813,7 +2906,7 @@ function! ZFVimIM_refreshAll()
                 let dictPath = db['implData']['dictPath']
                 " Cleanup script only works with .yaml files
                 if dictPath =~ '\.db$'
-                    let dictPath = substitute(dictPath, '\.db$', '.yaml', '')
+                    let dictPath = s:ZFVimIM_getYamlPath(dictPath)
                 endif
             else
                 " Try to get from autoLoadDict logic
@@ -2827,7 +2920,7 @@ function! ZFVimIM_refreshAll()
                 elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
                     let dictPath = expand(g:zfvimim_dict_path)
                     if dictPath =~ '\.db$'
-                        let dictPath = substitute(dictPath, '\.db$', '.yaml', '')
+                        let dictPath = s:ZFVimIM_getYamlPath(dictPath)
                     endif
                 else
                     let dictPath = dictDir . '/default.yaml'
@@ -2883,25 +2976,19 @@ command! -nargs=0 IMInfo call ZFVimIM_showInfo()
 " Sync YAML file to database (only add new entries, don't delete)
 command! -nargs=0 IMSync call ZFVimIM_syncTxtToDb()
 
-" Export database to YAML file (force overwrite YAML with DB content)
-command! -nargs=0 IMExport call ZFVimIM_exportDbToTxt()
+" Initialize YAML file from database (force overwrite YAML with DB content)
+command! -nargs=0 IMInit call ZFVimIM_exportDbToTxt()
+command! -nargs=0 IMExport call ZFVimIM_exportDbToTxt()  " Deprecated: use IMInit
 
 " Import YAML file to database (clear DB and reimport from YAML)
 command! -nargs=0 IMImport call ZFVimIM_importTxtToDb()
 
-" Batch add words (opens batch input interface)
-" Note: IMAdd also opens batch add interface, so IMBatchAdd is redundant
-" Keeping it for backward compatibility
-command! -nargs=0 IMBatchAdd call ZFVimIM_batchAddWords()
+" Edit dictionary (open in new tab, edit and save to import)
+command! -nargs=0 IMEdit call ZFVimIM_editDict()
 
 " ============================================================
-" Legacy commands (deprecated, use IM* commands instead)
+" Legacy commands removed - use IM* commands instead
 " ============================================================
-command! -nargs=0 ZFVimIMClear call ZFVimIM_refreshAll()
-command! -nargs=0 ZFVimIMInfo call ZFVimIM_showInfo()
-command! -nargs=0 ZFVimIMSync call ZFVimIM_syncTxtToDb()
-command! -nargs=0 ZFVimIMExport call ZFVimIM_exportDbToTxt()
-command! -nargs=0 ZFVimIMImport call ZFVimIM_importTxtToDb()
 
 function! ZFVimIM_importTxtToDb()
     " Check if Python is available
@@ -2939,7 +3026,7 @@ function! ZFVimIM_importTxtToDb()
     endif
     
     " Get database file path (.db file)
-    let dbPath = substitute(yamlPath, '\.yaml$', '.db', '')
+    let dbPath = s:ZFVimIM_getDbPath(yamlPath)
     
     " Get script path
     let scriptPath = pluginDir . '/misc/import_txt_to_db.py'
@@ -2983,7 +3070,7 @@ function! ZFVimIM_importTxtToDb()
                     let dbPath = db['implData']['dictPath']
                     " Convert .yaml to .db if needed
                     if dbPath =~ '\.yaml$'
-                        let dbPath = substitute(dbPath, '\.yaml$', '.db', '')
+                        let dbPath = s:ZFVimIM_getDbPath(dbPath)
                     endif
                     if filereadable(dbPath)
                         echom '[ZFVimIM] 重新加载数据库...'
@@ -3003,7 +3090,7 @@ endfunction
 function! ZFVimIM_exportDbToTxt()
     " Check if Python is available
     if !executable('python') && !executable('python3')
-        echom '[ZFVimIM] Error: Python not found, cannot export database'
+        echom '[ZFVimIM] Error: Python not found, cannot initialize YAML from database'
         return
     endif
     
@@ -3019,24 +3106,26 @@ function! ZFVimIM_exportDbToTxt()
     " Determine database file path
     if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
         let defaultDictName = g:zfvimim_default_dict_name
-        if defaultDictName =~ '\.yaml$'
-            let defaultDictName = substitute(defaultDictName, '\.yaml$', '.db', '')
-        elseif defaultDictName !~ '\.db$'
-            let defaultDictName = defaultDictName . '.db'
+        " Get YAML path first
+        if defaultDictName !~ '\.yaml$'
+            let defaultDictName = defaultDictName . '.yaml'
         endif
-        let dbPath = dictDir . '/' . defaultDictName
+        let yamlPath = dictDir . '/' . defaultDictName
+        let dbPath = s:ZFVimIM_getDbPath(yamlPath)
     elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
         let dictPath = expand(g:zfvimim_dict_path)
         " Convert .yaml to .db
         if dictPath =~ '\.yaml$'
-            let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
+            let dbPath = s:ZFVimIM_getDbPath(dictPath)
         elseif dictPath =~ '\.db$'
             let dbPath = dictPath
         else
-            let dbPath = dictPath . '.db'
+            " Assume it's a YAML file without extension
+            let dbPath = s:ZFVimIM_getDbPath(dictPath . '.yaml')
         endif
     else
-        let dbPath = dictDir . '/default.db'
+        let yamlPath = dictDir . '/default.yaml'
+        let dbPath = s:ZFVimIM_getDbPath(yamlPath)
     endif
     
     " Skip if database file doesn't exist
@@ -3045,13 +3134,13 @@ function! ZFVimIM_exportDbToTxt()
         return
     endif
     
-    " Get TXT file path (same name, different extension)
-    let yamlPath = substitute(dbPath, '\.db$', '.yaml', '')
+    " Get YAML file path from database path
+    let yamlPath = s:ZFVimIM_getYamlPath(dbPath)
     
     " Get script path
     let scriptPath = pluginDir . '/misc/db_export_to_txt.py'
     if !filereadable(scriptPath)
-        echom '[ZFVimIM] Error: Export script not found: ' . scriptPath
+        echom '[ZFVimIM] Error: 初始化脚本未找到: ' . scriptPath
         return
     endif
     
@@ -3064,7 +3153,7 @@ function! ZFVimIM_exportDbToTxt()
         let dbPathAbs = CygpathFix_absPath(dbPath)
         let yamlPathAbs = CygpathFix_absPath(yamlPath)
         
-        echom '[ZFVimIM] 开始导出数据库到 YAML 文件...'
+        echom '[ZFVimIM] 开始初始化 YAML 文件（从数据库）...'
         echom '[ZFVimIM] 数据库: ' . dbPathAbs
         echom '[ZFVimIM] 输出文件: ' . yamlPathAbs
         
@@ -3080,12 +3169,12 @@ function! ZFVimIM_exportDbToTxt()
         endfor
         
         if v:shell_error == 0
-            echom '[ZFVimIM] 导出完成！'
+            echom '[ZFVimIM] ✅ YAML 文件初始化完成！'
         else
-            echom '[ZFVimIM] 导出失败，请检查错误信息'
+            echom '[ZFVimIM] ❌ YAML 文件初始化失败，请检查错误信息'
         endif
     catch /.*/
-        echom '[ZFVimIM] Error: 导出过程出错: ' . v:exception
+        echom '[ZFVimIM] Error: 初始化过程出错: ' . v:exception
     endtry
 endfunction
 
@@ -3145,7 +3234,7 @@ function! ZFVimIM_syncTxtToDb()
     endif
     
     " Determine database file path (.db)
-    let dbPath = substitute(yamlPath, '\.yaml$', '.db', '')
+    let dbPath = s:ZFVimIM_getDbPath(yamlPath)
     
     " Determine Python command
     let pythonCmd = executable('python3') ? 'python3' : 'python'
@@ -3180,7 +3269,7 @@ function! ZFVimIM_syncTxtToDb()
                     let dbPath = db['implData']['dictPath']
                     " Convert .yaml to .db if needed
                     if dbPath =~ '\.yaml$'
-                        let dbPath = substitute(dbPath, '\.yaml$', '.db', '')
+                        let dbPath = s:ZFVimIM_getDbPath(dbPath)
                     endif
                     if filereadable(dbPath)
                         echom 'ZFVimIM: Reloading database...'
@@ -3290,7 +3379,7 @@ function! ZFVimIM_showInfo()
         
         " If path is TXT, convert to DB (show actual file being used)
         if !empty(dictPath) && dictPath =~ '\.yaml$'
-            let dictPath = substitute(dictPath, '\.yaml$', '.db', '')
+            let dictPath = s:ZFVimIM_getDbPath(dictPath)
         endif
         
         if !empty(dictPath)
@@ -3549,7 +3638,7 @@ function! s:ZFVimIM_processBatchAdd()
     " Get YAML file path
     let yamlPath = dictPath
     if yamlPath =~ '\.db$'
-        let yamlPath = substitute(yamlPath, '\.db$', '.yaml', '')
+        let yamlPath = s:ZFVimIM_getYamlPath(yamlPath)
     endif
     
     if !filereadable(yamlPath)
@@ -3605,7 +3694,7 @@ function! s:ZFVimIM_processBatchAdd()
         echom '[ZFVimIM] 已保存 ' . len(newEntries) . ' 个新条目到 YAML: ' . fnamemodify(yamlPath, ':t')
         
         " Get database file path
-        let dbPath = substitute(yamlPath, '\.yaml$', '.db', '')
+        let dbPath = s:ZFVimIM_getDbPath(yamlPath)
         
         " Get Python command
         let pythonCmd = executable('python3') ? 'python3' : 'python'
@@ -3663,6 +3752,312 @@ function! s:ZFVimIM_processBatchAdd()
         endif
     else
         echom '[ZFVimIM] 所有条目已存在于 YAML 文件中'
+    endif
+    
+    " Keep buffer open, just mark as not modified
+    setlocal nomodified
+endfunction
+
+" Edit dictionary - open in new tab, edit and save to import
+function! ZFVimIM_editDict()
+    " Get current dictionary path
+    let dictPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    " Determine dictionary path
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.yaml$'
+            let defaultDictName = defaultDictName . '.yaml'
+        endif
+        let dictPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+    else
+        let dictPath = dictDir . '/default.yaml'
+    endif
+    
+    " Get database file path
+    let dbPath = s:ZFVimIM_getDbPath(dictPath)
+    if !filereadable(dbPath)
+        echom '[ZFVimIM] 错误: 数据库文件不存在: ' . dbPath
+        echom '[ZFVimIM] 请先运行 :IMImport 导入词库'
+        return
+    endif
+    
+    " Store paths in buffer variable
+    let b:zfvimim_dict_path = dictPath
+    let b:zfvimim_db_path = dbPath
+    
+    " Create a new tab for editing
+    tabnew
+    setlocal buftype=acwrite
+    setlocal bufhidden=wipe
+    setlocal noswapfile
+    setlocal filetype=zfvimim_edit
+    setlocal syntax=zfvimim_edit
+    
+    " Set buffer name
+    let bufname = '[ZFVimIM 词库编辑] ' . fnamemodify(dictPath, ':t')
+    silent! execute 'file ' . escape(bufname, ' ')
+    
+    " Add instructions
+    call setline(1, '# ZFVimIM 词库编辑')
+    call setline(2, '# 格式: 编码 候选词1 候选词2 ...')
+    call setline(3, '# 例如:')
+    call setline(4, '# nihao 你好 你号')
+    call setline(5, '# ceshi 测试 测时')
+    call setline(6, '#')
+    call setline(7, '# 删除行即可删除该编码的所有词')
+    call setline(8, '# 每次使用 :w 保存时会即时导入到词库并重新加载输入法')
+    call setline(9, '# 使用 :q 关闭此标签页')
+    call setline(10, '')
+    
+    " Export database to text format
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        echom '[ZFVimIM] 错误: Python 未找到，无法导出词库'
+        return
+    endif
+    
+    " Get script path
+    let scriptPath = pluginDir . '/misc/db_export_for_edit.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] 错误: 脚本文件不存在: ' . scriptPath
+        return
+    endif
+    
+    " Execute Python script to export database
+    let scriptPathAbs = CygpathFix_absPath(scriptPath)
+    let dbPathAbs = CygpathFix_absPath(dbPath)
+    let cmd = pythonCmd . ' "' . scriptPathAbs . '" "' . dbPathAbs . '"'
+    let result = system(cmd)
+    
+    if v:shell_error != 0
+        echom '[ZFVimIM] 错误: 导出词库失败'
+        if !empty(result)
+            echom '[ZFVimIM] 错误信息: ' . result
+        endif
+        return
+    endif
+    
+    " Parse result and add to buffer
+    let lines = split(result, '\n')
+    let lineNum = 11
+    for line in lines
+        if !empty(line)
+            call setline(lineNum, line)
+            let lineNum += 1
+        endif
+    endfor
+    
+    " Set up autocommand to handle save
+    augroup ZFVimIM_editDict
+        autocmd!
+        autocmd BufWriteCmd <buffer> call s:ZFVimIM_processEditDict()
+    augroup END
+    
+    " Set up key mapping for quick save
+    nnoremap <buffer> <silent> <C-s> :w<CR>
+    inoremap <buffer> <silent> <C-s> <Esc>:w<CR>
+    
+    " Move cursor to first data line
+    normal! 11G
+    
+    echom '[ZFVimIM] 词库编辑模式已在新标签页打开，每次 :w 保存时会即时导入到词库并重新加载输入法'
+endfunction
+
+function! s:ZFVimIM_processEditDict()
+    let dictPath = get(b:, 'zfvimim_dict_path', '')
+    let dbPath = get(b:, 'zfvimim_db_path', '')
+    
+    " If buffer variables are lost, try to get from buffer name
+    if empty(dictPath) || empty(dbPath)
+        let bufname = bufname('%')
+        if bufname =~# '\[ZFVimIM 词库编辑\]'
+            let dictName = substitute(bufname, '.*\[ZFVimIM 词库编辑\]\s*', '', '')
+            if !empty(dictName)
+                let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+                let sfileDir = expand('<sfile>:p:h:h')
+                if isdirectory(sfileDir . '/dict')
+                    let pluginDir = sfileDir
+                endif
+                let dictDir = pluginDir . '/dict'
+                let dictPath = dictDir . '/' . dictName
+                let dbPath = s:ZFVimIM_getDbPath(dictPath)
+            endif
+        endif
+        
+        " If still empty, use default dictionary
+        if empty(dictPath)
+            let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+            let sfileDir = expand('<sfile>:p:h:h')
+            if isdirectory(sfileDir . '/dict')
+                let pluginDir = sfileDir
+            endif
+            let dictDir = pluginDir . '/dict'
+            
+            if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+                let defaultDictName = g:zfvimim_default_dict_name
+                if defaultDictName !~ '\.yaml$'
+                    let defaultDictName = defaultDictName . '.yaml'
+                endif
+                let dictPath = dictDir . '/' . defaultDictName
+            elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+                let dictPath = expand(g:zfvimim_dict_path)
+            else
+                let dictPath = dictDir . '/default.yaml'
+            endif
+            let dbPath = s:ZFVimIM_getDbPath(dictPath)
+        endif
+    endif
+    
+    if empty(dictPath) || empty(dbPath)
+        echom '[ZFVimIM] 错误: 无法获取词库路径'
+        setlocal nomodified
+        return
+    endif
+    
+    " Get all lines from buffer (skip instructions)
+    let lines = getline(11, '$')
+    let entries = []
+    
+    " Parse lines
+    for line in lines
+        let line = substitute(line, '^\s*', '', '')
+        let line = substitute(line, '\s*$', '', '')
+        
+        " Skip empty lines and comments
+        if empty(line) || line[0] ==# '#'
+            continue
+        endif
+        
+        " Parse format: encoding word1 word2 ... (space separated)
+        " Handle escaped spaces: replace \  with placeholder first
+        let lineTmp = substitute(line, '\\ ', '_ZFVimIM_space_', 'g')
+        let parts = split(lineTmp, ' ')
+        if len(parts) < 2
+            continue
+        endif
+        
+        " Restore spaces in words
+        let words = []
+        for i in range(1, len(parts) - 1)
+            call add(words, substitute(parts[i], '_ZFVimIM_space_', ' ', 'g'))
+        endfor
+        call add(words, substitute(parts[len(parts) - 1], '_ZFVimIM_space_', ' ', 'g'))
+        
+        let encoding = substitute(parts[0], '_ZFVimIM_space_', ' ', 'g')
+        
+        " Validate encoding (should be lowercase letters)
+        if encoding !~# '^[a-z]\+$'
+            continue
+        endif
+        
+        " Validate words (should contain Chinese characters)
+        let validWords = []
+        for word in words
+            if word =~# '[\u4e00-\u9fff]'
+                call add(validWords, word)
+            endif
+        endfor
+        
+        if !empty(validWords)
+            call add(entries, {'encoding': encoding, 'words': validWords})
+        endif
+    endfor
+    
+    if empty(entries)
+        echom '[ZFVimIM] 没有有效的条目，取消保存'
+        setlocal nomodified
+        return
+    endif
+    
+    " Write to temporary YAML file
+    let yamlPath = dictPath
+    let tmpYamlPath = yamlPath . '.tmp'
+    
+    let output = []
+    for entry in entries
+        " Escape spaces in words
+        let escapedWords = []
+        for word in entry['words']
+            call add(escapedWords, substitute(word, ' ', '\\ ', 'g'))
+        endfor
+        call add(output, entry['encoding'] . ' ' . join(escapedWords, ' '))
+    endfor
+    
+    call writefile(output, tmpYamlPath)
+    
+    echom '[ZFVimIM] 已保存 ' . len(entries) . ' 个条目到临时文件'
+    
+    " Import to database using import script
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        echom '[ZFVimIM] 错误: Python 未找到，无法导入到数据库'
+        setlocal nomodified
+        return
+    endif
+    
+    " Get script path
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    else
+        if !isdirectory(pluginDir . '/misc')
+            let altPath = stdpath('config') . '/lazy/ZFVimIM'
+            if isdirectory(altPath . '/misc')
+                let pluginDir = altPath
+            endif
+        endif
+    endif
+    let scriptPath = pluginDir . '/misc/import_txt_to_db.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] 错误: 脚本文件不存在: ' . scriptPath
+        setlocal nomodified
+        return
+    endif
+    
+    " Execute import script
+    let scriptPathAbs = CygpathFix_absPath(scriptPath)
+    let tmpYamlPathAbs = CygpathFix_absPath(tmpYamlPath)
+    let dbPathAbs = CygpathFix_absPath(dbPath)
+    let cmd = pythonCmd . ' "' . scriptPathAbs . '" "' . tmpYamlPathAbs . '" "' . dbPathAbs . '"'
+    let result = system(cmd)
+    
+    " Clean up temporary file
+    if filereadable(tmpYamlPath)
+        call delete(tmpYamlPath)
+    endif
+    
+    if v:shell_error == 0
+        echom '[ZFVimIM] ✅ 已导入 ' . len(entries) . ' 个条目到数据库'
+        
+        " Reload dictionary
+        let dictName = fnamemodify(dbPath, ':t:r')
+        if exists('g:ZFVimIM_db')
+            for db in g:ZFVimIM_db
+                if get(db, 'name', '') ==# dictName
+                    call ZFVimIM_dbSearchCacheClear(db)
+                    call ZFVimIM_dbLoad(db, dbPath)
+                    echom '[ZFVimIM] ✅ 输入法已重新加载'
+                    break
+                endif
+            endfor
+        endif
+    else
+        echom '[ZFVimIM] ❌ 导入失败'
+        if !empty(result)
+            echom '[ZFVimIM] 错误信息: ' . result
+        endif
+        setlocal nomodified
+        return
     endif
     
     " Keep buffer open, just mark as not modified

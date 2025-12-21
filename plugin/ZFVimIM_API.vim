@@ -295,7 +295,22 @@ function! IMAdd(bang, db, key, word)
     endif
     
     " Get database file path (.db file)
-    let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
+    " Use function from ZFVimIM_IME.vim to get DB path
+    if exists('*s:ZFVimIM_getDbPath')
+        let dbPath = s:ZFVimIM_getDbPath(dictPath)
+    else
+        " Fallback: use config directory
+        let dbDir = stdpath('config') . '/zfvimim_db'
+        if !isdirectory(dbDir)
+            call mkdir(dbDir, 'p')
+        endif
+        let yamlName = fnamemodify(dictPath, ':t')
+        let dbName = substitute(yamlName, '\.yaml$', '.db', '')
+        if dbName ==# yamlName
+            let dbName = dbName . '.db'
+        endif
+        let dbPath = dbDir . '/' . dbName
+    endif
     if !filereadable(dbPath)
         echom '[ZFVimIM] Error: Database file not found: ' . dbPath
         echom '[ZFVimIM] Please run :ZFVimIMSync to create database first'
@@ -551,7 +566,17 @@ function! IMRemove(bang, db, word, ...)
         endif
         
         " Step 2: Remove from database
-        let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
+        " Use function from ZFVimIM_IME.vim to get DB path
+        let dbDir = stdpath('config') . '/zfvimim_db'
+        if !isdirectory(dbDir)
+            call mkdir(dbDir, 'p')
+        endif
+        let yamlName = fnamemodify(dictPath, ':t')
+        let dbName = substitute(yamlName, '\.yaml$', '.db', '')
+        if dbName ==# yamlName
+            let dbName = dbName . '.db'
+        endif
+        let dbPath = dbDir . '/' . dbName
         if filereadable(dbPath)
             let pythonCmd = executable('python3') ? 'python3' : 'python'
             if executable(pythonCmd)
@@ -657,15 +682,6 @@ function! IMRemove(bang, db, word, ...)
         let g:ZFVimIM_dbEditApplyFlag -= 1
     endif
 endfunction
-function! IMReorder(bang, db, word, ...)
-    if a:bang == '!'
-        let g:ZFVimIM_dbEditApplyFlag += 1
-    endif
-    call ZFVimIM_wordReorder(a:db, a:word, get(a:, 1, ''))
-    if a:bang == '!'
-        let g:ZFVimIM_dbEditApplyFlag -= 1
-    endif
-endfunction
 " Wrapper functions to parse arguments in format: key word (matching dictionary format)
 " Redirect to batch add interface
 function! s:IMAddWrapper(bang, ...)
@@ -705,165 +721,8 @@ function! s:IMRemoveWrapper(bang, ...)
     endif
 endfunction
 
-function! IMSearch(bang, db, word)
-    " Get dictionary file path
-    let dictPath = ''
-    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
-    let sfileDir = expand('<sfile>:p:h:h')
-    if isdirectory(sfileDir . '/dict')
-        let pluginDir = sfileDir
-    endif
-    let dictDir = pluginDir . '/dict'
-    
-    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
-        let defaultDictName = g:zfvimim_default_dict_name
-        if defaultDictName !~ '\.yaml$'
-            let defaultDictName = defaultDictName . '.yaml'
-        endif
-        let dictPath = dictDir . '/' . defaultDictName
-    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
-        let dictPath = expand(g:zfvimim_dict_path)
-    else
-        let dictPath = dictDir . '/default.yaml'
-    endif
-    
-    if empty(dictPath) || !filereadable(dictPath)
-        echom '[ZFVimIM] Error: Dictionary file not found: ' . dictPath
-        return
-    endif
-    
-    " Get database file path (.db file)
-    let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
-    if !filereadable(dbPath)
-        echom '[ZFVimIM] Error: Database file not found: ' . dbPath
-        echom '[ZFVimIM] Please run :ZFVimIMSync to create database first'
-        return
-    endif
-    
-    " Use Python to search word in database
-    let pythonCmd = executable('python3') ? 'python3' : 'python'
-    if !executable(pythonCmd)
-        echom '[ZFVimIM] Error: Python not found. Cannot search database.'
-        return
-    endif
-    
-    " Get script path
-    let scriptPath = pluginDir . '/misc/db_search_word.py'
-    if !filereadable(scriptPath)
-        echom '[ZFVimIM] Error: Search script not found: ' . scriptPath
-        return
-    endif
-    
-    " Execute search (capture both stdout and stderr)
-    let cmd = pythonCmd . ' "' . scriptPath . '" "' . dbPath . '" "' . a:word . '" 2>&1'
-    let fullResult = system(cmd)
-    
-    " Split output: last line is JSON, previous lines are human-readable
-    let lines = split(fullResult, '\n')
-    let jsonLine = ''
-    let humanReadable = []
-    for line in lines
-        if line =~ '^{'
-            let jsonLine = line
-        elseif !empty(line)
-            call add(humanReadable, line)
-        endif
-    endfor
-    
-    " If we have human-readable output, use it (easier to parse)
-    if !empty(humanReadable)
-        for line in humanReadable
-            if !empty(line)
-                echom line
-            endif
-        endfor
-        return
-    endif
-    
-    " Fallback: parse JSON
-    if empty(jsonLine)
-        echom '[ZFVimIM] Error: No result from search script'
-        return
-    endif
-    
-    " Parse JSON result
-    if jsonLine =~ '^{'
-        " Extract information from JSON
-        if jsonLine =~ '"found"\s*:\s*true'
-            " Found results - extract count
-            let countMatch = matchstr(jsonLine, '"count"\s*:\s*\d\+')
-            let count = matchstr(countMatch, '\d\+')
-            if empty(count)
-                let count = '0'
-            endif
-            
-            echom '[ZFVimIM] 找到词: ' . a:word . ' (共 ' . count . ' 个编码)'
-            
-            " Extract all results using regex
-            let results = []
-            let pos = 0
-            while 1
-                " Find next result object: {"key":"...","word":"...","frequency":...}
-                let resultStart = match(jsonLine, '{"key"', pos)
-                if resultStart < 0
-                    break
-                endif
-                
-                " Extract key
-                let keyMatch = matchstr(jsonLine, '"key"\s*:\s*"[^"]*"', resultStart)
-                let key = matchstr(keyMatch, '"[^"]*"')
-                let key = substitute(key, '"', '', 'g')
-                
-                " Extract frequency (look within the same result object)
-                let objEnd = match(jsonLine, '}', resultStart)
-                if objEnd < 0
-                    let objEnd = len(jsonLine)
-                endif
-                let objStr = strpart(jsonLine, resultStart, objEnd - resultStart)
-                let freqMatch = matchstr(objStr, '"frequency"\s*:\s*\d\+')
-                let frequency = matchstr(freqMatch, '\d\+')
-                if empty(frequency)
-                    let frequency = '0'
-                endif
-                
-                call add(results, {'key': key, 'frequency': frequency})
-                
-                " Move to next result
-                let pos = objEnd + 1
-            endwhile
-            
-            " Display results
-            for item in results
-                echom '  编码: ' . item['key'] . '  频率: ' . item['frequency']
-            endfor
-        elseif jsonLine =~ '"found"\s*:\s*false'
-            echom '[ZFVimIM] 未找到词: ' . a:word
-        elseif jsonLine =~ '"error"'
-            let errorMatch = matchstr(jsonLine, '"error"\s*:\s*"[^"]*"')
-            let error = matchstr(errorMatch, '"[^"]*"')
-            let error = substitute(error, '"', '', 'g')
-            echom '[ZFVimIM] Error: ' . error
-        else
-            echom '[ZFVimIM] 搜索结果: ' . jsonLine
-        endif
-    else
-        echom '[ZFVimIM] 搜索结果: ' . fullResult
-    endif
-endfunction
-
-function! s:IMSearchWrapper(bang, ...)
-    if a:0 < 1
-        echom '[ZFVimIM] Error: Usage: IMSearch <word>'
-        return
-    endif
-    let word = join(a:000, ' ')
-    call IMSearch(a:bang, {}, word)
-endfunction
-
 command! -nargs=* -bang IMAdd :call s:IMAddWrapper(<q-bang>, <f-args>)
 command! -nargs=+ -bang IMRemove :call s:IMRemoveWrapper(<q-bang>, <f-args>)
-command! -nargs=+ -bang IMReorder :call IMReorder(<q-bang>, {}, <f-args>)
-command! -nargs=+ -bang IMSearch :call s:IMSearchWrapper(<q-bang>, <f-args>)
 
 let s:ZFVimIM_dbItemReorderThreshold = 1
 function! s:dbItemReorderFunc(item1, item2)
@@ -1334,8 +1193,22 @@ endfunction
 function! s:dbLoad_findDbFile(dbFile)
     " Always use .db file - convert .yaml to .db if needed
     if a:dbFile =~ '\.yaml$'
-        let dbFile = substitute(a:dbFile, '\.yaml$', '.db', '')
-        return dbFile
+        " Use function from ZFVimIM_IME.vim to get DB path
+        if exists('*s:ZFVimIM_getDbPath')
+            return s:ZFVimIM_getDbPath(a:dbFile)
+        else
+            " Fallback: use config directory
+            let dbDir = stdpath('config') . '/zfvimim_db'
+            if !isdirectory(dbDir)
+                call mkdir(dbDir, 'p')
+            endif
+            let yamlName = fnamemodify(a:dbFile, ':t')
+            let dbName = substitute(yamlName, '\.yaml$', '.db', '')
+            if dbName ==# yamlName
+                let dbName = dbName . '.db'
+            endif
+            return dbDir . '/' . dbName
+        endif
     endif
     " If already .db or no extension, return as-is
     return a:dbFile
