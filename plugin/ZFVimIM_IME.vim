@@ -1367,6 +1367,12 @@ function! s:updateCandidates()
         let s:fullResultList = []
         return
     endif
+    
+    " Check if keyboard actually changed (not just cached lookup)
+    " This is critical: if keyboard changed, we MUST do a new search
+    " even if there's a cache entry (which might be for a different/partial input)
+    let keyboardActuallyChanged = (s:keyboard !=# s:lastKeyboard)
+    
     " Update last keyboard state
     let s:lastKeyboard = s:keyboard
     
@@ -1377,9 +1383,13 @@ function! s:updateCandidates()
     let pageSize = &pumheight
     
     " Check if keyboard changed (new search needed)
+    " If keyboard actually changed, always do a new search (don't use cache)
     let keyboardChanged = 0
-    if !has_key(s:completeCache, s:keyboard)
+    if keyboardActuallyChanged || !has_key(s:completeCache, s:keyboard)
         let keyboardChanged = 1
+        " Clear loaded state when keyboard changes
+        let s:loadedResultCount = 0
+        let s:fullResultList = []
     endif
     
     if keyboardChanged
