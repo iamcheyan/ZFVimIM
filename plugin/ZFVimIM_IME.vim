@@ -123,10 +123,30 @@ function! s:ZFVimIM_autoLoadDict()
     endif
 endfunction
 
+" Auto clear cache after dictionary initialization
+function! s:ZFVimIM_autoClearCache()
+    " Delay execution to ensure dictionary is fully loaded
+    if has('timers')
+        call timer_start(100, {-> s:doClearCache()})
+    else
+        " Fallback for Vim without timers
+        call s:doClearCache()
+    endif
+endfunction
+
+function! s:doClearCache()
+    " Only clear cache, don't reload (avoid loop)
+    if exists('*ZFVimIM_cacheClearAll')
+        call ZFVimIM_cacheClearAll()
+    endif
+endfunction
+
 augroup ZFVimIME_augroup
     autocmd!
 
     autocmd User ZFVimIM_event_OnDbInit call s:ZFVimIM_autoLoadDict()
+    " Auto clear cache after dictionary initialization
+    autocmd User ZFVimIM_event_OnDbInit call s:ZFVimIM_autoClearCache()
 
     autocmd User ZFVimIM_event_OnStart silent
 
