@@ -2,3 +2,8 @@ __pycache__
 *.pyc
 
 .DS_Store
+
+# Database files (generated from YAML files, should not be committed)
+*.db
+dict/*.db
+dict/**/*.db
