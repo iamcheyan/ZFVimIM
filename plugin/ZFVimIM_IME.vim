@@ -69,6 +69,18 @@ function! s:ZFVimIM_autoLoadDict()
     
     " Load dictionary if path is valid and file exists
     if !empty(dictPath) && filereadable(dictPath)
+        " Convert to DB path if YAML is specified (actual file used for loading)
+        " Always use .db file - convert .yaml to .db if needed
+        let actualDbPath = dictPath
+        if dictPath =~ '\.yaml$'
+            let actualDbPath = substitute(dictPath, '\.yaml$', '.db', '')
+            
+            " Auto-generate .db file if it doesn't exist
+            if !filereadable(actualDbPath)
+                call s:ZFVimIM_autoImportDb(dictPath, actualDbPath)
+            endif
+        endif
+        
         if !exists('g:ZFVimIM_db')
             let g:ZFVimIM_db = []
         endif
@@ -88,12 +100,6 @@ function! s:ZFVimIM_autoLoadDict()
                         \   'name' : dictName,
                         \   'priority' : 100,
                         \ })
-            " Convert to DB path if YAML is specified (actual file used for loading)
-            " Always use .db file - convert .yaml to .db if needed
-            let actualDbPath = dictPath
-            if dictPath =~ '\.yaml$'
-                let actualDbPath = substitute(dictPath, '\.yaml$', '.db', '')
-            endif
             call ZFVimIM_dbLoad(db, actualDbPath)
             " Store actual DB path in implData (not TXT path)
             if !has_key(db, 'implData')
@@ -109,10 +115,15 @@ function! s:ZFVimIM_autoLoadDict()
                     if !has_key(db, 'implData')
                         let db['implData'] = {}
                     endif
-                    " Convert to DB path if TXT is specified
+                    " Convert to DB path if YAML is specified
                     let actualDbPath = dictPath
                     if dictPath =~ '\.yaml$'
                         let actualDbPath = substitute(dictPath, '\.yaml$', '.db', '')
+                        
+                        " Auto-generate .db file if it doesn't exist
+                        if !filereadable(actualDbPath)
+                            call s:ZFVimIM_autoImportDb(dictPath, actualDbPath)
+                        endif
                     endif
                     let db['implData']['dictPath'] = actualDbPath
                     let db['implData']['yamlPath'] = dictPath
@@ -120,6 +131,49 @@ function! s:ZFVimIM_autoLoadDict()
                 endif
             endfor
         endif
+    endif
+endfunction
+
+" Auto import YAML to DB if DB file doesn't exist
+function! s:ZFVimIM_autoImportDb(yamlPath, dbPath)
+    " Check if YAML file exists
+    if !filereadable(a:yamlPath)
+        return
+    endif
+    
+    " Check if DB file already exists
+    if filereadable(a:dbPath)
+        return
+    endif
+    
+    " Get Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        echom '[ZFVimIM] Python not found, cannot auto-import dictionary'
+        return
+    endif
+    
+    " Get script path
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    endif
+    let scriptPath = pluginDir . '/misc/import_txt_to_db.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] Import script not found: ' . scriptPath
+        return
+    endif
+    
+    " Run import script
+    let cmd = pythonCmd . ' "' . scriptPath . '" "' . a:yamlPath . '" "' . a:dbPath . '"'
+    let result = system(cmd)
+    
+    " Check if import was successful
+    if v:shell_error == 0
+        echom '[ZFVimIM] Auto-imported dictionary: ' . fnamemodify(a:yamlPath, ':t')
+    else
+        echom '[ZFVimIM] Failed to auto-import dictionary: ' . result
     endif
 endfunction
 
