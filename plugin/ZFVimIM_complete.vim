@@ -86,10 +86,10 @@ function! s:buildAliasMatches(aliasKey, db)
     let matches = []
     
     " Performance optimization: limit search range for large buckets
-    " For buckets with > 10000 items, only search first 5000 items
+    " For buckets with > 5000 items, only search first 2000 items
     " This significantly speeds up search while still finding most matches
     let bucketSize = len(bucket)
-    let maxSearchItems = bucketSize > 10000 ? 5000 : bucketSize
+    let maxSearchItems = bucketSize > 5000 ? 2000 : bucketSize
     
     " Performance optimization: extract key first without full decode
     " Only decode items that might match (based on key pattern)
@@ -506,8 +506,12 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     let multiChars = []
     
     " First pass: collect all items, separate single chars and multi chars
-    " For short keys (1-2 chars), limit search to first 200 items for performance
-    let maxItems = (keyLen <= 2) ? 200 : 10000
+    " For short keys (1-2 chars), limit search to first 100 items for performance
+    " For 4-char keys (full pinyin codes), search more items - they need exact match
+    " For longer keys, also limit to avoid excessive decoding
+    " Note: 4-char keys are usually full pinyin codes (e.g., "xmzl" for "现在")
+    " They may be far in the sorted list, so we need a larger search range
+    let maxItems = (keyLen <= 2) ? 100 : (keyLen == 4 ? 20000 : 500)
     let itemCount = 0
     let tempIndex = index
     while tempIndex >= 0 && itemCount < maxItems

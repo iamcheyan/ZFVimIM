@@ -980,15 +980,23 @@ function! s:resetAfterInsert()
 endfunction
 
 function! s:filterMatchListByPrefix(list, key)
+    " Only filter for 2-char keys, skip for others to save time
     if len(a:key) != 2
         return a:list
     endif
+    " Limit filtering to first 500 items for performance
+    let maxFilter = len(a:list) > 500 ? 500 : len(a:list)
     let filtered = []
-    for item in a:list
+    for i in range(maxFilter)
+        let item = a:list[i]
         if len(get(item, 'key', '')) >= 2 && strpart(item['key'], 0, 2) ==# a:key
             call add(filtered, item)
         endif
     endfor
+    " Add remaining items without filtering (they're already sorted)
+    if maxFilter < len(a:list)
+        call extend(filtered, a:list[maxFilter :])
+    endif
     return filtered
 endfunction
 
@@ -998,9 +1006,13 @@ function! s:deduplicateCandidates(list)
     if empty(a:list)
         return []
     endif
+    " Limit deduplication to first 1000 items for performance
+    " Most duplicates are in the first few items anyway
+    let maxDedup = len(a:list) > 1000 ? 1000 : len(a:list)
     let seen = {}
     let deduplicated = []
-    for item in a:list
+    for i in range(maxDedup)
+        let item = a:list[i]
         " Use word as the unique identifier for deduplication
         " If same word appears with different keys, keep the first one
         let word = get(item, 'word', '')
@@ -1009,6 +1021,10 @@ function! s:deduplicateCandidates(list)
             call add(deduplicated, item)
         endif
     endfor
+    " Add remaining items without deduplication (they're less likely to have duplicates)
+    if maxDedup < len(a:list)
+        call extend(deduplicated, a:list[maxDedup :])
+    endif
     return deduplicated
 endfunction
 
@@ -1336,6 +1352,10 @@ let s:completeCache = {}
 let s:completeCacheKeys = []
 " Last keyboard state for detecting changes
 let s:lastKeyboard = ''
+" Lazy loading: track how many results we've loaded
+let s:loadedResultCount = 0
+let s:fullResultList = []
+let s:hasFullResults = 0
 
 function! s:updateCandidates()
     let s:enter_to_confirm = 1
@@ -1343,48 +1363,106 @@ function! s:updateCandidates()
     if !s:updateKeyboardFromCursor()
         call s:floatClose()
         let s:lastKeyboard = ''
+        let s:loadedResultCount = 0
+        let s:fullResultList = []
         return
     endif
     " Update last keyboard state
     let s:lastKeyboard = s:keyboard
-    if s:pageup_pagedown != 0 && !empty(s:match_list) && &pumheight > 0
-        let length = len(s:match_list)
-        let pageCount = (length-1) / &pumheight + 1
-        let s:page += s:pageup_pagedown
-        if s:page >= pageCount
-            let s:page = pageCount - 1
+    
+    " Ensure pumheight is set correctly
+    if &pumheight <= 0 || &pumheight < 10
+        set pumheight=10
+    endif
+    let pageSize = &pumheight
+    
+    " Check if keyboard changed (new search needed)
+    let keyboardChanged = 0
+    if !has_key(s:completeCache, s:keyboard)
+        let keyboardChanged = 1
+    endif
+    
+    if keyboardChanged
+        " New search: limit initial search to 20 items for speed
+        " Use a small matchLimit to speed up initial search
+        let initialLimit = pageSize * 2  " Load 2 pages initially
+        let s:fullResultList = ZFVimIM_complete(s:keyboard, {'match': initialLimit})
+        let s:fullResultList = s:filterMatchListByPrefix(s:fullResultList, s:keyboard)
+        let s:fullResultList = s:deduplicateCandidates(s:fullResultList)
+        
+        " If user needs more results, we'll do a full search on demand
+        " For now, mark that we only have partial results
+        let s:hasFullResults = 0
+        
+        " Cache full result list (but don't load all at once)
+        let s:completeCache[s:keyboard] = s:fullResultList
+        call add(s:completeCacheKeys, s:keyboard)
+        " Limit cache size to 200 entries
+        if len(s:completeCacheKeys) > 200
+            let removeCount = len(s:completeCacheKeys) - 200
+            for i in range(removeCount)
+                let oldKey = remove(s:completeCacheKeys, 0)
+                if has_key(s:completeCache, oldKey)
+                    call remove(s:completeCache, oldKey)
+                endif
+            endfor
         endif
-        if s:page < 0
+        
+        " Initially only load first page (10 items)
+        let s:loadedResultCount = pageSize * 2  " Load 2 pages initially for smooth scrolling
+        if s:loadedResultCount > len(s:fullResultList)
+            let s:loadedResultCount = len(s:fullResultList)
+        endif
+        let s:match_list = s:fullResultList[0 : s:loadedResultCount - 1]
+        let s:page = 0
+        let s:hasFullResults = 0  " Mark that we only have partial results initially
+    else
+        " Same keyboard: use cached full result list
+        let s:fullResultList = s:completeCache[s:keyboard]
+        
+        " Handle page navigation
+        if s:pageup_pagedown != 0 && !empty(s:match_list) && pageSize > 0
+            let s:page += s:pageup_pagedown
+            let maxPage = (len(s:fullResultList) - 1) / pageSize
+            if s:page > maxPage
+                let s:page = maxPage
+            endif
+            if s:page < 0
+                let s:page = 0
+            endif
+        else
             let s:page = 0
         endif
-    else
-        " Check cache first
-        if has_key(s:completeCache, s:keyboard)
-            let s:match_list = s:completeCache[s:keyboard]
-        else
-            let s:match_list = ZFVimIM_complete(s:keyboard)
-            let s:match_list = s:filterMatchListByPrefix(s:match_list, s:keyboard)
-            " Remove duplicate candidates based on word
-            let s:match_list = s:deduplicateCandidates(s:match_list)
-            " Cache result
-            let s:completeCache[s:keyboard] = s:match_list
-            call add(s:completeCacheKeys, s:keyboard)
-            " Limit cache size to 100 entries
-            if len(s:completeCacheKeys) > 100
-                let removeCount = len(s:completeCacheKeys) - 100
-                for i in range(removeCount)
-                    let oldKey = remove(s:completeCacheKeys, 0)
-                    if has_key(s:completeCache, oldKey)
-                        call remove(s:completeCache, oldKey)
-                    endif
-                endfor
+        
+        " Check if we need to load more results for current page
+        let neededCount = (s:page + 2) * pageSize  " Load 2 pages ahead
+        
+        " If we need more results than we have, do a full search
+        if !s:hasFullResults && neededCount > len(s:fullResultList)
+            " Do full search to get all results
+            let s:fullResultList = ZFVimIM_complete(s:keyboard)
+            let s:fullResultList = s:filterMatchListByPrefix(s:fullResultList, s:keyboard)
+            let s:fullResultList = s:deduplicateCandidates(s:fullResultList)
+            " Update cache with full results
+            let s:completeCache[s:keyboard] = s:fullResultList
+            let s:hasFullResults = 1
+        endif
+        
+        if neededCount > s:loadedResultCount && neededCount <= len(s:fullResultList)
+            " Load more results from cache
+            let s:loadedResultCount = neededCount
+            if s:loadedResultCount > len(s:fullResultList)
+                let s:loadedResultCount = len(s:fullResultList)
             endif
+            let s:match_list = s:fullResultList[0 : s:loadedResultCount - 1]
+        elseif s:loadedResultCount == 0 || len(s:match_list) != s:loadedResultCount
+            " Initialize or refresh match_list
+            let s:loadedResultCount = pageSize * 2
+            if s:loadedResultCount > len(s:fullResultList)
+                let s:loadedResultCount = len(s:fullResultList)
+            endif
+            let s:match_list = s:fullResultList[0 : s:loadedResultCount - 1]
         endif
-        " Ensure pumheight is set correctly
-        if &pumheight <= 0 || &pumheight < 10
-            set pumheight=10
-        endif
-        let s:page = 0
     endif
     let s:pageup_pagedown = 0
     " Debug: check if pumheight is limiting candidates
@@ -1447,13 +1525,13 @@ function! s:updateCandidatesDebounced()
         return
     endif
     
-    " For longer input (3+ chars) with no change, use debounce to avoid excessive updates
+    " For longer input (3+ chars) with no change, use minimal debounce
     " Cancel previous timer if exists
     if s:updateCandidatesTimer >= 0
         call timer_stop(s:updateCandidatesTimer)
     endif
-    " Schedule update with 30ms delay (reduced from 50ms for better responsiveness)
-    let s:updateCandidatesTimer = timer_start(30, {-> s:updateCandidates()})
+    " Schedule update with 10ms delay (minimal debounce for better responsiveness)
+    let s:updateCandidatesTimer = timer_start(10, {-> s:updateCandidates()})
 endfunction
 
 function! s:omnifunc(start, keyboard)

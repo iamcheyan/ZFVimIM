@@ -310,6 +310,30 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
 
   ![](assast/2025-12-20-23-13-34.png)
 
+### 词库同步
+
+- `:ZFVimIMSync` - **将 TXT 词库文件同步到数据库**
+
+  将 TXT 文件中的新数据同步到 SQLite 数据库（`.db` 文件）。当你手动编辑了 TXT 词库文件后，使用此命令将更改同步到数据库。
+
+  **使用场景**：
+  - 在 TXT 文件中手动添加或修改了编码和词条
+  - 需要将 TXT 文件中的更改同步到数据库，以便输入法使用
+
+  **说明**：
+  - 自动查找对应的 TXT 和 DB 文件
+  - 只插入 TXT 中存在但数据库中不存在的新数据（增量同步）
+  - 同步完成后自动重新加载数据库（如果已加载）
+  - 显示详细的同步统计信息
+
+  **示例**：
+  ```vim
+  " 在 TXT 文件中添加了新编码后，执行同步
+  :ZFVimIMSync
+  ```
+
+  详细说明请参考 [词库管理 - 同步 TXT 词库到数据库](#同步-txt-词库到数据库) 部分。
+
 ### 字典编辑
 
 #### `:IMAdd` - 添加词到字典
@@ -744,6 +768,107 @@ ceshi 测试 测时 侧视
 - 即使使用 `IMAdd` 添加了不规范的内容，退出时也会被自动清理
 - 清理过程在后台异步执行，不会阻塞退出
 - 清理脚本：`misc/dbCleanup.py`
+
+### 同步 TXT 词库到数据库
+
+**功能**：将 TXT 词库文件中的新数据同步到 SQLite 数据库（`.db` 文件）。
+
+**使用场景**：
+- 在 TXT 文件中手动添加或修改了编码和词条
+- 需要将 TXT 文件中的更改同步到数据库，以便输入法使用
+- 维护词库时，通过编辑 TXT 文件来管理，然后同步到数据库
+
+**方法 1：使用 Vim 命令（推荐）**
+
+在 Neovim 中执行：
+
+```vim
+:ZFVimIMSync
+```
+
+**说明**：
+- 自动查找对应的 TXT 和 DB 文件
+- 只插入 TXT 中存在但数据库中不存在的新数据
+- 同步完成后自动重新加载数据库（如果已加载）
+- 显示详细的同步统计信息
+
+**示例输出**：
+```
+ZFVimIM: Syncing TXT to database...
+  TXT: /Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt
+  DB:  /Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.db
+同步词库: .../sbzr.userdb.txt -> .../sbzr.userdb.db
+============================================================
+读取数据库中已存在的数据...
+  数据库中已有 778127 条记录
+
+读取TXT文件并对比数据...
+  处理中... 已处理 100000 行, 发现 150 条新数据
+  处理中... 已处理 200000 行, 发现 320 条新数据
+
+发现 500 条新数据，开始插入...
+  成功插入: 500 条
+
+============================================================
+同步完成！
+  TXT文件总行数: 1426182
+  TXT文件有效行数: 620095
+  本次新增: 500 条
+  数据库总记录数: 778627 条
+  数据库文件: .../sbzr.userdb.db
+```
+
+**方法 2：使用命令行脚本**
+
+直接在终端执行：
+
+```bash
+# 基本用法（自动查找同名的 .db 文件）
+python3 ~/.local/share/nvim/lazy/ZFVimIM/misc/sync_txt_to_db.py \
+  ~/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt
+
+# 指定数据库文件路径
+python3 ~/.local/share/nvim/lazy/ZFVimIM/misc/sync_txt_to_db.py \
+  ~/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt \
+  ~/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.db
+```
+
+**工作原理**：
+1. 读取 TXT 文件中的所有编码和词条
+2. 对比数据库中已存在的数据
+3. 只插入 TXT 中有但数据库中没有的新数据
+4. 避免重复插入，确保数据唯一性
+
+**注意事项**：
+- 同步过程是增量式的，不会删除数据库中的现有数据
+- 如果 TXT 文件中删除了某些词条，这些词条仍会保留在数据库中
+- 同步完成后，建议运行 `:ZFVimIMCacheUpdate` 更新缓存
+- 确保 TXT 文件格式正确（`编码 词1 词2 ...`）
+
+**工作流程示例**：
+
+1. **编辑 TXT 文件**：
+   ```txt
+   # 在 sbzr.userdb.txt 中添加新编码
+   xmzl 现在 先在 先宰 先载 县宰 陷在
+   ```
+
+2. **执行同步命令**：
+   ```vim
+   :ZFVimIMSync
+   ```
+
+3. **更新缓存**（可选，但推荐）：
+   ```vim
+   :ZFVimIMCacheUpdate
+   ```
+
+4. **验证同步结果**：
+   ```vim
+   :ZFVimIMInfo
+   ```
+
+现在可以在输入法中使用新添加的编码了！
 
 ## 升级说明
 
