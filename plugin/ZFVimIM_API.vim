@@ -667,14 +667,18 @@ function! IMReorder(bang, db, word, ...)
     endif
 endfunction
 " Wrapper functions to parse arguments in format: key word (matching dictionary format)
+" Redirect to batch add interface
 function! s:IMAddWrapper(bang, ...)
-    if a:0 < 2
-        echom '[ZFVimIM] Error: Usage: IMAdd <key> <word>'
-        return
+    " Always redirect to batch add interface
+    " If arguments provided, they will be pre-filled
+    if a:0 >= 2
+        let key = a:1
+        let word = join(a:000[1:], ' ')
+        call ZFVimIM_batchAddWords(key, word)
+    else
+        " No arguments, just open batch add interface
+        call ZFVimIM_batchAddWords()
     endif
-    let key = a:1
-    let word = join(a:000[1:], ' ')
-    call IMAdd(a:bang, {}, key, word)
 endfunction
 
 function! s:IMRemoveWrapper(bang, ...)
@@ -856,7 +860,7 @@ function! s:IMSearchWrapper(bang, ...)
     call IMSearch(a:bang, {}, word)
 endfunction
 
-command! -nargs=+ -bang IMAdd :call s:IMAddWrapper(<q-bang>, <f-args>)
+command! -nargs=* -bang IMAdd :call s:IMAddWrapper(<q-bang>, <f-args>)
 command! -nargs=+ -bang IMRemove :call s:IMRemoveWrapper(<q-bang>, <f-args>)
 command! -nargs=+ -bang IMReorder :call IMReorder(<q-bang>, {}, <f-args>)
 command! -nargs=+ -bang IMSearch :call s:IMSearchWrapper(<q-bang>, <f-args>)
