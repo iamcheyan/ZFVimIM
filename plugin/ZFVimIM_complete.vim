@@ -1033,66 +1033,66 @@ function! s:mergeResult(data, key, option, db)
         endwhile
     endif
 
-    " Extract common first character from multi-chars ONLY when key length is exactly 2
-    " Only extract from multi-chars whose key matches the user input prefix exactly
-    if len(a:key) == 2
-        let allMultiChars = []
-        let currentKeyPrefix = a:key  " e.g., 'gz'
-        
-        " Collect only multi-chars that match the current key prefix exactly
-        for item in ret
-            " Only include multi-chars whose key starts with currentKeyPrefix
-            if len(item['word']) > 1 && len(item['key']) >= 2
-                let itemPrefix = strpart(item['key'], 0, 2)
-                if itemPrefix ==# currentKeyPrefix
-                    call add(allMultiChars, item)
-                endif
-            endif
-        endfor
-        
-        if len(allMultiChars) >= 2
-            let extractedChars = s:extractCommonFirstChar(allMultiChars, a:key, a:db)
-            let pendingExtracted = []
-            for extractedChar in extractedChars
-                " Tag extracted result so we can treat it with lower priority later
-                let extractedChar['source'] = 'extracted_common_char'
-
-                " Skip if exact same candidate already exists
-                let alreadyExists = 0
-                for item in ret
-                    if item['word'] ==# extractedChar['word'] && item['key'] ==# extractedChar['key']
-                        let alreadyExists = 1
-                        break
-                    endif
-                endfor
-                if !alreadyExists
-                    call add(pendingExtracted, extractedChar)
-                endif
-            endfor
-
-            if !empty(pendingExtracted)
-                " Insert extracted chars after real exact-match entries from current db
-                let insertPos = 0
-                while insertPos < len(ret)
-                    let item = ret[insertPos]
-                    if get(item, 'type', '') ==# 'match'
-                                \ && get(item, 'key', '') ==# a:key
-                                \ && get(item, 'dbId', -1) == a:db['dbId']
-                                \ && get(item, 'source', '') !=# 'extracted_common_char'
-                        let insertPos += 1
-                        continue
-                    endif
-                    break
-                endwhile
-
-                let offset = 0
-                for extractedChar in pendingExtracted
-                    call insert(ret, extractedChar, insertPos + offset)
-                    let offset += 1
-                endfor
-            endif
-        endif
-    endif
+    " Extract common first character from multi-chars - DISABLED
+    " This feature has been disabled as requested
+    " if len(a:key) == 2
+    "     let allMultiChars = []
+    "     let currentKeyPrefix = a:key  " e.g., 'gz'
+    "     
+    "     " Collect only multi-chars that match the current key prefix exactly
+    "     for item in ret
+    "         " Only include multi-chars whose key starts with currentKeyPrefix
+    "         if len(item['word']) > 1 && len(item['key']) >= 2
+    "             let itemPrefix = strpart(item['key'], 0, 2)
+    "             if itemPrefix ==# currentKeyPrefix
+    "                 call add(allMultiChars, item)
+    "             endif
+    "         endif
+    "     endfor
+    "     
+    "     if len(allMultiChars) >= 2
+    "         let extractedChars = s:extractCommonFirstChar(allMultiChars, a:key, a:db)
+    "         let pendingExtracted = []
+    "         for extractedChar in extractedChars
+    "             " Tag extracted result so we can treat it with lower priority later
+    "             let extractedChar['source'] = 'extracted_common_char'
+    "
+    "             " Skip if exact same candidate already exists
+    "             let alreadyExists = 0
+    "             for item in ret
+    "                 if item['word'] ==# extractedChar['word'] && item['key'] ==# extractedChar['key']
+    "                     let alreadyExists = 1
+    "                     break
+    "                 endif
+    "             endfor
+    "             if !alreadyExists
+    "                 call add(pendingExtracted, extractedChar)
+    "             endif
+    "         endfor
+    "
+    "         if !empty(pendingExtracted)
+    "             " Insert extracted chars after real exact-match entries from current db
+    "             let insertPos = 0
+    "             while insertPos < len(ret)
+    "                 let item = ret[insertPos]
+    "                 if get(item, 'type', '') ==# 'match'
+    "                             \ && get(item, 'key', '') ==# a:key
+    "                             \ && get(item, 'dbId', -1) == a:db['dbId']
+    "                             \ && get(item, 'source', '') !=# 'extracted_common_char'
+    "                     let insertPos += 1
+    "                     continue
+    "                 endif
+    "                 break
+    "             endwhile
+    "
+    "             let offset = 0
+    "             for extractedChar in pendingExtracted
+    "                 call insert(ret, extractedChar, insertPos + offset)
+    "                 let offset += 1
+    "             endfor
+    "         endif
+    "     endif
+    " endif
 
     " For 2-letter input, keep only items whose key matches the input prefix
     if len(a:key) == 2

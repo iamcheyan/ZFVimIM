@@ -2406,14 +2406,14 @@ if !exists(':ZFVimIMReload')
     command! ZFVimIMReload :call ZFVimIM_reload()
 endif
 
-" Create user command for cache management
-if !exists(':ZFVimIMCacheClear')
-    command! ZFVimIMCacheClear :call ZFVimIM_cacheClearAll()
-endif
-
-if !exists(':ZFVimIMCacheUpdate')
-    command! ZFVimIMCacheUpdate :call ZFVimIM_cacheUpdate()
-endif
+" Cache management commands - removed, use ZFVimIMClear instead
+" if !exists(':ZFVimIMCacheClear')
+"     command! ZFVimIMCacheClear :call ZFVimIM_cacheClearAll()
+" endif
+"
+" if !exists(':ZFVimIMCacheUpdate')
+"     command! ZFVimIMCacheUpdate :call ZFVimIM_cacheUpdate()
+" endif
 
 " Auto-regenerate cache when dictionary files are modified
 augroup ZFVimIM_autoCacheUpdate_augroup
@@ -2561,14 +2561,197 @@ function! ZFVimIM_cleanupDictionary()
     endtry
 endfunction
 
-" Command to manually cleanup dictionary
-command! -nargs=0 ZFVimIMCleanup call ZFVimIM_cleanupDictionary()
+" Command to manually cleanup dictionary - removed, use ZFVimIMClear instead
+" command! -nargs=0 ZFVimIMCleanup call ZFVimIM_cleanupDictionary()
+
+" Combined command: cleanup dictionary + clear cache + reload
+" This is the only cache management command now
+function! ZFVimIM_refreshAll()
+    echom '[ZFVimIM] 开始刷新：清理字典 + 清除缓存 + 重新加载...'
+    
+    " Step 1: Cleanup dictionary file (if cleanup script exists)
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict') && isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    else
+        if !isdirectory(pluginDir . '/misc')
+            let altPath = stdpath('config') . '/lazy/ZFVimIM'
+            if isdirectory(altPath . '/misc')
+                let pluginDir = altPath
+            endif
+        endif
+    endif
+    
+    let cleanupScript = pluginDir . '/misc/dbCleanup.py'
+    if filereadable(cleanupScript)
+        " Get current database
+        if g:ZFVimIM_dbIndex < len(g:ZFVimIM_db)
+            let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
+            
+            " Get dictionary file path
+            let dictPath = ''
+            if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                let dictPath = db['implData']['dictPath']
+                " Cleanup script only works with .txt files
+                if dictPath =~ '\.db$'
+                    let dictPath = substitute(dictPath, '\.db$', '.txt', '')
+                endif
+            else
+                " Try to get from autoLoadDict logic
+                let dictDir = pluginDir . '/dict'
+                if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+                    let defaultDictName = g:zfvimim_default_dict_name
+                    if defaultDictName !~ '\.txt$'
+                        let defaultDictName = defaultDictName . '.txt'
+                    endif
+                    let dictPath = dictDir . '/' . defaultDictName
+                elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+                    let dictPath = expand(g:zfvimim_dict_path)
+                    if dictPath =~ '\.db$'
+                        let dictPath = substitute(dictPath, '\.db$', '.txt', '')
+                    endif
+                else
+                    let dictPath = dictDir . '/default_pinyin.txt'
+                endif
+            endif
+            
+            if !empty(dictPath) && filereadable(dictPath)
+                let pythonCmd = executable('python3') ? 'python3' : 'python'
+                let cachePath = ZFVimIM_cachePath()
+                
+                try
+                    let scriptPathAbs = CygpathFix_absPath(cleanupScript)
+                    let dictPathAbs = CygpathFix_absPath(dictPath)
+                    let cachePathAbs = CygpathFix_absPath(cachePath)
+                    
+                    echom '[ZFVimIM] 步骤 1/3: 清理字典文件...'
+                    let cmdList = [pythonCmd, scriptPathAbs, dictPathAbs, cachePathAbs]
+                    let result = system(join(cmdList, ' '))
+                    if v:shell_error == 0
+                        echom '[ZFVimIM] 字典文件清理完成'
+                    else
+                        echom '[ZFVimIM] 警告: 字典清理失败: ' . result
+                    endif
+                catch /.*/
+                    echom '[ZFVimIM] 警告: 字典清理出错: ' . v:exception
+                endtry
+            endif
+        endif
+    else
+        echom '[ZFVimIM] 跳过字典清理（清理脚本不存在）'
+    endif
+    
+    " Step 2: Clear cache and reload dictionaries
+    echom '[ZFVimIM] 步骤 2/3: 清除缓存文件...'
+    call ZFVimIM_cacheClearAll()
+    
+    echom '[ZFVimIM] 步骤 3/3: 重新加载字典...'
+    call ZFVimIM_cacheUpdate()
+    
+    echom '[ZFVimIM] 刷新完成！'
+endfunction
+
+" Main cache management command - combines cleanup + clear + reload
+command! -nargs=0 ZFVimIMClear call ZFVimIM_refreshAll()
 
 " Command to show dictionary information
 command! -nargs=0 ZFVimIMInfo call ZFVimIM_showInfo()
 
 " Command to sync TXT file to database
 command! -nargs=0 ZFVimIMSync call ZFVimIM_syncTxtToDb()
+
+" Command to export database to TXT file
+command! -nargs=0 ZFVimIMExport call ZFVimIM_exportDbToTxt()
+
+function! ZFVimIM_exportDbToTxt()
+    " Check if Python is available
+    if !executable('python') && !executable('python3')
+        echom '[ZFVimIM] Error: Python not found, cannot export database'
+        return
+    endif
+    
+    " Get database file path
+    let dbPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    " Determine database file path
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName =~ '\.txt$'
+            let defaultDictName = substitute(defaultDictName, '\.txt$', '.db', '')
+        elseif defaultDictName !~ '\.db$'
+            let defaultDictName = defaultDictName . '.db'
+        endif
+        let dbPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+        " Convert .txt to .db
+        if dictPath =~ '\.txt$'
+            let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+        elseif dictPath =~ '\.db$'
+            let dbPath = dictPath
+        else
+            let dbPath = dictPath . '.db'
+        endif
+    else
+        let dbPath = dictDir . '/default_pinyin.db'
+    endif
+    
+    " Skip if database file doesn't exist
+    if empty(dbPath) || !filereadable(dbPath)
+        echom '[ZFVimIM] Error: Database file not found: ' . dbPath
+        return
+    endif
+    
+    " Get TXT file path (same name, different extension)
+    let txtPath = substitute(dbPath, '\.db$', '.txt', '')
+    
+    " Get script path
+    let scriptPath = pluginDir . '/misc/db_export_to_txt.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] Error: Export script not found: ' . scriptPath
+        return
+    endif
+    
+    " Determine Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    
+    " Run export script
+    try
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let dbPathAbs = CygpathFix_absPath(dbPath)
+        let txtPathAbs = CygpathFix_absPath(txtPath)
+        
+        echom '[ZFVimIM] 开始导出数据库到 TXT 文件...'
+        echom '[ZFVimIM] 数据库: ' . dbPathAbs
+        echom '[ZFVimIM] 输出文件: ' . txtPathAbs
+        
+        let cmdList = [pythonCmd, scriptPathAbs, dbPathAbs, txtPathAbs]
+        let result = system(join(cmdList, ' '))
+        
+        " Display result
+        let lines = split(result, '\n')
+        for line in lines
+            if !empty(line)
+                echom line
+            endif
+        endfor
+        
+        if v:shell_error == 0
+            echom '[ZFVimIM] 导出完成！'
+        else
+            echom '[ZFVimIM] 导出失败，请检查错误信息'
+        endif
+    catch /.*/
+        echom '[ZFVimIM] Error: 导出过程出错: ' . v:exception
+    endtry
+endfunction
 
 function! ZFVimIM_syncTxtToDb()
     " Check if Python is available

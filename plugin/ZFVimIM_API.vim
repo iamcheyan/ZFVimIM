@@ -365,12 +365,37 @@ function! IMRemove(bang, db, word, ...)
         let g:ZFVimIM_dbEditApplyFlag += 1
     endif
     
-    " Collect all words to remove (support multiple words)
-    let wordsToRemove = [a:word]
-    if a:0 > 0
-        for i in range(1, a:0)
-            call add(wordsToRemove, a:{i})
-        endfor
+    " Check for fuzzy match flag
+    let fuzzyMatch = 0
+    let wordsToRemove = []
+    
+    " Check if first argument is a flag
+    if a:word ==# '--fuzzy' || a:word ==# '-f'
+        let fuzzyMatch = 1
+        " Collect words from remaining arguments
+        if a:0 > 0
+            for i in range(1, a:0)
+                call add(wordsToRemove, a:{i})
+            endfor
+        endif
+    else
+        " Normal mode: collect all words
+        call add(wordsToRemove, a:word)
+        if a:0 > 0
+            for i in range(1, a:0)
+                " Check if this argument is a flag
+                if a:{i} ==# '--fuzzy' || a:{i} ==# '-f'
+                    let fuzzyMatch = 1
+                else
+                    call add(wordsToRemove, a:{i})
+                endif
+            endfor
+        endif
+    endif
+    
+    if empty(wordsToRemove)
+        echom '[ZFVimIM] Error: No words specified to remove'
+        return
     endif
     
     " Get dictionary file path
@@ -411,15 +436,17 @@ function! IMRemove(bang, db, word, ...)
         return
     endif
     
-    " Create a Python script to remove multiple words
+    " Create a Python script to remove multiple words (with fuzzy match support)
     let tmpScript = ZFVimIM_cachePath() . '/direct_remove_words.py'
+    let fuzzyFlag = fuzzyMatch ? 'True' : 'False'
     let scriptLines = [
                 \ '#!/usr/bin/env python3',
                 \ '# -*- coding: utf-8 -*-',
                 \ 'import sys',
                 \ '',
                 \ 'dictFile = sys.argv[1]',
-                \ 'wordsToRemove = sys.argv[2:]',
+                \ 'fuzzyMatch = sys.argv[2] == "True"',
+                \ 'wordsToRemove = sys.argv[3:]',
                 \ '',
                 \ '# Read file line by line',
                 \ 'modified = False',
@@ -447,12 +474,24 @@ function! IMRemove(bang, db, word, ...)
                 \ '        for w in parts[1:]:',
                 \ '            # Restore spaces and compare',
                 \ '            wRestored = w.replace("_ZFVimIM_space_", " ")',
-                \ '            if wRestored not in wordsToRemove:',
-                \ '                newParts.append(w)',
+                \ '            shouldRemove = False',
+                \ '            ',
+                \ '            if fuzzyMatch:',
+                \ '                # Fuzzy match: check if word contains any pattern',
+                \ '                for pattern in wordsToRemove:',
+                \ '                    if pattern in wRestored:',
+                \ '                        shouldRemove = True',
+                \ '                        break',
                 \ '            else:',
+                \ '                # Exact match',
+                \ '                shouldRemove = (wRestored in wordsToRemove)',
+                \ '            ',
+                \ '            if shouldRemove:',
                 \ '                foundAny = True',
                 \ '                modified = True',
                 \ '                removedCount[wRestored] = removedCount.get(wRestored, 0) + 1',
+                \ '            else:',
+                \ '                newParts.append(w)',
                 \ '        ',
                 \ '        # If line still has words after removal, keep it',
                 \ '        if len(newParts) > 1:',
@@ -471,7 +510,7 @@ function! IMRemove(bang, db, word, ...)
                 \ '    # Print removed words count',
                 \ '    result = []',
                 \ '    for word in wordsToRemove:',
-                \ '        count = removedCount.get(word, 0)',
+                \ '        count = sum(1 for w in removedCount.keys() if word in w) if fuzzyMatch else removedCount.get(word, 0)',
                 \ '        if count > 0:',
                 \ '            result.append(word + "(" + str(count) + ")")',
                 \ '        else:',
@@ -489,8 +528,8 @@ function! IMRemove(bang, db, word, ...)
         call writefile(split(scriptContent, "\n", 1), tmpScript)
     endif
     
-    " Build command with all words as arguments
-    let cmd = pythonCmd . ' "' . tmpScript . '" "' . dictPath . '"'
+    " Build command with fuzzy flag and all words as arguments
+    let cmd = pythonCmd . ' "' . tmpScript . '" "' . dictPath . '" "' . fuzzyFlag . '"'
     for word in wordsToRemove
         let cmd = cmd . ' "' . word . '"'
     endfor
@@ -535,6 +574,10 @@ function! IMRemove(bang, db, word, ...)
                     let scriptPathAbs = CygpathFix_absPath(scriptPath)
                     let dbPathAbs = CygpathFix_absPath(dbPath)
                     let cmd = pythonCmd . ' "' . scriptPathAbs . '" "' . dbPathAbs . '"'
+                    " Add fuzzy flag if needed
+                    if fuzzyMatch
+                        let cmd = cmd . ' --fuzzy'
+                    endif
                     for word in wordsToRemove
                         let cmd = cmd . ' "' . word . '"'
                     endfor
@@ -544,10 +587,36 @@ function! IMRemove(bang, db, word, ...)
                     
                     if dbResult =~# '^OK:'
                         " Successfully removed from both TXT and DB
-                        if !empty(removedInfo)
-                            echom '[ZFVimIM] Removed words from TXT and DB: ' . removedInfo
+                        " Parse result to show removed words info
+                        let dbResultParts = split(dbResult, ':')
+                        if len(dbResultParts) > 1
+                            let dbRemovedInfo = join(dbResultParts[1:], ':')
+                            " Check if there's a WORDS: section (from fuzzy match)
+                            if dbRemovedInfo =~ 'WORDS:'
+                                let wordsMatch = matchstr(dbRemovedInfo, 'WORDS:[^:]*')
+                                let wordsList = substitute(wordsMatch, 'WORDS:', '', '')
+                                " Extract records count if available
+                                let recordsMatch = matchstr(dbRemovedInfo, 'RECORDS:\d\+')
+                                let recordsCount = matchstr(recordsMatch, '\d\+')
+                                if !empty(recordsCount)
+                                    echom '[ZFVimIM] 模糊匹配删除完成: ' . removedInfo . ' (共删除 ' . recordsCount . ' 条数据库记录)'
+                                else
+                                    echom '[ZFVimIM] 模糊匹配删除完成: ' . removedInfo
+                                endif
+                                echom '[ZFVimIM] 实际删除的词: ' . wordsList
+                            else
+                                if !empty(removedInfo)
+                                    echom '[ZFVimIM] Removed words from TXT and DB: ' . removedInfo
+                                else
+                                    echom '[ZFVimIM] Words removed from TXT and database'
+                                endif
+                            endif
                         else
-                            echom '[ZFVimIM] Words removed from TXT and database'
+                            if !empty(removedInfo)
+                                echom '[ZFVimIM] Removed words from TXT and DB: ' . removedInfo
+                            else
+                                echom '[ZFVimIM] Words removed from TXT and database'
+                            endif
                         endif
                         
                         " Clear cache and reload database
@@ -610,8 +679,9 @@ endfunction
 
 function! s:IMRemoveWrapper(bang, ...)
     if a:0 < 1
-        echom '[ZFVimIM] Error: Usage: IMRemove <word1> [word2] [word3] ...'
+        echom '[ZFVimIM] Error: Usage: IMRemove [--fuzzy|-f] <word1> [word2] [word3] ...'
         echom '[ZFVimIM] Example: IMRemove 词1 词2 词3'
+        echom '[ZFVimIM] Example (fuzzy): IMRemove --fuzzy 鬻  (删除所有包含"鬻"的词)'
         return
     endif
     " Call IMRemove with first word and remaining words as additional arguments
@@ -631,9 +701,165 @@ function! s:IMRemoveWrapper(bang, ...)
     endif
 endfunction
 
+function! IMSearch(bang, db, word)
+    " Get dictionary file path
+    let dictPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
+        endif
+        let dictPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+    else
+        let dictPath = dictDir . '/default_pinyin.txt'
+    endif
+    
+    if empty(dictPath) || !filereadable(dictPath)
+        echom '[ZFVimIM] Error: Dictionary file not found: ' . dictPath
+        return
+    endif
+    
+    " Get database file path (.db file)
+    let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+    if !filereadable(dbPath)
+        echom '[ZFVimIM] Error: Database file not found: ' . dbPath
+        echom '[ZFVimIM] Please run :ZFVimIMSync to create database first'
+        return
+    endif
+    
+    " Use Python to search word in database
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        echom '[ZFVimIM] Error: Python not found. Cannot search database.'
+        return
+    endif
+    
+    " Get script path
+    let scriptPath = pluginDir . '/misc/db_search_word.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] Error: Search script not found: ' . scriptPath
+        return
+    endif
+    
+    " Execute search (capture both stdout and stderr)
+    let cmd = pythonCmd . ' "' . scriptPath . '" "' . dbPath . '" "' . a:word . '" 2>&1'
+    let fullResult = system(cmd)
+    
+    " Split output: last line is JSON, previous lines are human-readable
+    let lines = split(fullResult, '\n')
+    let jsonLine = ''
+    let humanReadable = []
+    for line in lines
+        if line =~ '^{'
+            let jsonLine = line
+        elseif !empty(line)
+            call add(humanReadable, line)
+        endif
+    endfor
+    
+    " If we have human-readable output, use it (easier to parse)
+    if !empty(humanReadable)
+        for line in humanReadable
+            if !empty(line)
+                echom line
+            endif
+        endfor
+        return
+    endif
+    
+    " Fallback: parse JSON
+    if empty(jsonLine)
+        echom '[ZFVimIM] Error: No result from search script'
+        return
+    endif
+    
+    " Parse JSON result
+    if jsonLine =~ '^{'
+        " Extract information from JSON
+        if jsonLine =~ '"found"\s*:\s*true'
+            " Found results - extract count
+            let countMatch = matchstr(jsonLine, '"count"\s*:\s*\d\+')
+            let count = matchstr(countMatch, '\d\+')
+            if empty(count)
+                let count = '0'
+            endif
+            
+            echom '[ZFVimIM] 找到词: ' . a:word . ' (共 ' . count . ' 个编码)'
+            
+            " Extract all results using regex
+            let results = []
+            let pos = 0
+            while 1
+                " Find next result object: {"key":"...","word":"...","frequency":...}
+                let resultStart = match(jsonLine, '{"key"', pos)
+                if resultStart < 0
+                    break
+                endif
+                
+                " Extract key
+                let keyMatch = matchstr(jsonLine, '"key"\s*:\s*"[^"]*"', resultStart)
+                let key = matchstr(keyMatch, '"[^"]*"')
+                let key = substitute(key, '"', '', 'g')
+                
+                " Extract frequency (look within the same result object)
+                let objEnd = match(jsonLine, '}', resultStart)
+                if objEnd < 0
+                    let objEnd = len(jsonLine)
+                endif
+                let objStr = strpart(jsonLine, resultStart, objEnd - resultStart)
+                let freqMatch = matchstr(objStr, '"frequency"\s*:\s*\d\+')
+                let frequency = matchstr(freqMatch, '\d\+')
+                if empty(frequency)
+                    let frequency = '0'
+                endif
+                
+                call add(results, {'key': key, 'frequency': frequency})
+                
+                " Move to next result
+                let pos = objEnd + 1
+            endwhile
+            
+            " Display results
+            for item in results
+                echom '  编码: ' . item['key'] . '  频率: ' . item['frequency']
+            endfor
+        elseif jsonLine =~ '"found"\s*:\s*false'
+            echom '[ZFVimIM] 未找到词: ' . a:word
+        elseif jsonLine =~ '"error"'
+            let errorMatch = matchstr(jsonLine, '"error"\s*:\s*"[^"]*"')
+            let error = matchstr(errorMatch, '"[^"]*"')
+            let error = substitute(error, '"', '', 'g')
+            echom '[ZFVimIM] Error: ' . error
+        else
+            echom '[ZFVimIM] 搜索结果: ' . jsonLine
+        endif
+    else
+        echom '[ZFVimIM] 搜索结果: ' . fullResult
+    endif
+endfunction
+
+function! s:IMSearchWrapper(bang, ...)
+    if a:0 < 1
+        echom '[ZFVimIM] Error: Usage: IMSearch <word>'
+        return
+    endif
+    let word = join(a:000, ' ')
+    call IMSearch(a:bang, {}, word)
+endfunction
+
 command! -nargs=+ -bang IMAdd :call s:IMAddWrapper(<q-bang>, <f-args>)
 command! -nargs=+ -bang IMRemove :call s:IMRemoveWrapper(<q-bang>, <f-args>)
 command! -nargs=+ -bang IMReorder :call IMReorder(<q-bang>, {}, <f-args>)
+command! -nargs=+ -bang IMSearch :call s:IMSearchWrapper(<q-bang>, <f-args>)
 
 let s:ZFVimIM_dbItemReorderThreshold = 1
 function! s:dbItemReorderFunc(item1, item2)
