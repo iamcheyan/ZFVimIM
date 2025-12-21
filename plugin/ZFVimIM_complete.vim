@@ -84,9 +84,78 @@ function! s:buildAliasMatches(aliasKey, db)
         return []
     endif
     let matches = []
+    
+    " Performance optimization: extract key first without full decode
+    " Only decode items that might match (based on key pattern)
+    let keyMain = g:ZFVimIM_KEY_S_MAIN
+    let aliasKeyLen = len(a:aliasKey)
+    
+    " Pre-filter keys first (fast string operations, no decode)
+    " Pattern for 3-char: first char (0), third char (2), last 2 chars
+    " Pattern for 4+ char: first char (0), third char (2), fifth char (4), last char
+    let candidateIndices = []
+    let idx = 0
     for dbItemEncoded in bucket
+        " Extract key without full decode (much faster - just string operation)
+        let keyEnd = stridx(dbItemEncoded, keyMain)
+        if keyEnd < 0
+            let idx += 1
+            continue
+        endif
+        let dbItemKey = strpart(dbItemEncoded, 0, keyEnd)
+        let keyLen = len(dbItemKey)
+        
+        " Quick filter: skip keys that are too short
+        if keyLen < 6
+            let idx += 1
+            continue
+        endif
+        
+        " Quick filter: first char must match
+        if dbItemKey[0] !=# a:aliasKey[0]
+            let idx += 1
+            continue
+        endif
+        
+        " Quick filter: third char (index 2) must match
+        if keyLen < 3 || dbItemKey[2] !=# a:aliasKey[1]
+            let idx += 1
+            continue
+        endif
+        
+        " For 4+ char words: check fifth char (index 4) and last char
+        " This filters out most non-matches before expensive decode
+        let mightMatch = 0
+        if keyLen >= 5 && dbItemKey[4] ==# a:aliasKey[2]
+            " Check last char for 4+ char words
+            if keyLen >= 8
+                let lastCharIndex = keyLen - 2
+                if lastCharIndex >= 0 && dbItemKey[lastCharIndex] ==# a:aliasKey[3]
+                    let mightMatch = 1
+                endif
+            endif
+        endif
+        " Also check for 3-char words (last 2 chars)
+        if keyLen >= 6
+            let lastTwo = strpart(dbItemKey, keyLen - 2, 2)
+            if lastTwo ==# strpart(a:aliasKey, 2, 2)
+                let mightMatch = 1
+            endif
+        endif
+        
+        if mightMatch
+            call add(candidateIndices, idx)
+        endif
+        let idx += 1
+    endfor
+    
+    " Now decode only candidate items (much fewer)
+    for candidateIdx in candidateIndices
+        let dbItemEncoded = bucket[candidateIdx]
         let dbItem = ZFVimIM_dbItemDecode(dbItemEncoded)
         let dbItemKey = dbItem['key']
+        
+        " Check each word
         for word in dbItem['wordList']
             let wordLen = strchars(word)
             if wordLen == 3

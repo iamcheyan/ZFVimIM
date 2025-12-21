@@ -422,6 +422,7 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
 1. **检查词库路径**：
    ```vim
    :lua print(vim.g.zfvimim_dict_path)
+   :lua print(vim.g.zfvimim_default_dict_name)
    ```
 
 2. **检查文件是否存在**：
@@ -433,6 +434,58 @@ vim.g.ZFVimIME_IMEStatus_tagR = '> '  -- 右标签
    ```vim
    :messages
    ```
+
+### 清理脚本错误：UTF-8 编码错误
+
+**错误信息**：
+```
+ZFVimIM: Cleanup failed: Error loading dictionary: 'utf-8' codec can't decode byte 0x8d in position 98: invalid start byte
+```
+
+**原因**：
+- 清理脚本试图处理二进制文件（如 `.db` 文件）而不是文本文件（`.txt`）
+- 词库文件损坏或编码不正确
+
+**解决方法**：
+
+1. **确认词库文件格式**：
+   - 清理脚本只处理 `.txt` 文件
+   - 不要尝试清理 `.db` 二进制文件
+   - 确保配置指向的是 `.txt` 文件
+
+2. **检查文件编码**：
+   ```bash
+   # 检查文件类型
+   file ~/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt
+   
+   # 检查文件编码
+   enca ~/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt
+   ```
+
+3. **如果文件损坏，从备份恢复**：
+   ```bash
+   # 检查是否有备份文件
+   ls ~/.local/share/nvim/lazy/ZFVimIM/dict/*.backup*
+   
+   # 如果有备份，恢复它
+   cp ~/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt.backup \
+      ~/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt
+   ```
+
+4. **禁用自动清理（临时方案）**：
+   如果问题持续，可以暂时禁用退出时的自动清理：
+   ```vim
+   " 注释掉或删除自动清理的 autocmd（在插件代码中）
+   " 但这不是推荐的长期解决方案
+   ```
+
+5. **手动重新生成词库**：
+   如果文件确实损坏，可以：
+   - 从其他来源重新获取词库文件
+   - 使用备份文件
+   - 从头开始创建词库
+
+**注意**：`.db` 文件是二进制数据库文件，不应该用文本工具编辑或清理。只清理 `.txt` 文件。
 
 ### 缓存问题
 

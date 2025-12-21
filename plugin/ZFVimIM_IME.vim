@@ -88,12 +88,20 @@ function! s:ZFVimIM_autoLoadDict()
                         \   'name' : dictName,
                         \   'priority' : 100,
                         \ })
-            call ZFVimIM_dbLoad(db, dictPath)
-            " Store dictPath in implData for saving after deletion
+            " Convert to DB path if TXT is specified (actual file used for loading)
+            " Always use .db file - convert .txt to .db if needed
+            let actualDbPath = dictPath
+            if dictPath =~ '\.txt$'
+                let actualDbPath = substitute(dictPath, '\.txt$', '.db', '')
+            endif
+            call ZFVimIM_dbLoad(db, actualDbPath)
+            " Store actual DB path in implData (not TXT path)
             if !has_key(db, 'implData')
                 let db['implData'] = {}
             endif
-            let db['implData']['dictPath'] = dictPath
+            let db['implData']['dictPath'] = actualDbPath
+            " Also store original TXT path for reference
+            let db['implData']['txtPath'] = dictPath
         else
             " Update dictPath for already loaded dictionary
             for db in g:ZFVimIM_db
@@ -101,7 +109,13 @@ function! s:ZFVimIM_autoLoadDict()
                     if !has_key(db, 'implData')
                         let db['implData'] = {}
                     endif
-                    let db['implData']['dictPath'] = dictPath
+                    " Convert to DB path if TXT is specified
+                    let actualDbPath = dictPath
+                    if dictPath =~ '\.txt$'
+                        let actualDbPath = substitute(dictPath, '\.txt$', '.db', '')
+                    endif
+                    let db['implData']['dictPath'] = actualDbPath
+                    let db['implData']['txtPath'] = dictPath
                     break
                 endif
             endfor
@@ -1987,6 +2001,10 @@ function! s:cleanupDictionaryOnExit()
         let dictPath = dictDir . '/' . defaultDictName
     elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
         let dictPath = expand(g:zfvimim_dict_path)
+        " Ensure it's .txt file for cleanup script
+        if dictPath =~ '\.db$'
+            let dictPath = substitute(dictPath, '\.db$', '.txt', '')
+        endif
     else
         let dictPath = dictDir . '/default_pinyin.txt'
     endif
@@ -2191,7 +2209,12 @@ function! ZFVimIM_cleanupDictionary()
     " Get dictionary file path
     let dictPath = ''
     if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+        " Get path from database, but convert .db to .txt for cleanup script
         let dictPath = db['implData']['dictPath']
+        " Cleanup script only works with .txt files, so convert .db to .txt
+        if dictPath =~ '\.db$'
+            let dictPath = substitute(dictPath, '\.db$', '.txt', '')
+        endif
     else
         " Try to get from autoLoadDict logic
         let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
@@ -2210,6 +2233,10 @@ function! ZFVimIM_cleanupDictionary()
             let dictPath = dictDir . '/' . defaultDictName
         elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
             let dictPath = expand(g:zfvimim_dict_path)
+            " Ensure it's .txt file for cleanup script
+            if dictPath =~ '\.db$'
+                let dictPath = substitute(dictPath, '\.db$', '.txt', '')
+            endif
         else
             " Default dictionary: default_pinyin.txt
             let dictPath = dictDir . '/default_pinyin.txt'
@@ -2272,6 +2299,117 @@ command! -nargs=0 ZFVimIMCleanup call ZFVimIM_cleanupDictionary()
 
 " Command to show dictionary information
 command! -nargs=0 ZFVimIMInfo call ZFVimIM_showInfo()
+
+" Command to sync TXT file to database
+command! -nargs=0 ZFVimIMSync call ZFVimIM_syncTxtToDb()
+
+function! ZFVimIM_syncTxtToDb()
+    " Check if Python is available
+    if !executable('python') && !executable('python3')
+        echom 'ZFVimIM: Python not found, cannot sync dictionary'
+        return
+    endif
+    
+    " Get dictionary file path (TXT file)
+    let txtPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    " Determine TXT file path
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
+        endif
+        let txtPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let txtPath = expand(g:zfvimim_dict_path)
+    else
+        let txtPath = dictDir . '/default_pinyin.txt'
+    endif
+    
+    " Skip if TXT file doesn't exist
+    if empty(txtPath) || !filereadable(txtPath)
+        echom 'ZFVimIM: TXT dictionary file not found: ' . txtPath
+        return
+    endif
+    
+    " Get script path
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict') && isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    else
+        if !isdirectory(pluginDir . '/misc')
+            let altPath = stdpath('config') . '/lazy/ZFVimIM'
+            if isdirectory(altPath . '/misc')
+                let pluginDir = altPath
+            endif
+        endif
+    endif
+    
+    let scriptPath = pluginDir . '/misc/sync_txt_to_db.py'
+    if !filereadable(scriptPath)
+        echom 'ZFVimIM: Sync script not found: ' . scriptPath
+        return
+    endif
+    
+    " Determine database file path (.db)
+    let dbPath = substitute(txtPath, '\.txt$', '.db', '')
+    
+    " Determine Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    
+    " Run sync script synchronously
+    try
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let txtPathAbs = CygpathFix_absPath(txtPath)
+        let dbPathAbs = CygpathFix_absPath(dbPath)
+        
+        echom 'ZFVimIM: Syncing TXT to database...'
+        echom '  TXT: ' . txtPathAbs
+        echom '  DB:  ' . dbPathAbs
+        
+        let cmdList = [pythonCmd, scriptPathAbs, txtPathAbs, dbPathAbs]
+        let result = system(join(cmdList, ' '))
+        
+        " Show result
+        let lines = split(result, '\n')
+        for line in lines
+            if !empty(line)
+                echom line
+            endif
+        endfor
+        
+        if v:shell_error == 0
+            echom 'ZFVimIM: Sync completed successfully'
+            " Optionally reload the database
+            if exists('g:ZFVimIM_db') && len(g:ZFVimIM_db) > 0
+                let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
+                if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                    let dbPath = db['implData']['dictPath']
+                    " Convert .txt to .db if needed
+                    if dbPath =~ '\.txt$'
+                        let dbPath = substitute(dbPath, '\.txt$', '.db', '')
+                    endif
+                    if filereadable(dbPath)
+                        echom 'ZFVimIM: Reloading database...'
+                        call ZFVimIM_dbLoad(db, dbPath)
+                        echom 'ZFVimIM: Database reloaded'
+                    endif
+                endif
+            endif
+        else
+            echom 'ZFVimIM: Sync failed'
+        endif
+    catch /.*/
+        echom 'ZFVimIM: Error running sync: ' . v:exception
+    endtry
+endfunction
 
 function! ZFVimIM_showInfo()
     echo "=========================================="
@@ -2358,14 +2496,26 @@ function! ZFVimIM_showInfo()
         
         echo marker . "词库 #" . (idx + 1) . ": " . get(db, 'name', '(未命名)')
         
-        " Show dictionary path
+        " Show dictionary path (actual DB file being used)
         let dictPath = ''
         if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
             let dictPath = db['implData']['dictPath']
         endif
         
+        " If path is TXT, convert to DB (show actual file being used)
+        if !empty(dictPath) && dictPath =~ '\.txt$'
+            let dictPath = substitute(dictPath, '\.txt$', '.db', '')
+        endif
+        
         if !empty(dictPath)
-            echo "    路径: " . dictPath
+            echo "    路径: " . dictPath . " (SQLite数据库)"
+            " Also show TXT path if available
+            if has_key(db, 'implData') && has_key(db['implData'], 'txtPath')
+                let txtPath = db['implData']['txtPath']
+                if !empty(txtPath) && txtPath =~ '\.txt$'
+                    echo "    TXT源文件: " . txtPath
+                endif
+            endif
             if filereadable(dictPath)
                 let mtime = getftime(dictPath)
                 if mtime > 0

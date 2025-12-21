@@ -52,8 +52,13 @@ def loadDictionary(dbFile):
     entries_dict = {}  # 使用字典来合并相同编码的条目
     invalid_count = 0
     
+    # 检查文件扩展名
+    if not dbFile.lower().endswith('.txt'):
+        print("Error: dbCleanup.py only processes .txt files, got: " + dbFile, file=sys.stderr)
+        return None
+    
     try:
-        with io.open(dbFile, 'r', encoding='utf-8') as f:
+        with io.open(dbFile, 'r', encoding='utf-8', errors='replace') as f:
             for line_num, line in enumerate(f, 1):
                 line = line.rstrip('\n').strip()
                 # 跳过空行和注释
@@ -172,6 +177,11 @@ def cleanupDictionary(dbFile, cachePath):
     """整理词库的主函数"""
     if not os.path.isfile(dbFile):
         print("Dictionary file not found: " + dbFile, file=sys.stderr)
+        return False
+    
+    # 只处理 .txt 文件，忽略二进制文件（如 .db）
+    if not dbFile.lower().endswith('.txt'):
+        print("Warning: dbCleanup.py only processes .txt files, skipping: " + dbFile, file=sys.stderr)
         return False
     
     # 加载词库

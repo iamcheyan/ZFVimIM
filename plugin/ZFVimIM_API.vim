@@ -678,19 +678,193 @@ endif
 "     'c . start . pattern',
 "   ],
 " }
+let s:ZFVimIM_DBSEARCH_FALLBACK = -999999
+
+function! s:dbEnsureImplData(db) abort
+    if !has_key(a:db, 'implData') || type(a:db['implData']) != type({})
+        let a:db['implData'] = {}
+    endif
+    return a:db['implData']
+endfunction
+
+function! s:dbClearBucketIndexCache(db) abort
+    let implData = s:dbEnsureImplData(a:db)
+    let implData['_bucketKeys'] = {}
+    let implData['_bucketIndex'] = {}
+endfunction
+
+function! s:dbRebuildBucketIndex(db, c) abort
+    let implData = s:dbEnsureImplData(a:db)
+    if !has_key(implData, '_bucketKeys')
+        let implData['_bucketKeys'] = {}
+    endif
+    if !has_key(implData, '_bucketIndex')
+        let implData['_bucketIndex'] = {}
+    endif
+    let bucket = get(a:db['dbMap'], a:c, [])
+    if empty(bucket)
+        if has_key(implData['_bucketKeys'], a:c)
+            call remove(implData['_bucketKeys'], a:c)
+        endif
+        if has_key(implData['_bucketIndex'], a:c)
+            call remove(implData['_bucketIndex'], a:c)
+        endif
+        return
+    endif
+
+    let bucketKeys = []
+    let bucketIndex = {}
+    let idx = 0
+    for entry in bucket
+        let key = matchstr(entry, '^[^' . escape(g:ZFVimIM_KEY_S_MAIN, '\\') . ']*')
+        call add(bucketKeys, key)
+        let bucketIndex[key] = idx
+        let idx += 1
+    endfor
+    let implData['_bucketKeys'][a:c] = bucketKeys
+    let implData['_bucketIndex'][a:c] = bucketIndex
+endfunction
+
+function! s:dbBuildAllBucketIndexes(db) abort
+    call s:dbClearBucketIndexCache(a:db)
+    for c in keys(a:db['dbMap'])
+        call s:dbRebuildBucketIndex(a:db, c)
+    endfor
+endfunction
+
+function! s:dbGetBucketKeys(db, c) abort
+    let implData = s:dbEnsureImplData(a:db)
+    if !has_key(implData, '_bucketKeys')
+        let implData['_bucketKeys'] = {}
+    endif
+    if !has_key(implData['_bucketKeys'], a:c)
+        call s:dbRebuildBucketIndex(a:db, a:c)
+    endif
+    return get(implData['_bucketKeys'], a:c, [])
+endfunction
+
+function! s:dbGetBucketIndex(db, c) abort
+    let implData = s:dbEnsureImplData(a:db)
+    if !has_key(implData, '_bucketIndex')
+        let implData['_bucketIndex'] = {}
+    endif
+    if !has_key(implData['_bucketIndex'], a:c)
+        call s:dbRebuildBucketIndex(a:db, a:c)
+    endif
+    return get(implData['_bucketIndex'], a:c, {})
+endfunction
+
+function! s:dbStartsWith(str, prefix) abort
+    if empty(a:prefix)
+        return 1
+    endif
+    if strlen(a:str) < strlen(a:prefix)
+        return 0
+    endif
+    return strpart(a:str, 0, strlen(a:prefix)) ==# a:prefix
+endfunction
+
+function! s:dbLowerBound(keys, target) abort
+    let l = 0
+    let r = len(a:keys)
+    while l < r
+        let m = (l + r) / 2
+        if a:keys[m] <# a:target
+            let l = m + 1
+        else
+            let r = m
+        endif
+    endwhile
+    return l
+endfunction
+
+function! s:dbSearchUseIndex(db, c, pattern, startIndex) abort
+    if empty(a:pattern) || a:pattern[0] !=# '^'
+        return s:ZFVimIM_DBSEARCH_FALLBACK
+    endif
+
+    let prefixPattern = strpart(a:pattern, 1)
+    if empty(prefixPattern)
+        return s:ZFVimIM_DBSEARCH_FALLBACK
+    endif
+
+    let exactMatch = 0
+    let keyMain = g:ZFVimIM_KEY_S_MAIN
+    let keyMainLen = strlen(keyMain)
+    if keyMainLen > 0 && strlen(prefixPattern) >= keyMainLen
+                \ && strpart(prefixPattern, strlen(prefixPattern) - keyMainLen) ==# keyMain
+        let exactMatch = 1
+        let prefixPattern = strpart(prefixPattern, 0, strlen(prefixPattern) - keyMainLen)
+    endif
+
+    if empty(prefixPattern)
+        return s:ZFVimIM_DBSEARCH_FALLBACK
+    endif
+
+    let bucketKeys = s:dbGetBucketKeys(a:db, a:c)
+    if empty(bucketKeys)
+        return -1
+    endif
+
+    if exactMatch
+        let indexMap = s:dbGetBucketIndex(a:db, a:c)
+        let idx = get(indexMap, prefixPattern, -1)
+        if idx < a:startIndex
+            return -1
+        endif
+        return idx
+    endif
+
+    let baseIndex = s:dbLowerBound(bucketKeys, prefixPattern)
+    if baseIndex < a:startIndex
+        let baseIndex = a:startIndex
+    endif
+    let prefixLen = strlen(prefixPattern)
+    let keysLen = len(bucketKeys)
+    let idx = baseIndex
+    while idx < keysLen
+        let currentKey = bucketKeys[idx]
+        if s:dbStartsWith(currentKey, prefixPattern)
+            return idx
+        endif
+        let currentPrefix = strpart(currentKey, 0, prefixLen)
+        if currentPrefix ># prefixPattern
+            break
+        endif
+        let idx += 1
+    endwhile
+    return -1
+endfunction
+
 function! ZFVimIM_dbSearch(db, c, pattern, start)
     let patternKey = a:c . a:start . a:pattern
     let index = get(a:db['dbSearchCache'], patternKey, -2)
     if index != -2
         return index
     endif
-    " this may take long time for large db
-    call ZFVimIM_DEBUG_profileStart('dbSearch')
-    let index = match(get(a:db['dbMap'], a:c, []), a:pattern, a:start)
-    call ZFVimIM_DEBUG_profileStop()
+
+    let bucket = get(a:db['dbMap'], a:c, [])
+    if empty(bucket)
+        return -1
+    endif
+
+    let startIndex = a:start
+    if startIndex < 0
+        let startIndex = 0
+    endif
+    if startIndex >= len(bucket)
+        return -1
+    endif
+
+    let searchResult = s:dbSearchUseIndex(a:db, a:c, a:pattern, startIndex)
+    if searchResult == s:ZFVimIM_DBSEARCH_FALLBACK
+        call ZFVimIM_DEBUG_profileStart('dbSearch')
+        let searchResult = match(bucket, a:pattern, startIndex)
+        call ZFVimIM_DEBUG_profileStop()
+    endif
 
     if a:start == 0
-        let a:db['dbSearchCache'][patternKey] = index
+        let a:db['dbSearchCache'][patternKey] = searchResult
         call add(a:db['dbSearchCacheKeys'], patternKey)
 
         " limit cache size
@@ -701,7 +875,7 @@ function! ZFVimIM_dbSearch(db, c, pattern, start)
         endif
     endif
 
-    return index
+    return searchResult
 endfunction
 
 function! ZFVimIM_dbSearchCacheClear(db)
@@ -829,7 +1003,17 @@ endfunction
 
 
 " ============================================================
-" Helper functions removed - only TXT format is supported now
+" Database loading - only SQLite (.db) format is supported now
+
+function! s:dbLoad_findDbFile(dbFile)
+    " Always use .db file - convert .txt to .db if needed
+    if a:dbFile =~ '\.txt$'
+        let dbFile = substitute(a:dbFile, '\.txt$', '.db', '')
+        return dbFile
+    endif
+    " If already .db or no extension, return as-is
+    return a:dbFile
+endfunction
 
 function! s:dbLoad(db, dbFile, ...)
     call ZFVimIM_dbSearchCacheClear(a:db)
@@ -837,68 +1021,28 @@ function! s:dbLoad(db, dbFile, ...)
     " explicitly clear db content
     let a:db['dbMap'] = {}
     let a:db['dbEdit'] = []
+    call s:dbClearBucketIndexCache(a:db)
 
     let dbMap = a:db['dbMap']
     
+    " Try to find database file (prefer .db over .txt)
+    let actualDbFile = s:dbLoad_findDbFile(a:dbFile)
+    
     " Try to load from cache first
-    let cacheFile = s:dbLoad_getCacheFile(a:dbFile)
-    if s:dbLoad_tryLoadFromCache(dbMap, a:dbFile, cacheFile)
+    let cacheFile = s:dbLoad_getCacheFile(actualDbFile)
+    if s:dbLoad_tryLoadFromCache(dbMap, actualDbFile, cacheFile)
         " Successfully loaded from cache
         call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
     else
         " Try to use Python script for faster loading if available
-        if s:dbLoad_tryUsePythonScript(dbMap, a:dbFile, cacheFile, get(a:, 1, ''))
+        if s:dbLoad_tryUsePythonScript(dbMap, actualDbFile, cacheFile, get(a:, 1, ''))
             " Successfully loaded using Python script
             call ZFVimIM_DEBUG_profileStart('dbLoadCountFile')
         else
-            " Fallback to VimScript loading
-            " Load from source file and create cache
-            call ZFVimIM_DEBUG_profileStart('dbLoadFile')
-            let lines = readfile(a:dbFile)
-            call ZFVimIM_DEBUG_profileStop()
-            if empty(lines)
-                return
-            endif
-
-            call ZFVimIM_DEBUG_profileStart('dbLoad')
-            " Load from TXT format (key word1 word2 ...)
-            for line in lines
-                let line = substitute(line, '^\s*\(.\{-}\)\s*$', '\1', '')
-                " Skip empty lines and comments
-                if empty(line) || line[0] ==# '#'
-                    continue
-                endif
-                " Handle escaped spaces
-                if match(line, '\\ ') >= 0
-                    let wordListTmp = split(substitute(line, '\\ ', '_ZFVimIM_space_', 'g'))
-                    if !empty(wordListTmp)
-                        let key = remove(wordListTmp, 0)
-                    endif
-                    let wordList = []
-                    for word in wordListTmp
-                        call add(wordList, substitute(word, '_ZFVimIM_space_', ' ', 'g'))
-                    endfor
-                else
-                    let wordList = split(line)
-                    if !empty(wordList)
-                        let key = remove(wordList, 0)
-                    endif
-                endif
-                if !empty(wordList) && !empty(key)
-                    if !exists('dbMap[key[0]]')
-                        let dbMap[key[0]] = []
-                    endif
-                    call add(dbMap[key[0]], ZFVimIM_dbItemEncode({
-                                \   'key' : key,
-                                \   'wordList' : wordList,
-                                \   'countList' : [],
-                                \ }))
-                endif
-            endfor
-            call ZFVimIM_DEBUG_profileStop()
-            
-            " Save to cache for next time
-            call s:dbLoad_saveToCache(dbMap, cacheFile)
+            " SQLite file should be loaded by Python script
+            " If we reach here, Python script failed, so return empty
+            " No fallback to TXT loading - only SQLite is supported
+            return
         endif
     endif
 
@@ -932,6 +1076,8 @@ function! s:dbLoad(db, dbFile, ...)
         endfor
         call ZFVimIM_DEBUG_profileStop()
     endif
+
+    call s:dbBuildAllBucketIndexes(a:db)
 endfunction
 
 " Get cache file path for a dictionary file
@@ -1045,7 +1191,9 @@ function! s:dbLoad_tryUsePythonScript(dbMap, dbFile, cacheFile, dbCountFile)
     " Run Python script to generate cache files
     try
         let scriptPathAbs = CygpathFix_absPath(scriptPath)
-        let dbFileAbs = CygpathFix_absPath(a:dbFile)
+        " Try to find .db file if .txt is specified
+        let actualDbFile = s:dbLoad_findDbFile(a:dbFile)
+        let dbFileAbs = CygpathFix_absPath(actualDbFile)
         let dbCountFileAbs = empty(a:dbCountFile) ? '' : CygpathFix_absPath(a:dbCountFile)
         let cachePathAbs = CygpathFix_absPath(pythonCachePath)
         
@@ -1402,8 +1550,10 @@ function! s:dbEditMap(db, dbEdit)
                             \   'wordList' : [word],
                             \   'countList' : [1],
                             \ }))
+                call sort(dbMap[key[0]])
                 call ZFVimIM_dbSearchCacheClear(a:db)
             endif
+            call s:dbRebuildBucketIndex(a:db, key[0])
         elseif e['action'] == 'remove'
             let index = ZFVimIM_dbSearch(a:db, key[0],
                         \ '^' . key . g:ZFVimIM_KEY_S_MAIN,
@@ -1434,6 +1584,7 @@ function! s:dbEditMap(db, dbEdit)
                 let dbMap[key[0]][index] = ZFVimIM_dbItemEncode(dbItem)
                 echom '[ZFVimIM] Word removed. Remaining words: ' . join(dbItem['wordList'], ', ')
             endif
+            call s:dbRebuildBucketIndex(a:db, key[0])
         elseif e['action'] == 'reorder'
             let index = ZFVimIM_dbSearch(a:db, key[0],
                         \ '^' . key . g:ZFVimIM_KEY_S_MAIN,
@@ -1454,6 +1605,7 @@ function! s:dbEditMap(db, dbEdit)
             let dbItem['countList'][wordIndex] = float2nr(floor(sum / 3))
             call ZFVimIM_dbItemReorder(dbItem)
             let dbMap[key[0]][index] = ZFVimIM_dbItemEncode(dbItem)
+            call s:dbRebuildBucketIndex(a:db, key[0])
         endif
     endfor
 endfunction
@@ -1479,4 +1631,3 @@ if 0 " test db
                 \   },
                 \ }]
 endif
-

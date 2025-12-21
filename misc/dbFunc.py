@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import sys
+import sqlite3
 
 
 ZFVimIM_KEY_S_MAIN = '#'
@@ -104,62 +105,57 @@ def dbItemEncode(dbItem):
     return dbItemEncoded
 
 
-# since python has low performance on List search,
-# we use different db struct with vim side
-#
-# return pyMap: {
-#   'a' : {
-#     'a' : 'a#AAA,BBB#3,2',
-#     'ai' : 'ai#CCC,DDD#3',
-#   },
-#   'c' : {
-#     'ceshi' : 'ceshi#EEE',
-#   },
-# }
-def dbLoadPy(dbFile, dbCountFile):
+# Load from SQLite database
+def dbLoadSqlitePy(dbFile, dbCountFile):
     pyMap = {}
-    # load db from TXT format (key word1 word2 ...)
-    with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
-        for line in dbFilePtr:
-            line = line.rstrip('\n').strip()
-            # Skip empty lines and comments
-            if not line or line.startswith('#'):
+    if not os.path.isfile(dbFile):
+        return pyMap
+    
+    try:
+        # Optimize SQLite connection for read performance
+        conn = sqlite3.connect(dbFile)
+        # Optimize for read-only access (faster reads)
+        conn.execute('PRAGMA synchronous=NORMAL')
+        conn.execute('PRAGMA cache_size=-64000')  # 64MB cache
+        cursor = conn.cursor()
+        
+        # Load all words from database in one query
+        cursor.execute('SELECT key, word FROM words ORDER BY key, word')
+        rows = cursor.fetchall()
+        conn.close()
+        
+        # First pass: collect all words for each key (avoid repeated encode/decode)
+        # Use dict with list - duplicates are already handled by PRIMARY KEY in DB
+        keyWordsMap = {}  # key -> list of words
+        
+        for key, word in rows:
+            # Filter: only lowercase alphabetic keys
+            if not key or not key[0].islower() or not key.isalpha():
                 continue
-            # Handle escaped spaces
-            if '\\ ' in line:
-                wordListTmp = line.replace('\\ ', '_ZFVimIM_space_').split()
-                if len(wordListTmp) > 0:
-                    key = wordListTmp[0]
-                    wordList = [w.replace('_ZFVimIM_space_', ' ') for w in wordListTmp[1:]]
-                else:
-                    continue
-            else:
-                wordList = line.split()
-                if len(wordList) > 0:
-                    key = wordList[0]
-                    wordList = wordList[1:]
-                else:
-                    continue
-            # Filter empty words
-            wordList = [w for w in wordList if w.strip()]
-            if len(wordList) > 0 and key and key[0].islower() and key.isalpha():
-                if key[0] not in pyMap:
-                    pyMap[key[0]] = {}
-                # Merge with existing entries if key already exists
-                if key in pyMap[key[0]]:
-                    existingItem = dbItemDecode(pyMap[key[0]][key])
-                    for word in wordList:
-                        if word not in existingItem['wordList']:
-                            existingItem['wordList'].append(word)
-                            existingItem['countList'].append(0)
-                    pyMap[key[0]][key] = dbItemEncode(existingItem)
-                else:
-                    pyMap[key[0]][key] = dbItemEncode({
-                        'key' : key,
-                        'wordList' : wordList,
-                        'countList' : [],
-                    })
-    # load word count
+            
+            if key not in keyWordsMap:
+                keyWordsMap[key] = []
+            # No need to check duplicates - PRIMARY KEY ensures uniqueness
+            keyWordsMap[key].append(word)
+        
+        # Second pass: encode all items at once (much faster than per-row encoding)
+        for key, wordList in keyWordsMap.items():
+            if key[0] not in pyMap:
+                pyMap[key[0]] = {}
+            pyMap[key[0]][key] = dbItemEncode({
+                'key' : key,
+                'wordList' : wordList,
+                'countList' : [0] * len(wordList),
+            })
+        
+    except Exception as e:
+        # If SQLite loading fails, return empty map
+        # Print error for debugging
+        import sys
+        print(f'Error loading SQLite database {dbFile}: {e}', file=sys.stderr)
+        pass
+    
+    # Load word count from count file (still as text format for compatibility)
     if len(dbCountFile) > 0 and os.path.isfile(dbCountFile) and os.access(dbCountFile, os.R_OK):
         with io.open(dbCountFile, 'r', encoding='utf-8') as dbCountFilePtr:
             for line in dbCountFilePtr:
@@ -179,7 +175,31 @@ def dbLoadPy(dbFile, dbCountFile):
                     dbItem['countList'][i] = int(countTextList[i + 1])
                 dbItemReorder(dbItem)
                 pyMap[key[0]][key] = dbItemEncode(dbItem)
+    
     return pyMap
+    # end of dbLoadSqlitePy
+
+
+# since python has low performance on List search,
+# we use different db struct with vim side
+#
+# return pyMap: {
+#   'a' : {
+#     'a' : 'a#AAA,BBB#3,2',
+#     'ai' : 'ai#CCC,DDD#3',
+#   },
+#   'c' : {
+#     'ceshi' : 'ceshi#EEE',
+#   },
+# }
+# Now only supports SQLite database files (.db)
+def dbLoadPy(dbFile, dbCountFile):
+    # Convert .txt to .db if needed
+    if dbFile.endswith('.txt'):
+        dbFile = dbFile[:-4] + '.db'
+    
+    # Only load from SQLite database
+    return dbLoadSqlitePy(dbFile, dbCountFile)
     # end of dbLoadPy
 
 
@@ -192,52 +212,44 @@ def dbLoadPy(dbFile, dbCountFile):
 #     key a1 a3
 #   to:
 #     key a1 a2 a3
+# Now only supports SQLite database files (.db)
 def dbLoadNormalizePy(dbFile):
-    pyMap = {}
-    # Load from TXT format (key word1 word2 ...)
-    with io.open(dbFile, 'r', encoding='utf-8') as dbFilePtr:
-        for line in dbFilePtr:
-            line = line.rstrip('\n').strip()
-            # Skip empty lines and comments
-            if not line or line.startswith('#'):
-                continue
-            # Handle escaped spaces
-            if '\\ ' in line:
-                wordListTmp = line.replace('\\ ', '_ZFVimIM_space_').split()
-                if len(wordListTmp) > 0:
-                    key = wordListTmp[0]
-                    wordList = [w.replace('_ZFVimIM_space_', ' ') for w in wordListTmp[1:]]
-                else:
-                    continue
-            else:
-                wordList = line.split()
-                if len(wordList) > 0:
-                    key = wordList[0]
-                    wordList = wordList[1:]
-                else:
-                    continue
+    # Convert .txt to .db if needed
+    if dbFile.endswith('.txt'):
+        dbFile = dbFile[:-4] + '.db'
+    
+    # Load from SQLite and normalize
+    pyMap = dbLoadSqlitePy(dbFile, '')
+    
+    # Normalize keys (remove non-alphabetic characters)
+    normalizedMap = {}
+    for c in pyMap.keys():
+        for key, dbItemEncoded in pyMap[c].items():
+            dbItem = dbItemDecode(dbItemEncoded)
             # Normalize key (remove non-alphabetic characters)
-            key = re.sub('[^a-z]', '', key)
-            if key == '':
+            normalizedKey = re.sub('[^a-z]', '', key)
+            if normalizedKey == '':
                 continue
-            # Filter empty words
-            wordList = [w for w in wordList if w.strip()]
-            if len(wordList) > 0 and key and key[0].islower() and key.isalpha():
-                if key[0] not in pyMap:
-                    pyMap[key[0]] = {}
-                if key in pyMap[key[0]]:
-                    dbItem = dbItemDecode(pyMap[key[0]][key])
-                    for word in wordList:
-                        if word not in dbItem['wordList']:
-                            dbItem['wordList'].append(word)
-                    pyMap[key[0]][key] = dbItemEncode(dbItem)
-                else:
-                    pyMap[key[0]][key] = dbItemEncode({
-                        'key' : key,
-                        'wordList' : wordList,
-                        'countList' : [],
-                    })
-    return pyMap
+            
+            # Use normalized key
+            if normalizedKey[0] not in normalizedMap:
+                normalizedMap[normalizedKey[0]] = {}
+            
+            if normalizedKey in normalizedMap[normalizedKey[0]]:
+                existingItem = dbItemDecode(normalizedMap[normalizedKey[0]][normalizedKey])
+                for word in dbItem['wordList']:
+                    if word not in existingItem['wordList']:
+                        existingItem['wordList'].append(word)
+                        existingItem['countList'].append(0)
+                normalizedMap[normalizedKey[0]][normalizedKey] = dbItemEncode(existingItem)
+            else:
+                normalizedMap[normalizedKey[0]][normalizedKey] = dbItemEncode({
+                    'key' : normalizedKey,
+                    'wordList' : dbItem['wordList'],
+                    'countList' : dbItem['countList'],
+                })
+    
+    return normalizedMap
     # end of dbLoadNormalizePy
 
 
