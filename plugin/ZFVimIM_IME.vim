@@ -3403,8 +3403,8 @@ function! ZFVimIM_batchAddWords(...)
     " Store dictionary path in buffer variable
     let b:zfvimim_dict_path = dictPath
     
-    " Create a new buffer for batch input
-    enew
+    " Create a new tab for batch input
+    tabnew
     setlocal buftype=acwrite
     setlocal bufhidden=wipe
     setlocal noswapfile
@@ -3422,8 +3422,8 @@ function! ZFVimIM_batchAddWords(...)
     call setline(4, '# xnzg	新增')
     call setline(5, '# wxsh	我想说话')
     call setline(6, '#')
-    call setline(7, '# 输入完成后，使用 :w 保存并提交')
-    call setline(8, '# 或使用 :q 取消')
+    call setline(7, '# 每次使用 :w 保存时会实时写入数据库并重新加载输入法')
+    call setline(8, '# 使用 :q 关闭此标签页')
     call setline(9, '')
     
     " If arguments provided, add them as initial content
@@ -3448,7 +3448,7 @@ function! ZFVimIM_batchAddWords(...)
     nnoremap <buffer> <silent> <C-s> :w<CR>
     inoremap <buffer> <silent> <C-s> <Esc>:w<CR>
     
-    echom '[ZFVimIM] 批量添加模式已打开，输入完成后使用 :w 保存并提交'
+    echom '[ZFVimIM] 批量添加模式已在新标签页打开，每次 :w 保存时会实时写入数据库并重新加载输入法'
 endfunction
 
 function! s:ZFVimIM_processBatchAdd()
@@ -3649,14 +3649,14 @@ function! s:ZFVimIM_processBatchAdd()
             echom '[ZFVimIM] ⚠️  ' . failedCount . ' 个条目同步失败'
         endif
         
-        " Reload dictionary
+        " Reload dictionary after saving
         let dictName = fnamemodify(dbPath, ':t:r')
         if exists('g:ZFVimIM_db')
             for db in g:ZFVimIM_db
                 if get(db, 'name', '') ==# dictName
                     call ZFVimIM_dbSearchCacheClear(db)
                     call ZFVimIM_dbLoad(db, dbPath)
-                    echom '[ZFVimIM] ✅ 词库已重新加载'
+                    echom '[ZFVimIM] ✅ 输入法已重新加载'
                     break
                 endif
             endfor
@@ -3665,12 +3665,8 @@ function! s:ZFVimIM_processBatchAdd()
         echom '[ZFVimIM] 所有条目已存在于 YAML 文件中'
     endif
     
-    " Close buffer
+    " Keep buffer open, just mark as not modified
     setlocal nomodified
-    bwipeout
-    augroup ZFVimIM_batchAdd
-        autocmd!
-    augroup END
 endfunction
 
 " Command to open batch add interface
