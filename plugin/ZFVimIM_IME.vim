@@ -2981,23 +2981,26 @@ command! -nargs=0 IMInit call ZFVimIM_exportDbToTxt()
 command! -nargs=0 IMExport call ZFVimIM_exportDbToTxt()  " Deprecated: use IMInit
 
 " Import YAML file to database (clear DB and reimport from YAML)
-command! -nargs=0 IMImport call ZFVimIM_importTxtToDb()
+command! -nargs=? -complete=file IMImport call ZFVimIM_importTxtToDb(<q-args>)
 
 " Edit dictionary (open in new tab, edit and save to import)
 command! -nargs=0 IMEdit call ZFVimIM_editDict()
+
+" Backup dictionary (export YAML and DB to specified directory or dict/ directory)
+command! -nargs=? -complete=dir IMBackup call ZFVimIM_backupDict(<q-args>)
 
 " ============================================================
 " Legacy commands removed - use IM* commands instead
 " ============================================================
 
-function! ZFVimIM_importTxtToDb()
+function! ZFVimIM_importTxtToDb(...)
     " Check if Python is available
     if !executable('python') && !executable('python3')
         echom '[ZFVimIM] Error: Python not found, cannot import TXT file'
         return
     endif
     
-    " Get YAML file path
+    " Get YAML file path (use argument if provided, otherwise use default)
     let yamlPath = ''
     let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
     let sfileDir = expand('<sfile>:p:h:h')
@@ -3006,17 +3009,27 @@ function! ZFVimIM_importTxtToDb()
     endif
     let dictDir = pluginDir . '/dict'
     
-    " Determine YAML file path
-    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
-        let defaultDictName = g:zfvimim_default_dict_name
-        if defaultDictName !~ '\.yaml$'
-            let defaultDictName = defaultDictName . '.yaml'
+    " If path argument provided, use it
+    if a:0 > 0 && !empty(a:1)
+        let yamlPath = expand(a:1)
+        " Check if file exists
+        if !filereadable(yamlPath)
+            echom '[ZFVimIM] 错误: 指定的 YAML 文件不存在: ' . yamlPath
+            return
         endif
-        let yamlPath = dictDir . '/' . defaultDictName
-    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
-        let yamlPath = expand(g:zfvimim_dict_path)
     else
-        let yamlPath = dictDir . '/default.yaml'
+        " Use default logic
+        if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+            let defaultDictName = g:zfvimim_default_dict_name
+            if defaultDictName !~ '\.yaml$'
+                let defaultDictName = defaultDictName . '.yaml'
+            endif
+            let yamlPath = dictDir . '/' . defaultDictName
+        elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+            let yamlPath = expand(g:zfvimim_dict_path)
+        else
+            let yamlPath = dictDir . '/default.yaml'
+        endif
     endif
     
     " Skip if TXT file doesn't exist
@@ -4062,6 +4075,172 @@ function! s:ZFVimIM_processEditDict()
     
     " Keep buffer open, just mark as not modified
     setlocal nomodified
+endfunction
+
+" Backup dictionary - export YAML and DB to specified directory or dict/ directory
+function! ZFVimIM_backupDict(...)
+    " Check if Python is available
+    if !executable('python') && !executable('python3')
+        echom '[ZFVimIM] 错误: Python 未找到，无法备份词库'
+        return
+    endif
+    
+    " Get backup directory (use argument if provided, otherwise use default)
+    let backupDir = ''
+    if a:0 > 0 && !empty(a:1)
+        " User specified a path
+        let backupDir = expand(a:1)
+        " Ensure it's a directory
+        if !isdirectory(backupDir)
+            " Try to create it
+            call mkdir(backupDir, 'p')
+            if !isdirectory(backupDir)
+                echom '[ZFVimIM] 错误: 无法创建备份目录: ' . backupDir
+                return
+            endif
+        endif
+    else
+        " Use default dict directory
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/dict')
+            let pluginDir = sfileDir
+        endif
+        let backupDir = pluginDir . '/dict'
+    endif
+    
+    " Get database file path
+    let dbPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    " Determine database file path
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        " Get YAML path first
+        if defaultDictName !~ '\.yaml$'
+            let defaultDictName = defaultDictName . '.yaml'
+        endif
+        let yamlPath = dictDir . '/' . defaultDictName
+        let dbPath = s:ZFVimIM_getDbPath(yamlPath)
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+        " Convert .yaml to .db
+        if dictPath =~ '\.yaml$'
+            let dbPath = s:ZFVimIM_getDbPath(dictPath)
+        elseif dictPath =~ '\.db$'
+            let dbPath = dictPath
+        else
+            " Assume it's a YAML file without extension
+            let dbPath = s:ZFVimIM_getDbPath(dictPath . '.yaml')
+        endif
+    else
+        let yamlPath = dictDir . '/default.yaml'
+        let dbPath = s:ZFVimIM_getDbPath(yamlPath)
+    endif
+    
+    " Check if database file exists
+    if empty(dbPath) || !filereadable(dbPath)
+        echom '[ZFVimIM] 错误: 数据库文件不存在: ' . dbPath
+        echom '[ZFVimIM] 请先运行 :IMImport 导入词库'
+        return
+    endif
+    
+    " Get base name for backup files
+    let dbName = fnamemodify(dbPath, ':t:r')
+    
+    " Generate timestamp for backup filename
+    " Format: YYYYMMDD_HHMMSS
+    let timestamp = strftime('%Y%m%d_%H%M%S')
+    
+    " Create backup filenames
+    let backupYamlName = dbName . '_backup_' . timestamp . '.yaml'
+    let backupDbName = dbName . '_backup_' . timestamp . '.db'
+    let backupYamlPath = backupDir . '/' . backupYamlName
+    let backupDbPath = backupDir . '/' . backupDbName
+    
+    " Get script path for export
+    let scriptPath = pluginDir . '/misc/db_export_to_txt.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] 错误: 导出脚本未找到: ' . scriptPath
+        return
+    endif
+    
+    " Determine Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    
+    " Step 1: Copy DB file to backup location
+    try
+        echom '[ZFVimIM] 开始备份词库...'
+        echom '[ZFVimIM] 数据库: ' . dbPath
+        echom '[ZFVimIM] 备份目录: ' . backupDir
+        
+        " Copy DB file
+        let dbPathAbs = CygpathFix_absPath(dbPath)
+        let backupDbPathAbs = CygpathFix_absPath(backupDbPath)
+        
+        " Use system copy command
+        if has('win32') || has('win64')
+            let copyCmd = 'copy /Y "' . dbPathAbs . '" "' . backupDbPathAbs . '"'
+        else
+            let copyCmd = 'cp "' . dbPathAbs . '" "' . backupDbPathAbs . '"'
+        endif
+        
+        let copyResult = system(copyCmd)
+        if v:shell_error != 0
+            echom '[ZFVimIM] ❌ 复制数据库文件失败'
+            if !empty(copyResult)
+                echom '[ZFVimIM] 错误信息: ' . copyResult
+            endif
+            return
+        endif
+        
+        echom '[ZFVimIM] ✅ 数据库文件已备份: ' . backupDbName
+        
+        " Step 2: Export DB to YAML
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let backupYamlPathAbs = CygpathFix_absPath(backupYamlPath)
+        
+        echom '[ZFVimIM] 正在导出 YAML 文件...'
+        
+        let cmdList = [pythonCmd, scriptPathAbs, backupDbPathAbs, backupYamlPathAbs]
+        let result = system(join(cmdList, ' '))
+        
+        " Display result
+        let lines = split(result, '\n')
+        for line in lines
+            if !empty(line)
+                echom line
+            endif
+        endfor
+        
+        if v:shell_error == 0
+            echom '[ZFVimIM] ✅ YAML 文件已备份: ' . backupYamlName
+            echom '[ZFVimIM] ✅ 备份完成！'
+            echom '[ZFVimIM] 备份位置: ' . backupDir
+            echom '[ZFVimIM]   - DB: ' . backupDbName
+            echom '[ZFVimIM]   - YAML: ' . backupYamlName
+        else
+            echom '[ZFVimIM] ❌ YAML 文件导出失败'
+            " Remove DB backup if YAML export failed
+            if filereadable(backupDbPath)
+                call delete(backupDbPath)
+            endif
+        endif
+    catch /.*/
+        echom '[ZFVimIM] Error: 备份过程出错: ' . v:exception
+        " Clean up on error
+        if filereadable(backupDbPath)
+            call delete(backupDbPath)
+        endif
+        if filereadable(backupYamlPath)
+            call delete(backupYamlPath)
+        endif
+    endtry
 endfunction
 
 " Command to open batch add interface

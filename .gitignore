@@ -13,3 +13,4 @@ dict/**/*.db
 
 # Test scripts
 freqtest.vim
+dict/sbxlm.sbzr_backup_*.yaml

@@ -69,9 +69,10 @@ cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua
 
 | 命令 | 功能 | 说明 |
 |------|------|------|
-| `:IMImport` | 导入词库 | 完全以 YAML 为准，清空 DB 后重新导入 |
+| `:IMImport [路径]` | 导入词库 | 完全以 YAML 为准，清空 DB 后重新导入。如指定路径则导入该 YAML 文件，否则使用默认词库 |
 | `:IMSync` | 同步词库 | 只增加 YAML 里有但 DB 没有的，不删除 |
 | `:IMInit` | 初始化 YAML | 用 DB 覆盖 YAML（从数据库初始化 YAML 文件） |
+| `:IMBackup [路径]` | 备份词库 | 备份 YAML 和 DB 文件（带时间戳）。如指定路径则备份到该路径，否则备份到 `dict/` 目录 |
 | `:IMInfo` | 显示词库信息 | 显示词库详细信息 |
 | `:IMClear` | 清理缓存 | 清理缓存并重新加载词库 |
 
