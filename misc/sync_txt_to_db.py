@@ -133,10 +133,15 @@ def sync_txt_to_db(txt_file, db_file=None):
             key, words = result
             processed_lines += 1
             
-            # 检查每个词是否已存在
-            for word in words:
+            # 检查每个词是否已存在，按原始顺序设置词频
+            # 根据词的数量动态计算词频：第一个词频率最高（等于词数），依次递减
+            word_count = len(words)
+            for idx, word in enumerate(words):
                 if (key, word) not in existing_data:
-                    new_data.append((key, word))
+                    # 按原始顺序设置词频：第一个词频率 = 词数，依次递减到 1
+                    # 例如：10个词 -> 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
+                    frequency = word_count - idx
+                    new_data.append((key, word, frequency))
                     # 添加到已存在集合中，避免同一批次重复
                     existing_data.add((key, word))
     
@@ -146,11 +151,18 @@ def sync_txt_to_db(txt_file, db_file=None):
         inserted = 0
         skipped = 0
         
-        for key, word in new_data:
+        for item in new_data:
             try:
+                if len(item) == 3:
+                    # 包含频率信息
+                    key, word, frequency = item
+                else:
+                    # 兼容旧格式（只有 key 和 word）
+                    key, word = item
+                    frequency = 0
                 cursor.execute(
                     'INSERT INTO words (key, word, frequency) VALUES (?, ?, ?)',
-                    (key, word, 0)
+                    (key, word, frequency)
                 )
                 inserted += 1
             except sqlite3.IntegrityError:

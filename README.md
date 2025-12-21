@@ -73,7 +73,7 @@ return {
 - **使用数据目录**：
   ```lua
   vim.g.zfvimim_dict_path = vim.fn.stdpath("data") .. "/ZFVimIM/my_dict.txt"
-  ```
+```
 
 #### 方法 3：在 options.lua 中设置（全局配置）
 
@@ -98,8 +98,8 @@ vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/sbzr.userdb.t
 #### TXT 格式（推荐）
 
 ```txt
-a: [啊, 阿, 吖]
-ai: [爱, 唉, 埃]
+   a: [啊, 阿, 吖]
+   ai: [爱, 唉, 埃]
 nihao: [你好, 你号]
 ceshi: [测试, 测时]
 ```

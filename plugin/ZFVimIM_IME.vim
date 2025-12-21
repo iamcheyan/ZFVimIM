@@ -45,7 +45,7 @@ function! s:ZFVimIM_autoLoadDict()
         let defaultDict = dictDir . '/' . defaultDictName
     else
         " Default dictionary: default_pinyin.txt
-        let defaultDict = dictDir . '/default_pinyin.txt'
+            let defaultDict = dictDir . '/default_pinyin.txt'
     endif
     
     " Check if zfvimim_dict_path is set
@@ -1393,20 +1393,18 @@ function! s:updateCandidates()
     endif
     
     if keyboardChanged
-        " New search: limit initial search to 20 items for speed
-        " Use a small matchLimit to speed up initial search
-        " BUT: for 4-character inputs (full codes), use full search to ensure
-        " we find all matches even if they're far in the sorted list
+        " New search: limit initial search to keep UI responsive
         let keyLen = len(s:keyboard)
-        let initialLimit = (keyLen == 4) ? 0 : (pageSize * 2)  " 0 means no limit
+        let initialLimit = pageSize * 2
+        if initialLimit <= 0
+            let initialLimit = 20
+        endif
         let s:fullResultList = ZFVimIM_complete(s:keyboard, {'match': initialLimit})
         let s:fullResultList = s:filterMatchListByPrefix(s:fullResultList, s:keyboard)
         let s:fullResultList = s:deduplicateCandidates(s:fullResultList)
         
-        " Mark if we have full results
-        " For 4-character inputs, we use full search (initialLimit = 0), so mark as full
-        " For other inputs, we use limited search initially, mark as partial
-        let s:hasFullResults = (keyLen == 4) ? 1 : 0
+        " Mark as partial; load more lazily when needed
+        let s:hasFullResults = 0
         
         " Cache full result list (but don't load all at once)
         " Also cache the hasFullResults flag
@@ -1437,7 +1435,7 @@ function! s:updateCandidates()
         endif
         let s:match_list = s:fullResultList[0 : s:loadedResultCount - 1]
         let s:page = 0
-        " hasFullResults is already set above based on keyLen
+        " hasFullResults is already set above based on whether we ran full search
     else
         " Same keyboard: use cached full result list
         let s:fullResultList = s:completeCache[s:keyboard]
@@ -1451,16 +1449,16 @@ function! s:updateCandidates()
         
         " Handle page navigation
         if s:pageup_pagedown != 0 && !empty(s:match_list) && pageSize > 0
-            let s:page += s:pageup_pagedown
+        let s:page += s:pageup_pagedown
             let maxPage = (len(s:fullResultList) - 1) / pageSize
             if s:page > maxPage
                 let s:page = maxPage
-            endif
-            if s:page < 0
-                let s:page = 0
-            endif
-        else
+        endif
+        if s:page < 0
             let s:page = 0
+        endif
+    else
+        let s:page = 0
         endif
         
         " Check if we need to load more results for current page
@@ -1506,7 +1504,7 @@ function! s:updateCandidates()
     if get(g:, 'ZFVimIM_freeScroll', 0)
         call s:floatRender(s:match_list)
     else
-        call s:floatRender(s:curPage())
+    call s:floatRender(s:curPage())
     endif
     doautocmd User ZFVimIM_event_OnUpdateOmni
 endfunction
@@ -1846,7 +1844,7 @@ function! s:removeWord(dbId, key, word)
             let dictPath = expand(g:zfvimim_dict_path)
         else
             " Default dictionary: default_pinyin.txt
-            let dictPath = dictDir . '/default_pinyin.txt'
+                let dictPath = dictDir . '/default_pinyin.txt'
         endif
     endif
     
@@ -1861,11 +1859,11 @@ function! s:removeWord(dbId, key, word)
     
     " Mark database for saving (don't save immediately)
     if !empty(dictPath) && filereadable(dictPath)
-        " Store dictPath in implData for future use
-        if !has_key(db, 'implData')
-            let db['implData'] = {}
-        endif
-        let db['implData']['dictPath'] = dictPath
+            " Store dictPath in implData for future use
+            if !has_key(db, 'implData')
+                let db['implData'] = {}
+            endif
+            let db['implData']['dictPath'] = dictPath
         
         " Mark this database for saving when leaving insert mode
         let s:pendingSaveDicts[dictPath] = db
@@ -2190,10 +2188,82 @@ function! s:recordWordUsage(key, word)
         let s:word_frequency[key] = 1000
     endif
     
+    " Update frequency in database
+    call s:updateWordFrequencyInDb(a:key, a:word, 1)
+    
     " Auto-save frequency data (every 10 uses)
     if s:word_frequency[key] % 10 == 0
         call s:saveWordFrequency()
     endif
+endfunction
+
+function! s:updateWordFrequencyInDb(key, word, increment)
+    " Update word frequency in database
+    " Get database file path
+    let dictPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
+        endif
+        let dictPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let dictPath = expand(g:zfvimim_dict_path)
+    else
+        let dictPath = dictDir . '/default_pinyin.txt'
+    endif
+    
+    if empty(dictPath)
+        return
+    endif
+    
+    " Get database file path (.db file)
+    let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+    if !filereadable(dbPath)
+        return
+    endif
+    
+    " Use Python to update frequency in database
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        return
+    endif
+    
+    " Get script path
+    let scriptPath = pluginDir . '/misc/db_update_frequency.py'
+    if !filereadable(scriptPath)
+        return
+    endif
+    
+    " Execute update (silently, don't show errors)
+    try
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let dbPathAbs = CygpathFix_absPath(dbPath)
+        let cmd = pythonCmd . ' "' . scriptPathAbs . '" "' . dbPathAbs . '" "' . a:key . '" "' . a:word . '" ' . a:increment
+        let result = system(cmd)
+        " Update in-memory database if loaded
+        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+            for db in g:ZFVimIM_db
+                if has_key(db, 'implData')
+                    let dbDictPath = get(db['implData'], 'dictPath', '')
+                    if dbDictPath ==# dbPath
+                        " Update frequency in memory
+                        call ZFVimIM_wordReorder(db, a:word, a:key)
+                        break
+                    endif
+                endif
+            endfor
+        endif
+    catch /.*/
+        " Silently ignore errors
+    endtry
 endfunction
 
 function! s:saveWordFrequency()
@@ -2506,7 +2576,7 @@ function! ZFVimIM_cleanupDictionary()
             endif
         else
             " Default dictionary: default_pinyin.txt
-            let dictPath = dictDir . '/default_pinyin.txt'
+                let dictPath = dictDir . '/default_pinyin.txt'
         endif
     endif
     
@@ -2663,6 +2733,106 @@ command! -nargs=0 ZFVimIMSync call ZFVimIM_syncTxtToDb()
 
 " Command to export database to TXT file
 command! -nargs=0 ZFVimIMExport call ZFVimIM_exportDbToTxt()
+
+" Command to import TXT file to database (clear and reimport)
+command! -nargs=0 ZFVimIMImport call ZFVimIM_importTxtToDb()
+
+function! ZFVimIM_importTxtToDb()
+    " Check if Python is available
+    if !executable('python') && !executable('python3')
+        echom '[ZFVimIM] Error: Python not found, cannot import TXT file'
+        return
+    endif
+    
+    " Get TXT file path
+    let txtPath = ''
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict')
+        let pluginDir = sfileDir
+    endif
+    let dictDir = pluginDir . '/dict'
+    
+    " Determine TXT file path
+    if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+        let defaultDictName = g:zfvimim_default_dict_name
+        if defaultDictName !~ '\.txt$'
+            let defaultDictName = defaultDictName . '.txt'
+        endif
+        let txtPath = dictDir . '/' . defaultDictName
+    elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+        let txtPath = expand(g:zfvimim_dict_path)
+    else
+        let txtPath = dictDir . '/default_pinyin.txt'
+    endif
+    
+    " Skip if TXT file doesn't exist
+    if empty(txtPath) || !filereadable(txtPath)
+        echom '[ZFVimIM] Error: TXT dictionary file not found: ' . txtPath
+        return
+    endif
+    
+    " Get database file path (.db file)
+    let dbPath = substitute(txtPath, '\.txt$', '.db', '')
+    
+    " Get script path
+    let scriptPath = pluginDir . '/misc/import_txt_to_db.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] Error: Import script not found: ' . scriptPath
+        return
+    endif
+    
+    " Determine Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    
+    " Confirm before clearing database
+    echom '[ZFVimIM] 警告: 此操作将清空数据库并重新导入！'
+    echom '[ZFVimIM] TXT 文件: ' . txtPath
+    echom '[ZFVimIM] 数据库文件: ' . dbPath
+    echom '[ZFVimIM] 正在执行导入...'
+    
+    " Run import script
+    try
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let txtPathAbs = CygpathFix_absPath(txtPath)
+        let dbPathAbs = CygpathFix_absPath(dbPath)
+        
+        let cmdList = [pythonCmd, scriptPathAbs, txtPathAbs, dbPathAbs]
+        let result = system(join(cmdList, ' '))
+        
+        " Display result
+        let lines = split(result, '\n')
+        for line in lines
+            if !empty(line)
+                echom line
+            endif
+        endfor
+        
+        if v:shell_error == 0
+            echom '[ZFVimIM] 导入完成！'
+            " Optionally reload the database
+            if exists('g:ZFVimIM_db') && len(g:ZFVimIM_db) > 0
+                let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
+                if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
+                    let dbPath = db['implData']['dictPath']
+                    " Convert .txt to .db if needed
+                    if dbPath =~ '\.txt$'
+                        let dbPath = substitute(dbPath, '\.txt$', '.db', '')
+                    endif
+                    if filereadable(dbPath)
+                        echom '[ZFVimIM] 重新加载数据库...'
+                        call ZFVimIM_dbLoad(db, dbPath)
+                        echom '[ZFVimIM] 数据库已重新加载'
+                    endif
+                endif
+            endif
+        else
+            echom '[ZFVimIM] 导入失败，请检查错误信息'
+        endif
+    catch /.*/
+        echom '[ZFVimIM] Error: 导入过程出错: ' . v:exception
+    endtry
+endfunction
 
 function! ZFVimIM_exportDbToTxt()
     " Check if Python is available

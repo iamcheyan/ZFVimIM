@@ -264,6 +264,12 @@ function! s:newCandidate(dbId, key, word, wordLen, type, ...)
                 \ }
 endfunction
 
+function! s:trimList(ret, maxLen)
+    if a:maxLen > 0 && len(a:ret) > a:maxLen
+        call remove(a:ret, a:maxLen, len(a:ret) - 1)
+    endif
+endfunction
+
 function! s:completeDefault(key, ...)
     let option = get(a:, 1, {})
     let db = get(option, 'db', {})
@@ -385,8 +391,8 @@ function! s:complete_crossDb(ret, key, option, db)
         return
     endif
 
-    " Skip cross-db for long keys to avoid recursive heavy lookups
-    if len(a:key) >= 6
+    " Skip cross-db for very short or very long keys to avoid heavy recursion
+    if len(a:key) >= 6 || len(a:key) <= 2
         return
     endif
 
@@ -950,6 +956,15 @@ function! s:mergeResult(data, key, option, db)
     call s:removeDuplicate(sentenceRet, exists)
     call s:removeDuplicate(subMatchRet, exists)
     call s:removeDuplicate(crossDbRet, exists)
+
+    " Short keys can flood the list; trim aggressively to keep merge fast
+    if len(a:key) <= 2
+        call s:trimList(matchRet, 200)
+        call s:trimList(subMatchLongestRet, 120)
+        call s:trimList(subMatchRet, 120)
+        call s:trimList(predictRet, 80)
+        call s:trimList(sentenceRet, 40)
+    endif
 
     " crossDb may return different type
     let iCrossDb = 0

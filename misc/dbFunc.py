@@ -145,8 +145,8 @@ def dbLoadSqlitePy(dbFile, dbCountFile):
             
             # Filter: only lowercase alphabetic keys
             if not key or not key[0].islower() or not key.isalpha():
-                continue
-            
+                    continue
+                
             if key not in keyWordsMap:
                 keyWordsMap[key] = []
             # No need to check duplicates - PRIMARY KEY ensures uniqueness
@@ -154,15 +154,21 @@ def dbLoadSqlitePy(dbFile, dbCountFile):
         
         # Second pass: encode all items at once (much faster than per-row encoding)
         for key, wordFreqList in keyWordsMap.items():
-            if key[0] not in pyMap:
-                pyMap[key[0]] = {}
+                                                if key[0] not in pyMap:
+                                                    pyMap[key[0]] = {}
+            # Sort by frequency (descending) to maintain order
+            # This ensures words with higher frequency appear first
+            wordFreqList.sort(key=lambda x: x[1], reverse=True)
             wordList = [wf[0] for wf in wordFreqList]
             countList = [wf[1] for wf in wordFreqList]
-            pyMap[key[0]][key] = dbItemEncode({
-                'key' : key,
-                'wordList' : wordList,
+            # Encode and then reorder (dbItemReorder will handle final sorting)
+            dbItem = {
+                                                        'key' : key,
+                                                        'wordList' : wordList,
                 'countList' : countList,
-            })
+            }
+            dbItemReorder(dbItem)  # Sort by frequency with threshold
+            pyMap[key[0]][key] = dbItemEncode(dbItem)
         
     except Exception as e:
         # If SQLite loading fails, return empty map
@@ -245,7 +251,7 @@ def dbLoadNormalizePy(dbFile):
             # Normalize key (remove non-alphabetic characters)
             normalizedKey = re.sub('[^a-z]', '', key)
             if normalizedKey == '':
-                continue
+                        continue
             
             # Use normalized key
             if normalizedKey[0] not in normalizedMap:
@@ -258,7 +264,7 @@ def dbLoadNormalizePy(dbFile):
                         existingItem['wordList'].append(word)
                         existingItem['countList'].append(0)
                 normalizedMap[normalizedKey[0]][normalizedKey] = dbItemEncode(existingItem)
-            else:
+                    else:
                 normalizedMap[normalizedKey[0]][normalizedKey] = dbItemEncode({
                     'key' : normalizedKey,
                     'wordList' : dbItem['wordList'],
@@ -309,30 +315,30 @@ def dbSavePy(pyMap, dbFile, dbCountFile, cachePath):
     if len(txtLines) > 0:
         dbFilePtr.write(('\n'.join(txtLines) + '\n').encode('utf-8'))
     dbFilePtr.close()
-    shutil.move(tmpFile, dbFile)
-    
-    # Save count file if needed (still as text format for compatibility)
-    if len(dbCountFile) > 0:
-        dbCountFilePtr = io.open(cachePath + '/dbCountFileTmp', 'wb')
-        countLines = []
-        for c in pyMap.keys():
-            for key, dbItemEncoded in sorted(dbMapIter(pyMap[c])):
-                dbItem = dbItemDecode(dbItemEncoded)
-                countLine = dbItem['key']
-                for cnt in dbItem['countList']:
-                    if cnt <= 0:
-                        break
-                    countLine += ' '
-                    countLine += str(cnt)
-                if countLine != key:
-                    countLines.append(countLine)
-                if len(countLines) >= DB_FILE_LINE_BUFFER:
-                    dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
-                    countLines = []
-        if len(countLines) > 0:
-            dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
-        dbCountFilePtr.close()
-        shutil.move(cachePath + '/dbCountFileTmp', dbCountFile)
+        shutil.move(tmpFile, dbFile)
+        
+        # Save count file if needed (still as text format for compatibility)
+        if len(dbCountFile) > 0:
+            dbCountFilePtr = io.open(cachePath + '/dbCountFileTmp', 'wb')
+            countLines = []
+            for c in pyMap.keys():
+                for key, dbItemEncoded in sorted(dbMapIter(pyMap[c])):
+                    dbItem = dbItemDecode(dbItemEncoded)
+                    countLine = dbItem['key']
+                    for cnt in dbItem['countList']:
+                        if cnt <= 0:
+                            break
+                        countLine += ' '
+                        countLine += str(cnt)
+                    if countLine != key:
+                        countLines.append(countLine)
+                    if len(countLines) >= DB_FILE_LINE_BUFFER:
+                        dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
+                        countLines = []
+            if len(countLines) > 0:
+                dbCountFilePtr.write(('\n'.join(countLines) + '\n').encode('utf-8'))
+            dbCountFilePtr.close()
+            shutil.move(cachePath + '/dbCountFileTmp', dbCountFile)
     # end of dbSavePy
 
 
