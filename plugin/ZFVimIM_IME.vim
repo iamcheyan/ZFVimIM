@@ -1650,6 +1650,7 @@ function! s:savePendingDicts()
     
     " Clear pending saves
     let s:pendingSaveDicts = {}
+    " Note: pendingAutoAddWords are cleared in asyncSaveDict after processing
 endfunction
 function! s:OnCursorMovedI()
     if get(g:, 'ZFJobTimerFallbackCursorMoving', 0) > 0
@@ -1667,6 +1668,10 @@ endfunction
 " Track which databases need to be saved
 if !exists('s:pendingSaveDicts')
     let s:pendingSaveDicts = {}
+endif
+" Track words added by auto-add feature (key: dictPath, value: list of {key, word})
+if !exists('s:pendingAutoAddWords')
+    let s:pendingAutoAddWords = {}
 endif
 
 function! s:addWord(dbId, key, word)
@@ -1712,22 +1717,88 @@ function! s:addWord(dbId, key, word)
         endif
     endif
     
-    if !empty(dictPath) && filereadable(dictPath)
+    if !empty(dictPath)
         " Store dictPath in implData for future use
         if !has_key(db, 'implData')
             let db['implData'] = {}
         endif
         let db['implData']['dictPath'] = dictPath
         
+        " Record the added word for database update
+        if !has_key(s:pendingAutoAddWords, dictPath)
+            let s:pendingAutoAddWords[dictPath] = []
+        endif
+        call add(s:pendingAutoAddWords[dictPath], {'key': a:key, 'word': a:word})
+        
         " Mark this database for saving when leaving insert mode
         let s:pendingSaveDicts[dictPath] = db
     endif
 endfunction
 
-" Async save function to avoid blocking
+" Async save function to avoid blocking - now only updates database, not TXT
 function! s:asyncSaveDict(db, dictPath)
     try
-        call ZFVimIM_dbSave(a:db, a:dictPath)
+        " Get database file path (.db file)
+        let dbPath = substitute(a:dictPath, '\.txt$', '.db', '')
+        if !filereadable(dbPath)
+            " Database doesn't exist, skip
+            return
+        endif
+        
+        " Get words to add from pending list
+        let wordsToAdd = get(s:pendingAutoAddWords, a:dictPath, [])
+        if empty(wordsToAdd)
+            " No words to add, skip
+            return
+        endif
+        
+        " Use Python to add words to database
+        let pythonCmd = executable('python3') ? 'python3' : 'python'
+        if !executable(pythonCmd)
+            return
+        endif
+        
+        " Get script path
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/misc')
+            let pluginDir = sfileDir
+        endif
+        let scriptPath = pluginDir . '/misc/db_add_word.py'
+        if !filereadable(scriptPath)
+            return
+        endif
+        
+        " Add each word to database
+        let addedCount = 0
+        for wordItem in wordsToAdd
+            let cmd = pythonCmd . ' "' . scriptPath . '" "' . dbPath . '" "' . wordItem['key'] . '" "' . wordItem['word'] . '"'
+            let result = system(cmd)
+            let result = substitute(result, '[\r\n]', '', 'g')
+            if result ==# 'OK'
+                let addedCount += 1
+            endif
+        endfor
+        
+        " Clear pending words for this dict
+        if has_key(s:pendingAutoAddWords, a:dictPath)
+            call remove(s:pendingAutoAddWords, a:dictPath)
+        endif
+        
+        " Clear cache and reload database if loaded
+        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+            for db in g:ZFVimIM_db
+                if has_key(db, 'implData')
+                    let dbDictPath = get(db['implData'], 'dictPath', '')
+                    if dbDictPath ==# a:dictPath
+                        call ZFVimIM_dbSearchCacheClear(db)
+                        " Reload database
+                        call ZFVimIM_dbLoad(db, dbDictPath)
+                        break
+                    endif
+                endif
+            endfor
+        endif
     catch
         " Silently ignore save errors
     endtry
