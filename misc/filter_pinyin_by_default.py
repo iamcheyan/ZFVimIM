@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-根据 default_pinyin.txt 过滤全拼文件夹
-删除包含不在 default_pinyin.txt 中的汉字的词条
+根据 default.yaml 过滤全拼文件夹
+删除包含不在 default.yaml 中的汉字的词条
 """
 
 import sys
 import os
 import glob
 
-def load_default_pinyin_chars(file_path):
+def load_default_chars(file_path):
     """
-    从 default_pinyin.txt 中加载所有汉字（格式：拼音 汉字）
+    从 default.yaml 中加载所有汉字（格式：拼音 汉字）
     """
     chars = set()
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -94,23 +94,23 @@ def filter_file(input_file, valid_chars, backup=True):
 
 def main():
     if len(sys.argv) < 3:
-        print("使用方法: python filter_pinyin_by_default.py <default_pinyin.txt> <全拼目录>", file=sys.stderr)
+        print("使用方法: python filter_pinyin_by_default.py <default.yaml> <全拼目录>", file=sys.stderr)
         sys.exit(1)
     
-    default_pinyin_file = sys.argv[1]
+    default_file = sys.argv[1]
     pinyin_dir = sys.argv[2]
     
-    if not os.path.exists(default_pinyin_file):
-        print(f"错误: 文件不存在: {default_pinyin_file}", file=sys.stderr)
+    if not os.path.exists(default_file):
+        print(f"错误: 文件不存在: {default_file}", file=sys.stderr)
         sys.exit(1)
     
     if not os.path.isdir(pinyin_dir):
         print(f"错误: 目录不存在: {pinyin_dir}", file=sys.stderr)
         sys.exit(1)
     
-    # 加载 default_pinyin.txt 中的所有汉字
-    print(f"正在加载 {default_pinyin_file} 中的汉字...")
-    valid_chars = load_default_pinyin_chars(default_pinyin_file)
+    # 加载 default.yaml 中的所有汉字
+    print(f"正在加载 {default_file} 中的汉字...")
+    valid_chars = load_default_chars(default_file)
     print(f"已加载 {len(valid_chars)} 个有效汉字")
     
     # 获取所有 YAML 文件

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-检查全拼文件夹中的汉字是否都在 default_pinyin.txt 中
+检查全拼文件夹中的汉字是否都在 default.yaml 中
 """
 
 import sys
@@ -26,9 +26,9 @@ def load_chars_from_file(file_path):
     
     return chars
 
-def load_default_pinyin_chars(file_path):
+def load_default_chars(file_path):
     """
-    从 default_pinyin.txt 中加载所有汉字（格式：拼音 汉字）
+    从 default.yaml 中加载所有汉字（格式：拼音 汉字）
     """
     chars = set()
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -51,24 +51,24 @@ def load_default_pinyin_chars(file_path):
 
 def main():
     if len(sys.argv) < 3:
-        print("使用方法: python check_chars_match.py <default_pinyin.txt> <全拼目录>", file=sys.stderr)
+        print("使用方法: python check_chars_match.py <default.yaml> <全拼目录>", file=sys.stderr)
         sys.exit(1)
     
-    default_pinyin_file = sys.argv[1]
+    default_file = sys.argv[1]
     pinyin_dir = sys.argv[2]
     
-    if not os.path.exists(default_pinyin_file):
-        print(f"错误: 文件不存在: {default_pinyin_file}", file=sys.stderr)
+    if not os.path.exists(default_file):
+        print(f"错误: 文件不存在: {default_file}", file=sys.stderr)
         sys.exit(1)
     
     if not os.path.isdir(pinyin_dir):
         print(f"错误: 目录不存在: {pinyin_dir}", file=sys.stderr)
         sys.exit(1)
     
-    # 加载 default_pinyin.txt 中的所有汉字
-    print(f"正在加载 {default_pinyin_file} 中的汉字...")
-    default_chars = load_default_pinyin_chars(default_pinyin_file)
-    print(f"default_pinyin.txt 中有 {len(default_chars)} 个不同的汉字")
+    # 加载 default.yaml 中的所有汉字
+    print(f"正在加载 {default_file} 中的汉字...")
+    default_chars = load_default_chars(default_file)
+    print(f"default.yaml 中有 {len(default_chars)} 个不同的汉字")
     
     # 获取所有YAML文件
     yaml_files = glob.glob(os.path.join(pinyin_dir, '*.yaml'))
@@ -94,23 +94,23 @@ def main():
     
     print(f"\n全拼文件夹中总共有 {len(all_pinyin_chars)} 个不同的汉字")
     
-    # 检查是否有不在 default_pinyin.txt 中的汉字
+    # 检查是否有不在 default.yaml 中的汉字
     missing_chars = all_pinyin_chars - default_chars
     
     if missing_chars:
-        print(f"\n⚠️  发现 {len(missing_chars)} 个汉字不在 default_pinyin.txt 中：")
+        print(f"\n⚠️  发现 {len(missing_chars)} 个汉字不在 default.yaml 中：")
         sorted_missing = sorted(missing_chars)
         for char in sorted_missing:
             # 找出包含这个汉字的文件
             files_with_char = [f for f, chars in file_chars_map.items() if char in chars]
             print(f"  {char} (出现在: {', '.join(files_with_char[:3])}{'...' if len(files_with_char) > 3 else ''})")
     else:
-        print(f"\n✅ 完美匹配！全拼文件夹中的所有汉字都在 default_pinyin.txt 中")
+        print(f"\n✅ 完美匹配！全拼文件夹中的所有汉字都在 default.yaml 中")
     
-    # 额外信息：检查 default_pinyin.txt 中有但全拼文件夹中没有的汉字
+    # 额外信息：检查 default.yaml 中有但全拼文件夹中没有的汉字
     extra_chars = default_chars - all_pinyin_chars
     if extra_chars:
-        print(f"\nℹ️  default_pinyin.txt 中有 {len(extra_chars)} 个汉字未在全拼文件夹中使用（这是正常的）")
+        print(f"\nℹ️  default.yaml 中有 {len(extra_chars)} 个汉字未在全拼文件夹中使用（这是正常的）")
 
 if __name__ == '__main__':
     main()

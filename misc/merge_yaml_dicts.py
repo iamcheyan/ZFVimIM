@@ -115,7 +115,7 @@ if __name__ == '__main__':
     input_dir = os.path.join(plugin_dir, 'dict', '拆分')
     
     # 输出文件
-    output_file = os.path.join(plugin_dir, 'dict', 'merged_dict.txt')
+    output_file = os.path.join(plugin_dir, 'dict', 'merged_dict.yaml')
     
     # 支持命令行参数
     if len(sys.argv) >= 2:

@@ -53,8 +53,8 @@ def loadDictionary(dbFile):
     invalid_count = 0
     
     # 检查文件扩展名
-    if not dbFile.lower().endswith('.txt'):
-        print("Error: dbCleanup.py only processes .txt files, got: " + dbFile, file=sys.stderr)
+    if not dbFile.lower().endswith('.yaml'):
+        print("Error: dbCleanup.py only processes .yaml files, got: " + dbFile, file=sys.stderr)
         return None
     
     try:
@@ -179,9 +179,9 @@ def cleanupDictionary(dbFile, cachePath):
         print("Dictionary file not found: " + dbFile, file=sys.stderr)
         return False
     
-    # 只处理 .txt 文件，忽略二进制文件（如 .db）
-    if not dbFile.lower().endswith('.txt'):
-        print("Warning: dbCleanup.py only processes .txt files, skipping: " + dbFile, file=sys.stderr)
+    # 只处理 .yaml 文件，忽略二进制文件（如 .db）
+    if not dbFile.lower().endswith('.yaml'):
+        print("Warning: dbCleanup.py only processes .yaml files, skipping: " + dbFile, file=sys.stderr)
         return False
     
     # 加载词库

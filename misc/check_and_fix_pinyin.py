@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-检查并修正 default_pinyin.txt 中的拼音错误
+检查并修正 default.yaml 中的拼音错误
 
 功能：
 1. 检查拼音拼写是否正确

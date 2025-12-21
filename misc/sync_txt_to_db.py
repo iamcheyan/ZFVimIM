@@ -8,7 +8,7 @@
     python3 sync_txt_to_db.py <txt_file> [db_file]
 
 示例:
-    python3 sync_txt_to_db.py dict/sbzr.userdb.txt dict/sbzr.userdb.db
+    python3 sync_txt_to_db.py dict/sbzr.userdb.yaml dict/sbzr.userdb.db
 """
 
 import sys
@@ -64,7 +64,7 @@ def sync_txt_to_db(txt_file, db_file=None):
     将TXT文件中的新数据同步到SQLite数据库
     
     Args:
-        txt_file: TXT词库文件路径
+        txt_file: YAML词库文件路径
         db_file: SQLite数据库文件路径（可选，默认为txt_file同目录下的.db文件）
     """
     if not os.path.exists(txt_file):

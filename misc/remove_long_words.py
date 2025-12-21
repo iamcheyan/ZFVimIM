@@ -7,13 +7,13 @@
     python3 remove_long_words.py <txt_file> [max_length]
 
 参数:
-    txt_file: TXT词库文件路径
+    txt_file: YAML词库文件路径
     max_length: 最大词长度（默认 8，即移除 9 字及以上的词）
 
 示例:
-    python3 remove_long_words.py dict/sbzr.userdb.txt        # 移除 9 字及以上
-    python3 remove_long_words.py dict/sbzr.userdb.txt 5      # 移除 6 字及以上
-    python3 remove_long_words.py dict/sbzr.userdb.txt 6      # 移除 7 字及以上
+    python3 remove_long_words.py dict/sbzr.userdb.yaml        # 移除 9 字及以上
+    python3 remove_long_words.py dict/sbzr.userdb.yaml 5      # 移除 6 字及以上
+    python3 remove_long_words.py dict/sbzr.userdb.yaml 6      # 移除 7 字及以上
 """
 
 import sys
@@ -26,7 +26,7 @@ def remove_long_words(txt_file, max_length=8):
     从词库文件中移除指定长度以上的词
     
     Args:
-        txt_file: TXT词库文件路径
+        txt_file: YAML词库文件路径
         max_length: 最大词长度（默认8，即移除9字及以上的词）
     """
     if not os.path.exists(txt_file):

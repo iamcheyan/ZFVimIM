@@ -49,9 +49,9 @@ def remove_empty_encodings(input_file, output_file):
     return processed_lines, kept_lines, removed_lines
 
 if __name__ == '__main__':
-    input_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt'
-    output_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt'
-    temp_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt.tmp'
+    input_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml'
+    output_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml'
+    temp_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.yaml.tmp'
     
     print("単語がない空のエンコーディングを削除中...")
     processed, kept, removed = remove_empty_encodings(input_file, temp_file)

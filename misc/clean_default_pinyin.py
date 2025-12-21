@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-根据单字列表清理 default_pinyin.txt，删除不在单字列表中的单字
+根据单字列表清理 default.yaml，删除不在单字列表中的单字
 
-逻辑：以单字列表为准，删除 default_pinyin.txt 中包含不在单字列表中的单字的所有词
+逻辑：以单字列表为准，删除 default.yaml 中包含不在单字列表中的单字的所有词
 
 用法:
-    python3 clean_default_pinyin.py <single_char_file> <default_pinyin_file>
+    python3 clean_default.py <single_char_file> <default_file>
 """
 
 import sys
@@ -49,8 +49,8 @@ def contains_missing_char(word, single_chars):
     return False, None
 
 
-def clean_default_pinyin(single_char_file, default_pinyin_file):
-    """清理 default_pinyin.txt 文件"""
+def clean_default(single_char_file, default_file):
+    """清理 default.yaml 文件"""
     
     # 加载单字列表
     print('正在加载单字列表...')
@@ -62,12 +62,12 @@ def clean_default_pinyin(single_char_file, default_pinyin_file):
         return False
     
     # 创建备份
-    backup_file = default_pinyin_file + '.backup.' + datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_file = default_file + '.backup.' + datetime.now().strftime('%Y%m%d_%H%M%S')
     print(f'创建备份文件: {backup_file}')
-    shutil.copy2(default_pinyin_file, backup_file)
+    shutil.copy2(default_file, backup_file)
     
-    # 读取并处理 default_pinyin.txt
-    print('正在处理 default_pinyin.txt...')
+    # 读取并处理 default.yaml
+    print('正在处理 default.yaml...')
     new_lines = []
     removed_words_count = {}  # 记录被删除的词
     removed_lines_count = 0
@@ -75,7 +75,7 @@ def clean_default_pinyin(single_char_file, default_pinyin_file):
     total_words_before = 0
     total_words_after = 0
     
-    with open(default_pinyin_file, 'r', encoding='utf-8') as f:
+    with open(default_file, 'r', encoding='utf-8') as f:
         for line in f:
             total_lines += 1
             line = line.rstrip('\n')
@@ -128,7 +128,7 @@ def clean_default_pinyin(single_char_file, default_pinyin_file):
     
     # 写入新文件
     print('正在写入清理后的文件...')
-    with open(default_pinyin_file, 'w', encoding='utf-8') as f:
+    with open(default_file, 'w', encoding='utf-8') as f:
         for line in new_lines:
             f.write(line + '\n')
     
@@ -173,9 +173,9 @@ def main():
         sys.exit(1)
     
     single_char_file = sys.argv[1]
-    default_pinyin_file = sys.argv[2]
+    default_file = sys.argv[2]
     
-    success = clean_default_pinyin(single_char_file, default_pinyin_file)
+    success = clean_default(single_char_file, default_file)
     sys.exit(0 if success else 1)
 
 

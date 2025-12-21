@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-将TXT格式的词库转换为SQLite数据库
+将YAML格式的词库转换为SQLite数据库
 支持增量插入：多次运行只会插入新数据，已存在的数据不会重复插入
 
 用法:
-    python3 txt_to_sqlite.py <txt_file> [db_file]
+    python3 txt_to_sqlite.py <yaml_file> [db_file]
 
 示例:
-    python3 txt_to_sqlite.py dict/sbzr.userdb.txt dict/sbzr.userdb.db
+    python3 txt_to_sqlite.py dict/sbzr.userdb.yaml dict/sbzr.userdb.db
 """
 
 import sys
@@ -119,10 +119,10 @@ def insert_words(conn, key, words, existing_keys):
 
 def convert_txt_to_sqlite(txt_file, db_file=None):
     """
-    将TXT词库文件转换为SQLite数据库
+    将YAML词库文件转换为SQLite数据库
     
     Args:
-        txt_file: TXT词库文件路径
+        txt_file: YAML词库文件路径
         db_file: SQLite数据库文件路径（可选，默认为txt_file同目录下的.db文件）
     """
     if not os.path.exists(txt_file):
@@ -151,8 +151,8 @@ def convert_txt_to_sqlite(txt_file, db_file=None):
     existing_keys = get_existing_keys(conn)
     print(f'  数据库中已有 {len(existing_keys)} 条记录')
     
-    # 读取并处理TXT文件
-    print('\n开始处理TXT文件...')
+    # 读取并处理YAML文件
+    print('\n开始处理YAML文件...')
     total_lines = 0
     processed_lines = 0
     total_inserted = 0

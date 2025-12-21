@@ -254,7 +254,7 @@ def main():
     """
     if len(sys.argv) < 4:
         print("Usage: python convert_range_to_shuangpin.py <input_file> <start_line> <end_line>")
-        print("Example: python convert_range_to_shuangpin.py dict/sbzr.userdb.txt 3731 4144")
+        print("Example: python convert_range_to_shuangpin.py dict/sbzr.userdb.yaml 3731 4144")
         sys.exit(1)
     
     input_file = sys.argv[1]

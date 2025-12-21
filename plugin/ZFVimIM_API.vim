@@ -279,14 +279,14 @@ function! IMAdd(bang, db, key, word)
     
     if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
         let defaultDictName = g:zfvimim_default_dict_name
-        if defaultDictName !~ '\.txt$'
-            let defaultDictName = defaultDictName . '.txt'
+        if defaultDictName !~ '\.yaml$'
+            let defaultDictName = defaultDictName . '.yaml'
         endif
         let dictPath = dictDir . '/' . defaultDictName
     elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
         let dictPath = expand(g:zfvimim_dict_path)
     else
-        let dictPath = dictDir . '/default_pinyin.txt'
+        let dictPath = dictDir . '/default.yaml'
     endif
     
     if empty(dictPath) || !filereadable(dictPath)
@@ -295,7 +295,7 @@ function! IMAdd(bang, db, key, word)
     endif
     
     " Get database file path (.db file)
-    let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+    let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
     if !filereadable(dbPath)
         echom '[ZFVimIM] Error: Database file not found: ' . dbPath
         echom '[ZFVimIM] Please run :ZFVimIMSync to create database first'
@@ -343,7 +343,7 @@ function! IMAdd(bang, db, key, word)
             for db in g:ZFVimIM_db
                 if has_key(db, 'implData')
                     let dbDictPath = get(db['implData'], 'dictPath', '')
-                    let dbTxtPath = get(db['implData'], 'txtPath', '')
+                    let dbTxtPath = get(db['implData'], 'yamlPath', '')
                     if dbDictPath ==# dbPath || dbTxtPath ==# dictPath || dbDictPath ==# dictPath
                         call ZFVimIM_dbSearchCacheClear(db)
                         " Reload database (use dictPath if available, otherwise use dbPath)
@@ -413,14 +413,14 @@ function! IMRemove(bang, db, word, ...)
         
         if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
             let defaultDictName = g:zfvimim_default_dict_name
-            if defaultDictName !~ '\.txt$'
-                let defaultDictName = defaultDictName . '.txt'
+            if defaultDictName !~ '\.yaml$'
+                let defaultDictName = defaultDictName . '.yaml'
             endif
             let dictPath = dictDir . '/' . defaultDictName
         elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
             let dictPath = expand(g:zfvimim_dict_path)
         else
-            let dictPath = dictDir . '/default_pinyin.txt'
+            let dictPath = dictDir . '/default.yaml'
         endif
     endif
     
@@ -551,7 +551,7 @@ function! IMRemove(bang, db, word, ...)
         endif
         
         " Step 2: Remove from database
-        let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+        let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
         if filereadable(dbPath)
             let pythonCmd = executable('python3') ? 'python3' : 'python'
             if executable(pythonCmd)
@@ -624,7 +624,7 @@ function! IMRemove(bang, db, word, ...)
                             for db in g:ZFVimIM_db
                                 if has_key(db, 'implData')
                                     let dbDictPath = get(db['implData'], 'dictPath', '')
-                                    let dbTxtPath = get(db['implData'], 'txtPath', '')
+                                    let dbTxtPath = get(db['implData'], 'yamlPath', '')
                                     if dbDictPath ==# dbPath || dbTxtPath ==# dictPath || dbDictPath ==# dictPath
                                         call ZFVimIM_dbSearchCacheClear(db)
                                         " Reload database (use dictPath if available, otherwise use dbPath)
@@ -713,14 +713,14 @@ function! IMSearch(bang, db, word)
     
     if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
         let defaultDictName = g:zfvimim_default_dict_name
-        if defaultDictName !~ '\.txt$'
-            let defaultDictName = defaultDictName . '.txt'
+        if defaultDictName !~ '\.yaml$'
+            let defaultDictName = defaultDictName . '.yaml'
         endif
         let dictPath = dictDir . '/' . defaultDictName
     elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
         let dictPath = expand(g:zfvimim_dict_path)
     else
-        let dictPath = dictDir . '/default_pinyin.txt'
+        let dictPath = dictDir . '/default.yaml'
     endif
     
     if empty(dictPath) || !filereadable(dictPath)
@@ -729,7 +729,7 @@ function! IMSearch(bang, db, word)
     endif
     
     " Get database file path (.db file)
-    let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+    let dbPath = substitute(dictPath, '\.yaml$', '.db', '')
     if !filereadable(dbPath)
         echom '[ZFVimIM] Error: Database file not found: ' . dbPath
         echom '[ZFVimIM] Please run :ZFVimIMSync to create database first'
@@ -1328,9 +1328,9 @@ endfunction
 " Database loading - only SQLite (.db) format is supported now
 
 function! s:dbLoad_findDbFile(dbFile)
-    " Always use .db file - convert .txt to .db if needed
-    if a:dbFile =~ '\.txt$'
-        let dbFile = substitute(a:dbFile, '\.txt$', '.db', '')
+    " Always use .db file - convert .yaml to .db if needed
+    if a:dbFile =~ '\.yaml$'
+        let dbFile = substitute(a:dbFile, '\.yaml$', '.db', '')
         return dbFile
     endif
     " If already .db or no extension, return as-is
@@ -1347,7 +1347,7 @@ function! s:dbLoad(db, dbFile, ...)
 
     let dbMap = a:db['dbMap']
     
-    " Try to find database file (prefer .db over .txt)
+    " Try to find database file (prefer .db over .yaml)
     let actualDbFile = s:dbLoad_findDbFile(a:dbFile)
     
     " Try to load from cache first
@@ -1570,7 +1570,7 @@ function! s:dbLoad_tryUsePythonScript(dbMap, dbFile, cacheFile, dbCountFile)
     " Run Python script to generate cache files
     try
         let scriptPathAbs = CygpathFix_absPath(scriptPath)
-        " Try to find .db file if .txt is specified
+        " Try to find .db file if .yaml is specified
         let actualDbFile = s:dbLoad_findDbFile(a:dbFile)
         let dbFileAbs = CygpathFix_absPath(actualDbFile)
         let dbCountFileAbs = empty(a:dbCountFile) ? '' : CygpathFix_absPath(a:dbCountFile)
@@ -1711,7 +1711,7 @@ function! s:dbSave(db, dbFile, ...)
         
         if filereadable(dbFuncScript)
             " Use Python to save - write to temp file first, then use Python
-            let tmpFile = cachePath . '/dbSaveTmp.txt'
+            let tmpFile = cachePath . '/dbSaveTmp.yaml'
             if writefile(txtLines, tmpFile) == 0
                 " Use Python to move and optimize
                 let cmd = pythonCmd . ' -c "'

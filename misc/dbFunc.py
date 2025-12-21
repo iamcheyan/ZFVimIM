@@ -216,8 +216,8 @@ def dbLoadSqlitePy(dbFile, dbCountFile):
 # }
 # Now only supports SQLite database files (.db)
 def dbLoadPy(dbFile, dbCountFile):
-    # Convert .txt to .db if needed
-    if dbFile.endswith('.txt'):
+    # Convert .yaml to .db if needed
+    if dbFile.endswith('.yaml'):
         dbFile = dbFile[:-4] + '.db'
     
     # Only load from SQLite database
@@ -236,8 +236,8 @@ def dbLoadPy(dbFile, dbCountFile):
 #     key a1 a2 a3
 # Now only supports SQLite database files (.db)
 def dbLoadNormalizePy(dbFile):
-    # Convert .txt to .db if needed
-    if dbFile.endswith('.txt'):
+    # Convert .yaml to .db if needed
+    if dbFile.endswith('.yaml'):
         dbFile = dbFile[:-4] + '.db'
     
     # Load from SQLite and normalize

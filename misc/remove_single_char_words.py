@@ -113,7 +113,7 @@ def remove_single_char_words(txt_file):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('用法: python3 remove_single_char_words.py <词库文件>')
-        print('示例: python3 remove_single_char_words.py dict/sbzr.userdb.txt')
+        print('示例: python3 remove_single_char_words.py dict/sbzr.userdb.yaml')
         sys.exit(1)
     
     txt_file = sys.argv[1]

@@ -121,7 +121,7 @@ def filter_single_char_codes(input_file, output_file):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('用法: python3 filter_common_chars.py <输入文件> [输出文件]')
-        print('示例: python3 filter_common_chars.py dict/single_char_codes.txt dict/single_char_codes.txt')
+        print('示例: python3 filter_common_chars.py dict/single_char_codes.yaml dict/single_char_codes.yaml')
         sys.exit(1)
     
     input_file = sys.argv[1]

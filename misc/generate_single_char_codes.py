@@ -100,7 +100,7 @@ def generate_single_char_codes(txt_file, output_file):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('用法: python3 generate_single_char_codes.py <词库文件> [输出文件]')
-        print('示例: python3 generate_single_char_codes.py dict/sbzr.userdb.txt dict/single_char_codes.txt')
+        print('示例: python3 generate_single_char_codes.py dict/sbzr.userdb.yaml dict/single_char_codes.yaml')
         sys.exit(1)
     
     txt_file = sys.argv[1]
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     else:
         # 默认输出到 dict 目录
         output_dir = os.path.dirname(txt_file) or 'dict'
-        output_file = os.path.join(output_dir, 'single_char_codes.txt')
+        output_file = os.path.join(output_dir, 'single_char_codes.yaml')
     
     if not os.path.isfile(txt_file):
         print(f'错误: 词库文件不存在: {txt_file}')

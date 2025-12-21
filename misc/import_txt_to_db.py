@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-从 TXT 文件完整导入到数据库（清空后重新导入）
+从 YAML 文件完整导入到数据库（清空后重新导入）
 
 功能：
 1. 清空数据库中的所有数据
-2. 从 TXT 文件完整导入所有数据
-3. 确保数据库和 TXT 文件内容完全一致
+2. 从 YAML 文件完整导入所有数据
+3. 确保数据库和 YAML 文件内容完全一致
 
 用法:
     python3 import_txt_to_db.py <txt_file> [db_file]
 
 示例:
-    python3 import_txt_to_db.py dict/sbzr.userdb.txt dict/sbzr.userdb.db
+    python3 import_txt_to_db.py dict/sbzr.userdb.yaml dict/sbzr.userdb.db
 """
 
 import sys
@@ -25,22 +25,22 @@ from datetime import datetime
 
 def clean_and_sort_txt_file(txt_file):
     """
-    清理和整理 TXT 文件：
+    清理和整理 YAML 文件：
     1. 去重（同一个编码下的重复词）
     2. 格式化清理（去除空行、注释等）
     3. 按词数从多到少排序（每个编码下的词按数量排序）
     
     Args:
-        txt_file: TXT 文件路径
+        txt_file: YAML 文件路径
     
     Returns:
         bool: 是否成功
     """
     if not os.path.exists(txt_file):
-        print(f'错误: TXT 文件不存在: {txt_file}')
+        print(f'错误: YAML 文件不存在: {txt_file}')
         return False
     
-    print('正在整理 TXT 文件...')
+    print('正在整理 YAML 文件...')
     print('=' * 60)
     
     # 创建备份
@@ -179,15 +179,15 @@ def init_database(db_file):
 
 
 def import_txt_to_db(txt_file, db_file):
-    """从 TXT 文件导入数据到数据库"""
+    """从 YAML 文件导入数据到数据库"""
     
     if not os.path.exists(txt_file):
-        print(f'错误: TXT 文件不存在: {txt_file}')
+        print(f'错误: YAML 文件不存在: {txt_file}')
         return False
     
-    # Step 1: 清理和整理 TXT 文件
+    # Step 1: 清理和整理 YAML 文件
     if not clean_and_sort_txt_file(txt_file):
-        print('错误: TXT 文件整理失败')
+        print('错误: YAML 文件整理失败')
         return False
     
     print()
@@ -200,8 +200,8 @@ def import_txt_to_db(txt_file, db_file):
     if not clear_database(db_file):
         return False
     
-    # 读取整理后的 TXT 文件并导入
-    print('正在读取整理后的 TXT 文件...')
+    # 读取整理后的 YAML 文件并导入
+    print('正在读取整理后的 YAML 文件...')
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     
@@ -274,13 +274,13 @@ def import_txt_to_db(txt_file, db_file):
         print('=' * 60)
         print('导入完成！')
         print('=' * 60)
-        print(f'TXT 文件行数: {total_lines}')
-        print(f'TXT 文件词数: {total_words}')
+        print(f'YAML 文件行数: {total_lines}')
+        print(f'YAML 文件词数: {total_words}')
         print(f'数据库记录数: {db_count}')
         print()
         
         if db_count == total_words:
-            print('✅ 数据库和 TXT 文件内容完全一致')
+            print('✅ 数据库和 YAML 文件内容完全一致')
         else:
             print(f'⚠️  注意: 数据库记录数 ({db_count}) 与 TXT 词数 ({total_words}) 不一致')
             print('   可能原因: 存在重复的 (key, word) 组合')
@@ -303,16 +303,16 @@ def main():
     
     txt_file = sys.argv[1]
     
-    # 如果没有指定数据库文件，自动生成（将 .txt 替换为 .db）
+    # 如果没有指定数据库文件，自动生成（将 .yaml 替换为 .db）
     if len(sys.argv) >= 3:
         db_file = sys.argv[2]
     else:
-        if txt_file.endswith('.txt'):
+        if txt_file.endswith('.yaml'):
             db_file = txt_file[:-4] + '.db'
         else:
             db_file = txt_file + '.db'
     
-    print(f'TXT 文件: {txt_file}')
+    print(f'YAML 文件: {txt_file}')
     print(f'数据库文件: {db_file}')
     print()
     
