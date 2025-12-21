@@ -93,7 +93,7 @@ def sync_txt_to_db(txt_file, db_file=None):
         CREATE TABLE IF NOT EXISTS words (
             key TEXT NOT NULL,
             word TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            frequency INTEGER DEFAULT 0,
             PRIMARY KEY (key, word)
         )
     ''')
@@ -149,8 +149,8 @@ def sync_txt_to_db(txt_file, db_file=None):
         for key, word in new_data:
             try:
                 cursor.execute(
-                    'INSERT INTO words (key, word) VALUES (?, ?)',
-                    (key, word)
+                    'INSERT INTO words (key, word, frequency) VALUES (?, ?, ?)',
+                    (key, word, 0)
                 )
                 inserted += 1
             except sqlite3.IntegrityError:

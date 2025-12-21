@@ -120,15 +120,29 @@ def dbLoadSqlitePy(dbFile, dbCountFile):
         cursor = conn.cursor()
         
         # Load all words from database in one query
-        cursor.execute('SELECT key, word FROM words ORDER BY key, word')
+        # Try to load frequency if column exists, otherwise default to 0
+        try:
+            cursor.execute('SELECT key, word, frequency FROM words ORDER BY key, word')
+            has_frequency = True
+        except sqlite3.OperationalError:
+            # Column doesn't exist, try without frequency (for backward compatibility)
+            cursor.execute('SELECT key, word FROM words ORDER BY key, word')
+            has_frequency = False
+        
         rows = cursor.fetchall()
         conn.close()
         
-        # First pass: collect all words for each key (avoid repeated encode/decode)
+        # First pass: collect all words and frequencies for each key (avoid repeated encode/decode)
         # Use dict with list - duplicates are already handled by PRIMARY KEY in DB
-        keyWordsMap = {}  # key -> list of words
+        keyWordsMap = {}  # key -> list of (word, frequency) tuples
         
-        for key, word in rows:
+        for row in rows:
+            if has_frequency:
+                key, word, frequency = row
+            else:
+                key, word = row
+                frequency = 0
+            
             # Filter: only lowercase alphabetic keys
             if not key or not key[0].islower() or not key.isalpha():
                 continue
@@ -136,16 +150,18 @@ def dbLoadSqlitePy(dbFile, dbCountFile):
             if key not in keyWordsMap:
                 keyWordsMap[key] = []
             # No need to check duplicates - PRIMARY KEY ensures uniqueness
-            keyWordsMap[key].append(word)
+            keyWordsMap[key].append((word, frequency))
         
         # Second pass: encode all items at once (much faster than per-row encoding)
-        for key, wordList in keyWordsMap.items():
+        for key, wordFreqList in keyWordsMap.items():
             if key[0] not in pyMap:
                 pyMap[key[0]] = {}
+            wordList = [wf[0] for wf in wordFreqList]
+            countList = [wf[1] for wf in wordFreqList]
             pyMap[key[0]][key] = dbItemEncode({
                 'key' : key,
                 'wordList' : wordList,
-                'countList' : [0] * len(wordList),
+                'countList' : countList,
             })
         
     except Exception as e:
@@ -376,4 +392,52 @@ def dbEditApplyPy(pyMap, dbEdit):
             dbItemReorder(dbItem)
             pyMap[key[0]][key] = dbItemEncode(dbItem)
     # end of dbEditApplyPy
+
+
+def dbSyncFrequencyToSqlite(pyMap, dbFile):
+    """
+    将内存中的频率信息同步到 SQLite 数据库
+    
+    Args:
+        pyMap: 内存中的词库映射
+        dbFile: SQLite 数据库文件路径
+    """
+    if not os.path.isfile(dbFile):
+        return False
+    
+    try:
+        conn = sqlite3.connect(dbFile)
+        cursor = conn.cursor()
+        
+        # 检查是否有 frequency 字段
+        cursor.execute("PRAGMA table_info(words)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'frequency' not in columns:
+            # 表结构需要迁移，先不更新
+            conn.close()
+            return False
+        
+        updated_count = 0
+        for c in pyMap.keys():
+            for key, dbItemEncoded in dbMapIter(pyMap[c]):
+                dbItem = dbItemDecode(dbItemEncoded)
+                # 更新每个词的频率
+                for i, word in enumerate(dbItem['wordList']):
+                    frequency = dbItem['countList'][i] if i < len(dbItem['countList']) else 0
+                    cursor.execute(
+                        'UPDATE words SET frequency = ? WHERE key = ? AND word = ?',
+                        (frequency, key, word)
+                    )
+                    if cursor.rowcount > 0:
+                        updated_count += 1
+        
+        conn.commit()
+        conn.close()
+        
+        return True
+    except Exception as e:
+        import sys
+        print(f'Error syncing frequency to database {dbFile}: {e}', file=sys.stderr)
+        return False
+    # end of dbSyncFrequencyToSqlite
 

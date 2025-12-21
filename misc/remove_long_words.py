@@ -1,68 +1,144 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-3文字以上の単語を辞書ファイルから削除するスクリプト
+从词库文件中移除指定长度以上的词
+
+用法:
+    python3 remove_long_words.py <txt_file> [max_length]
+
+参数:
+    txt_file: TXT词库文件路径
+    max_length: 最大词长度（默认 8，即移除 9 字及以上的词）
+
+示例:
+    python3 remove_long_words.py dict/sbzr.userdb.txt        # 移除 9 字及以上
+    python3 remove_long_words.py dict/sbzr.userdb.txt 5      # 移除 6 字及以上
+    python3 remove_long_words.py dict/sbzr.userdb.txt 6      # 移除 7 字及以上
 """
 
 import sys
 import os
+import shutil
 
-def remove_long_words(input_file, output_file):
+
+def remove_long_words(txt_file, max_length=8):
     """
-    入力ファイルから3文字以上の単語を削除し、出力ファイルに保存
+    从词库文件中移除指定长度以上的词
+    
+    Args:
+        txt_file: TXT词库文件路径
+        max_length: 最大词长度（默认8，即移除9字及以上的词）
     """
+    if not os.path.exists(txt_file):
+        print(f'错误: 文件不存在: {txt_file}')
+        return False
+    
+    # 创建备份
+    backup_file = txt_file + '.backup'
+    print(f'创建备份: {backup_file}')
+    shutil.copy2(txt_file, backup_file)
+    
+    print(f'处理文件: {txt_file}')
+    print(f'移除 {max_length + 1} 字及以上的词')
+    print('=' * 60)
+    
+    total_lines = 0
     processed_lines = 0
     removed_count = 0
+    lines_modified = 0
+    lines_empty_after_removal = 0
     
-    with open(input_file, 'r', encoding='utf-8') as f_in, \
-         open(output_file, 'w', encoding='utf-8') as f_out:
-        
-        for line in f_in:
-            line = line.rstrip('\n\r')
-            if not line:
-                f_out.write('\n')
+    new_lines = []
+    
+    with open(txt_file, 'r', encoding='utf-8') as f:
+        for line_num, line in enumerate(f, 1):
+            original_line = line
+            line = line.rstrip('\n')
+            total_lines += 1
+            
+            # 保留空行和注释
+            if not line.strip() or line.startswith('#'):
+                new_lines.append(original_line)
                 continue
             
-            # ピンイン部分と単語部分を分離
-            parts = line.split(' ', 1)
-            if len(parts) == 1:
-                # 単語がない行（ピンインのみ）
-                f_out.write(line + '\n')
-                continue
-            
-            pinyin = parts[0]
-            words = parts[1].split(' ')
-            
-            # 2文字以下の単語のみを保持
-            short_words = [word for word in words if len(word) <= 2]
-            
-            # 削除された単語数をカウント
-            removed_count += len(words) - len(short_words)
-            
-            # 結果を書き込み
-            if short_words:
-                f_out.write(pinyin + ' ' + ' '.join(short_words) + '\n')
+            # 处理转义的空格
+            if '\\\\ ' in line:
+                parts = line.replace('\\\\ ', '_ZFVimIM_space_').split()
+                words = [w.replace('_ZFVimIM_space_', ' ') for w in parts[1:]]
             else:
-                # 単語が全て削除された場合はピンインのみ
-                f_out.write(pinyin + '\n')
+                parts = line.split()
+                words = parts[1:]
             
+            if len(parts) < 2:
+                new_lines.append(original_line)
+                continue
+            
+            key = parts[0]
             processed_lines += 1
-            if processed_lines % 10000 == 0:
-                print(f"処理済み: {processed_lines} 行", flush=True)
+            
+            # 过滤掉长度超过 max_length 的词
+            original_word_count = len(words)
+            filtered_words = [w for w in words if len(w) <= max_length]
+            removed_in_line = original_word_count - len(filtered_words)
+            
+            if removed_in_line > 0:
+                removed_count += removed_in_line
+                lines_modified += 1
+                
+                # 如果移除后没有词了，保留编码行（空词列表）
+                if len(filtered_words) == 0:
+                    lines_empty_after_removal += 1
+                    # 保留编码，但移除所有词（只保留编码）
+                    new_line = key + '\n'
+                else:
+                    # 重建行，处理转义的空格
+                    word_parts = []
+                    for word in filtered_words:
+                        if ' ' in word:
+                            escaped_word = word.replace(' ', '\\\\ ')
+                            word_parts.append(escaped_word)
+                        else:
+                            word_parts.append(word)
+                    new_line = key + ' ' + ' '.join(word_parts) + '\n'
+                
+                new_lines.append(new_line)
+            else:
+                # 没有需要移除的词，保留原行
+                new_lines.append(original_line)
+            
+            if line_num % 100000 == 0:
+                print(f'已处理 {line_num:,} 行，移除 {removed_count:,} 个长词...')
     
-    print(f"処理完了: {processed_lines} 行処理")
-    print(f"削除された単語数: {removed_count} 個")
-    return processed_lines, removed_count
+    # 写入新文件
+    print(f'\n写入修改后的文件...')
+    with open(txt_file, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+    
+    # 输出统计信息
+    print('\n' + '=' * 60)
+    print('处理完成！')
+    print(f'  总行数: {total_lines:,}')
+    print(f'  处理行数: {processed_lines:,}')
+    print(f'  修改的行数: {lines_modified:,}')
+    print(f'  移除的长词数: {removed_count:,}')
+    print(f'  移除后变空的行数: {lines_empty_after_removal:,}')
+    print(f'  备份文件: {backup_file}')
+    print('\n提示: 如果结果满意，可以删除备份文件')
+    
+    return True
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        sys.exit(1)
+    
+    txt_file = sys.argv[1]
+    # 支持第二个参数指定最大长度，默认 8
+    max_length = int(sys.argv[2]) if len(sys.argv) > 2 else 8
+    success = remove_long_words(txt_file, max_length=max_length)
+    sys.exit(0 if success else 1)
+
 
 if __name__ == '__main__':
-    input_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt'
-    output_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt'
-    temp_file = '/Users/tetsuya/.local/share/nvim/lazy/ZFVimIM/dict/sbzr.userdb.txt.tmp'
-    
-    print("3文字以上の単語を削除中...")
-    processed, removed = remove_long_words(input_file, temp_file)
-    
-    # 一時ファイルを元のファイルに置き換え
-    os.replace(temp_file, output_file)
-    print(f"ファイルを更新しました: {output_file}")
-
+    main()

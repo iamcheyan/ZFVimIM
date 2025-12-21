@@ -1385,17 +1385,26 @@ function! s:updateCandidates()
     if keyboardChanged
         " New search: limit initial search to 20 items for speed
         " Use a small matchLimit to speed up initial search
-        let initialLimit = pageSize * 2  " Load 2 pages initially
+        " BUT: for 4-character inputs (full codes), use full search to ensure
+        " we find all matches even if they're far in the sorted list
+        let keyLen = len(s:keyboard)
+        let initialLimit = (keyLen == 4) ? 0 : (pageSize * 2)  " 0 means no limit
         let s:fullResultList = ZFVimIM_complete(s:keyboard, {'match': initialLimit})
         let s:fullResultList = s:filterMatchListByPrefix(s:fullResultList, s:keyboard)
         let s:fullResultList = s:deduplicateCandidates(s:fullResultList)
         
-        " If user needs more results, we'll do a full search on demand
-        " For now, mark that we only have partial results
-        let s:hasFullResults = 0
+        " Mark if we have full results
+        " For 4-character inputs, we use full search (initialLimit = 0), so mark as full
+        " For other inputs, we use limited search initially, mark as partial
+        let s:hasFullResults = (keyLen == 4) ? 1 : 0
         
         " Cache full result list (but don't load all at once)
+        " Also cache the hasFullResults flag
         let s:completeCache[s:keyboard] = s:fullResultList
+        if !exists('s:completeCacheFull')
+            let s:completeCacheFull = {}
+        endif
+        let s:completeCacheFull[s:keyboard] = s:hasFullResults
         call add(s:completeCacheKeys, s:keyboard)
         " Limit cache size to 200 entries
         if len(s:completeCacheKeys) > 200
@@ -1404,6 +1413,9 @@ function! s:updateCandidates()
                 let oldKey = remove(s:completeCacheKeys, 0)
                 if has_key(s:completeCache, oldKey)
                     call remove(s:completeCache, oldKey)
+                endif
+                if exists('s:completeCacheFull') && has_key(s:completeCacheFull, oldKey)
+                    call remove(s:completeCacheFull, oldKey)
                 endif
             endfor
         endif
@@ -1415,10 +1427,17 @@ function! s:updateCandidates()
         endif
         let s:match_list = s:fullResultList[0 : s:loadedResultCount - 1]
         let s:page = 0
-        let s:hasFullResults = 0  " Mark that we only have partial results initially
+        " hasFullResults is already set above based on keyLen
     else
         " Same keyboard: use cached full result list
         let s:fullResultList = s:completeCache[s:keyboard]
+        " Restore hasFullResults flag from cache
+        if exists('s:completeCacheFull') && has_key(s:completeCacheFull, s:keyboard)
+            let s:hasFullResults = s:completeCacheFull[s:keyboard]
+        else
+            " If flag not cached, assume partial (for backward compatibility)
+            let s:hasFullResults = 0
+        endif
         
         " Handle page navigation
         if s:pageup_pagedown != 0 && !empty(s:match_list) && pageSize > 0
@@ -1445,6 +1464,10 @@ function! s:updateCandidates()
             let s:fullResultList = s:deduplicateCandidates(s:fullResultList)
             " Update cache with full results
             let s:completeCache[s:keyboard] = s:fullResultList
+            if !exists('s:completeCacheFull')
+                let s:completeCacheFull = {}
+            endif
+            let s:completeCacheFull[s:keyboard] = 1
             let s:hasFullResults = 1
         endif
         

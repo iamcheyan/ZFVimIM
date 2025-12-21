@@ -507,11 +507,12 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     
     " First pass: collect all items, separate single chars and multi chars
     " For short keys (1-2 chars), limit search to first 100 items for performance
-    " For 4-char keys (full pinyin codes), search more items - they need exact match
+    " For 4-char keys (full pinyin codes), search ALL items - they need exact match
     " For longer keys, also limit to avoid excessive decoding
     " Note: 4-char keys are usually full pinyin codes (e.g., "xmzl" for "现在")
-    " They may be far in the sorted list, so we need a larger search range
-    let maxItems = (keyLen <= 2) ? 100 : (keyLen == 4 ? 20000 : 500)
+    " They may be far in the sorted list (e.g., "lqxy" at position 31,095),
+    " so we need to search the entire bucket to ensure we find them
+    let maxItems = (keyLen <= 2) ? 100 : (keyLen == 4 ? 999999 : 500)
     let itemCount = 0
     let tempIndex = index
     while tempIndex >= 0 && itemCount < maxItems

@@ -268,7 +268,7 @@ function! ZFVimIM_wordReorder(db, word, ...)
 endfunction
 
 function! IMAdd(bang, db, key, word)
-    " Get dictionary file path
+    " Get dictionary file path (TXT file)
     let dictPath = ''
     let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
     let sfileDir = expand('<sfile>:p:h:h')
@@ -294,55 +294,68 @@ function! IMAdd(bang, db, key, word)
         return
     endif
     
-    " Simply append the line to the end of the file
-    " Format: key word (user input as-is)
-    let line = a:key . ' ' . a:word
-    
-    " Use Python to append to file (simple and fast)
-    let pythonCmd = executable('python3') ? 'python3' : 'python'
-    if !executable(pythonCmd)
-        " Fallback: use Vim's writefile
-        let lines = readfile(dictPath)
-        call add(lines, line)
-        call writefile(lines, dictPath)
-        echom '[ZFVimIM] Word added to dictionary file: ' . line
+    " Get database file path (.db file)
+    let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+    if !filereadable(dbPath)
+        echom '[ZFVimIM] Error: Database file not found: ' . dbPath
+        echom '[ZFVimIM] Please run :ZFVimIMSync to create database first'
         return
     endif
     
-    " Use Python to append (faster for large files)
-    let tmpScript = ZFVimIM_cachePath() . '/append_to_dict.py'
-    let scriptContent = [
-                \ '#!/usr/bin/env python3',
-                \ '# -*- coding: utf-8 -*-',
-                \ 'import sys',
-                \ '',
-                \ 'dictFile = sys.argv[1]',
-                \ 'line = sys.argv[2]',
-                \ '',
-                \ '# Append line to file',
-                \ 'with open(dictFile, "a", encoding="utf-8") as f:',
-                \ '    f.write(line + "\n")',
-                \ '',
-                \ 'print("OK")',
-                \ ]
-    
-    " Write script file
-    if type(scriptContent) == type([])
-        call writefile(scriptContent, tmpScript)
-    else
-        call writefile(split(scriptContent, "\n", 1), tmpScript)
+    " Use Python to add word to database
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    if !executable(pythonCmd)
+        echom '[ZFVimIM] Error: Python not found. Cannot add word to database.'
+        return
     endif
     
-    " Execute Python script
-    let cmd = pythonCmd . ' "' . tmpScript . '" "' . dictPath . '" "' . line . '"'
+    " Get script path
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/dict') && isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    else
+        if !isdirectory(pluginDir . '/misc')
+            let altPath = stdpath('config') . '/lazy/ZFVimIM'
+            if isdirectory(altPath . '/misc')
+                let pluginDir = altPath
+            endif
+        endif
+    endif
+    
+    let scriptPath = pluginDir . '/misc/db_add_word.py'
+    if !filereadable(scriptPath)
+        echom '[ZFVimIM] Error: Script not found: ' . scriptPath
+        return
+    endif
+    
+    " Execute Python script to add word to database
+    let scriptPathAbs = CygpathFix_absPath(scriptPath)
+    let dbPathAbs = CygpathFix_absPath(dbPath)
+    let cmd = pythonCmd . ' "' . scriptPathAbs . '" "' . dbPathAbs . '" "' . a:key . '" "' . a:word . '"'
     let result = system(cmd)
     let result = substitute(result, '[\r\n]', '', 'g')
     
-    " Clean up
-    call delete(tmpScript)
-    
     if result ==# 'OK'
-        echom '[ZFVimIM] Word added to dictionary file: ' . line
+        echom '[ZFVimIM] Word added to database: ' . a:key . ' ' . a:word
+        " Clear cache to force reload
+        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+            for db in g:ZFVimIM_db
+                if has_key(db, 'implData')
+                    let dbDictPath = get(db['implData'], 'dictPath', '')
+                    let dbTxtPath = get(db['implData'], 'txtPath', '')
+                    if dbDictPath ==# dbPath || dbTxtPath ==# dictPath || dbDictPath ==# dictPath
+                        call ZFVimIM_dbSearchCacheClear(db)
+                        " Reload database (use dictPath if available, otherwise use dbPath)
+                        let reloadPath = !empty(dbDictPath) ? dbDictPath : dbPath
+                        call ZFVimIM_dbLoad(db, reloadPath)
+                        break
+                    endif
+                endif
+            endfor
+        endif
+    elseif result ==# 'EXISTS'
+        echom '[ZFVimIM] Word already exists in database: ' . a:key . ' ' . a:word
     else
         echom '[ZFVimIM] Error: ' . result
     endif
@@ -490,26 +503,80 @@ function! IMRemove(bang, db, word, ...)
     call delete(tmpScript)
     
     if result =~# '^OK:'
-        " File modification time will automatically invalidate cache
-        " Just clear in-memory search cache if database is loaded
-        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
-            for db in g:ZFVimIM_db
-                if has_key(db, 'implData') && has_key(db['implData'], 'dictPath')
-                    if db['implData']['dictPath'] ==# dictPath
-                        call ZFVimIM_dbSearchCacheClear(db)
-                        break
-                    endif
-                endif
-            endfor
-        endif
-        
-        " Parse result and show removed words
+        " Step 1: Remove from TXT file completed
+        " Parse result to get removed words count
         let resultParts = split(result, ':')
+        let removedInfo = ''
         if len(resultParts) > 1
             let removedInfo = join(resultParts[1:], ':')
-            echom '[ZFVimIM] Removed words: ' . removedInfo
+        endif
+        
+        " Step 2: Remove from database
+        let dbPath = substitute(dictPath, '\.txt$', '.db', '')
+        if filereadable(dbPath)
+            let pythonCmd = executable('python3') ? 'python3' : 'python'
+            if executable(pythonCmd)
+                " Get script path
+                let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+                let sfileDir = expand('<sfile>:p:h:h')
+                if isdirectory(sfileDir . '/dict') && isdirectory(sfileDir . '/misc')
+                    let pluginDir = sfileDir
+                else
+                    if !isdirectory(pluginDir . '/misc')
+                        let altPath = stdpath('config') . '/lazy/ZFVimIM'
+                        if isdirectory(altPath . '/misc')
+                            let pluginDir = altPath
+                        endif
+                    endif
+                endif
+                
+                let scriptPath = pluginDir . '/misc/db_remove_word.py'
+                if filereadable(scriptPath)
+                    let scriptPathAbs = CygpathFix_absPath(scriptPath)
+                    let dbPathAbs = CygpathFix_absPath(dbPath)
+                    let cmd = pythonCmd . ' "' . scriptPathAbs . '" "' . dbPathAbs . '"'
+                    for word in wordsToRemove
+                        let cmd = cmd . ' "' . word . '"'
+                    endfor
+                    
+                    let dbResult = system(cmd)
+                    let dbResult = substitute(dbResult, '[\r\n]', '', 'g')
+                    
+                    if dbResult =~# '^OK:'
+                        " Successfully removed from both TXT and DB
+                        if !empty(removedInfo)
+                            echom '[ZFVimIM] Removed words from TXT and DB: ' . removedInfo
+                        else
+                            echom '[ZFVimIM] Words removed from TXT and database'
+                        endif
+                        
+                        " Clear cache and reload database
+                        if exists('g:ZFVimIM_db') && !empty(g:ZFVimIM_db)
+                            for db in g:ZFVimIM_db
+                                if has_key(db, 'implData')
+                                    let dbDictPath = get(db['implData'], 'dictPath', '')
+                                    let dbTxtPath = get(db['implData'], 'txtPath', '')
+                                    if dbDictPath ==# dbPath || dbTxtPath ==# dictPath || dbDictPath ==# dictPath
+                                        call ZFVimIM_dbSearchCacheClear(db)
+                                        " Reload database (use dictPath if available, otherwise use dbPath)
+                                        let reloadPath = !empty(dbDictPath) ? dbDictPath : dbPath
+                                        call ZFVimIM_dbLoad(db, reloadPath)
+                                        break
+                                    endif
+                                endif
+                            endfor
+                        endif
+                    else
+                        echom '[ZFVimIM] Removed from TXT: ' . removedInfo . ' (but failed to remove from DB: ' . dbResult . ')'
+                    endif
+                else
+                    echom '[ZFVimIM] Removed from TXT: ' . removedInfo . ' (script not found: ' . scriptPath . ')'
+                endif
+            else
+                echom '[ZFVimIM] Removed from TXT: ' . removedInfo . ' (Python not found, cannot remove from DB)'
+            endif
         else
-            echom '[ZFVimIM] Words removed from dictionary file'
+            echom '[ZFVimIM] Removed from TXT: ' . removedInfo . ' (DB file not found: ' . dbPath . ')'
         endif
     elseif result ==# 'NOT_FOUND'
         echom '[ZFVimIM] None of the words found in dictionary'
@@ -1399,6 +1466,21 @@ function! s:dbSave(db, dbFile, ...)
                 let result = system(cmd)
                 if v:shell_error == 0
                     echom '[ZFVimIM] Dictionary saved successfully: ' . totalEntries . ' entries (using Python)'
+                    
+                    " Also sync to database if .db file exists
+                    let dbPath = s:dbLoad_findDbFile(a:dbFile)
+                    if dbPath !=# a:dbFile && filereadable(dbPath)
+                        " Sync TXT to database (only new entries)
+                        let syncScript = pluginDir . '/misc/sync_txt_to_db.py'
+                        if filereadable(syncScript)
+                            let syncCmd = pythonCmd . ' "' . syncScript . '" "' . a:dbFile . '" "' . dbPath . '"'
+                            let syncResult = system(syncCmd)
+                            if v:shell_error != 0
+                                echom '[ZFVimIM] Warning: Failed to sync to database: ' . syncResult
+                            endif
+                        endif
+                    endif
+                    
                     call ZFVimIM_DEBUG_profileStop()
                     return
                 endif
@@ -1414,6 +1496,28 @@ function! s:dbSave(db, dbFile, ...)
     
     if writefile(txtLines, a:dbFile) == 0
         echom '[ZFVimIM] Dictionary saved successfully: ' . totalEntries . ' entries'
+        
+        " Also sync to database if .db file exists
+        let dbPath = s:dbLoad_findDbFile(a:dbFile)
+        if dbPath !=# a:dbFile && filereadable(dbPath)
+            " Sync TXT to database (only new entries)
+            let pythonCmd = executable('python3') ? 'python3' : 'python'
+            let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+            let sfileDir = expand('<sfile>:p:h:h')
+            if isdirectory(sfileDir . '/misc')
+                let pluginDir = sfileDir
+            endif
+            let syncScript = pluginDir . '/misc/sync_txt_to_db.py'
+            if filereadable(syncScript)
+                let cmd = pythonCmd . ' "' . syncScript . '" "' . a:dbFile . '" "' . dbPath . '"'
+                let result = system(cmd)
+                if v:shell_error == 0
+                    " Success - silently sync
+                else
+                    echom '[ZFVimIM] Warning: Failed to sync to database: ' . result
+                endif
+            endif
+        endif
     else
         echom '[ZFVimIM] Error: Failed to save dictionary file'
     endif
