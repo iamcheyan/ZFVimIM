@@ -1912,29 +1912,43 @@ function! s:updateCandidates_sbzr()
                     \ 'crossDb': 0,
                     \ 'predict': 0,
                     \ })
+        " 断词自动拼功能：当没有匹配时，尝试将最后一个字符拆分
+        " 但在 SBZR 模式下，如果输入两个编码的单字，且最后一个字符是标签键（a/e/u/i/o），
+        " 则不触发断词自动拼，让标签键用于选择候选词
         if empty(s:fullResultList) && len(s:keyboard) > 1
-            let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
             let suffixKey = strpart(s:keyboard, len(s:keyboard) - 1, 1)
-            let prefixList = ZFVimIM_complete(prefixKey, {
-                        \ 'match': -1,
-                        \ 'sentence': 0,
-                        \ 'crossDb': 0,
-                        \ 'predict': 0,
-                        \ })
-            let suffixList = ZFVimIM_complete(suffixKey, {
-                        \ 'match': 0 - limit,
-                        \ 'sentence': 0,
-                        \ 'crossDb': 0,
-                        \ 'predict': 0,
-                        \ })
-            if !empty(prefixList) && !empty(suffixList)
-                let prefixItem = prefixList[0]
-                let suffixItem = suffixList[0]
-                let combined = copy(prefixItem)
-                let combined['word'] = prefixItem['word'] . suffixItem['word']
-                let combined['displayWord'] = combined['word']
-                let combined['len'] = len(s:keyboard)
-                let s:fullResultList = [combined]
+            " 检查是否是两个编码的单字，且最后一个字符是标签键
+            let isTwoCharSingleWord = (len(s:keyboard) == 2)
+            let isLabelKey = (suffixKey ==# 'a' || suffixKey ==# 'e' || suffixKey ==# 'u' || suffixKey ==# 'i' || suffixKey ==# 'o')
+            
+            " 如果是两个编码的单字且最后一个字符是标签键，不触发断词自动拼
+            if isTwoCharSingleWord && isLabelKey
+                " 不触发断词自动拼，让标签键用于选择候选词
+                " 这里不设置 s:fullResultList，让它保持为空
+            else
+                " 其他情况触发断词自动拼
+                let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
+                let prefixList = ZFVimIM_complete(prefixKey, {
+                            \ 'match': -1,
+                            \ 'sentence': 0,
+                            \ 'crossDb': 0,
+                            \ 'predict': 0,
+                            \ })
+                let suffixList = ZFVimIM_complete(suffixKey, {
+                            \ 'match': 0 - limit,
+                            \ 'sentence': 0,
+                            \ 'crossDb': 0,
+                            \ 'predict': 0,
+                            \ })
+                if !empty(prefixList) && !empty(suffixList)
+                    let prefixItem = prefixList[0]
+                    let suffixItem = suffixList[0]
+                    let combined = copy(prefixItem)
+                    let combined['word'] = prefixItem['word'] . suffixItem['word']
+                    let combined['displayWord'] = combined['word']
+                    let combined['len'] = len(s:keyboard)
+                    let s:fullResultList = [combined]
+                endif
             endif
         endif
         let s:fullResultList = s:applyCandidateLimit(s:fullResultList)

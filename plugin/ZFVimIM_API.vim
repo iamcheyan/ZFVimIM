@@ -688,8 +688,8 @@ function! s:IMAddWrapper(bang, ...)
     " Always redirect to batch add interface
     " If arguments provided, they will be pre-filled
     if a:0 >= 2
-        let key = a:1
-        let word = join(a:000[1:], ' ')
+    let key = a:1
+    let word = join(a:000[1:], ' ')
         call ZFVimIM_batchAddWords(key, word)
     else
         " No arguments, just open batch add interface

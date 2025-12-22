@@ -42,7 +42,7 @@ return {
   vim.g.ZFVimIM_settings = { 'sbzr' }
   vim.g.zfvimim_default_dict_name = "sbzr"
   ```
-  
+
   或者直接加载模块配置文件：
   ```lua
   dofile(vim.fn.stdpath('data') .. '/lazy/ZFVimIM/modules/sbzr/config.lua')

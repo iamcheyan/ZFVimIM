@@ -594,22 +594,22 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
         endwhile
     else
         " Normal mode: sort multi-chars by length first (shortest first), then by frequency
-        if len(multiChars) > 1
-            call sort(multiChars, function('s:sortByLengthAndFrequency'))
-        endif
-        
-        " Add all single characters first (no limit)
-        call extend(a:ret, singleChars)
-        
-        " Then add multi-character words up to limit (already sorted by length)
-        let remainingLimit = matchLimit - len(singleChars)
-        if remainingLimit > 0
-            let wordIndex = 0
-            while wordIndex < len(multiChars) && remainingLimit > 0
-                call add(a:ret, multiChars[wordIndex])
-                let wordIndex += 1
-                let remainingLimit -= 1
-            endwhile
+    if len(multiChars) > 1
+        call sort(multiChars, function('s:sortByLengthAndFrequency'))
+    endif
+    
+    " Add all single characters first (no limit)
+    call extend(a:ret, singleChars)
+    
+    " Then add multi-character words up to limit (already sorted by length)
+    let remainingLimit = matchLimit - len(singleChars)
+    if remainingLimit > 0
+        let wordIndex = 0
+        while wordIndex < len(multiChars) && remainingLimit > 0
+            call add(a:ret, multiChars[wordIndex])
+            let wordIndex += 1
+            let remainingLimit -= 1
+        endwhile
         endif
     endif
     
@@ -713,22 +713,22 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
             endwhile
         else
             " Normal mode: sort multi-chars by length first (shortest first), then by frequency
-            if len(multiChars) > 1
-                call sort(multiChars, function('s:sortByLengthAndFrequency'))
-            endif
-            
-            " Add all single characters first (no limit)
-            call extend(ret, singleChars)
-            
-            " Then add multi-character words up to remaining limit (already sorted by length)
-            let remainingLimit = matchLimit - len(singleChars)
-            if remainingLimit > 0
-                let wordIndex = 0
-                while wordIndex < len(multiChars) && remainingLimit > 0
-                    call add(ret, multiChars[wordIndex])
-                    let wordIndex += 1
-                    let remainingLimit -= 1
-                endwhile
+        if len(multiChars) > 1
+            call sort(multiChars, function('s:sortByLengthAndFrequency'))
+        endif
+        
+        " Add all single characters first (no limit)
+        call extend(ret, singleChars)
+        
+        " Then add multi-character words up to remaining limit (already sorted by length)
+        let remainingLimit = matchLimit - len(singleChars)
+        if remainingLimit > 0
+            let wordIndex = 0
+            while wordIndex < len(multiChars) && remainingLimit > 0
+                call add(ret, multiChars[wordIndex])
+                let wordIndex += 1
+                let remainingLimit -= 1
+            endwhile
             endif
         endif
         
