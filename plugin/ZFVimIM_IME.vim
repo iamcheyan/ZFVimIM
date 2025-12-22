@@ -1385,13 +1385,9 @@ endfunction
 
 function! s:curPage()
     if !empty(s:match_list) && &pumheight > 0
-        if s:completeItemAvailable && get(g:, 'ZFVimIM_freeScroll', 0)
-            execute 'let results = s:match_list[' . (s:page * &pumheight) . ':-1]'
-            return results
-        else
-            execute 'let results = s:match_list[' . (s:page * &pumheight) . ':' . ((s:page+1) * &pumheight - 1) . ']'
-            return results
-        endif
+        " Always return only one page of candidates (pumheight items)
+        execute 'let results = s:match_list[' . (s:page * &pumheight) . ':' . ((s:page+1) * &pumheight - 1) . ']'
+        return results
     else
         return []
     endif
