@@ -1914,17 +1914,59 @@ function! s:updateCandidates_sbzr()
                     \ })
         " 断词自动拼功能：当没有匹配时，尝试将最后一个字符拆分
         " 但在 SBZR 模式下，如果输入两个编码的单字，且最后一个字符是标签键（a/e/u/i/o），
-        " 则不触发断词自动拼，让标签键用于选择候选词
+        " 并且该标签键对应的候选词存在，则不触发断词自动拼，让标签键用于选择候选词
         if empty(s:fullResultList) && len(s:keyboard) > 1
             let suffixKey = strpart(s:keyboard, len(s:keyboard) - 1, 1)
             " 检查是否是两个编码的单字，且最后一个字符是标签键
             let isTwoCharSingleWord = (len(s:keyboard) == 2)
             let isLabelKey = (suffixKey ==# 'a' || suffixKey ==# 'e' || suffixKey ==# 'u' || suffixKey ==# 'i' || suffixKey ==# 'o')
             
-            " 如果是两个编码的单字且最后一个字符是标签键，不触发断词自动拼
+            " 如果是两个编码的单字且最后一个字符是标签键，检查该标签键对应的候选词是否存在
             if isTwoCharSingleWord && isLabelKey
-                " 不触发断词自动拼，让标签键用于选择候选词
-                " 这里不设置 s:fullResultList，让它保持为空
+                " 获取前缀的候选词列表（去掉最后一个标签键字符）
+                let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
+                let prefixCandidates = ZFVimIM_complete(prefixKey, {
+                            \ 'match': -2000,
+                            \ 'sentence': 0,
+                            \ 'crossDb': 0,
+                            \ 'predict': 0,
+                            \ })
+                " 检查标签键对应的候选词是否存在
+                " sbzr_label_map: {'a': 2, 'e': 3, 'u': 4, 'i': 5, 'o': 6}
+                " 表示 a 对应第2个候选词（索引1），e 对应第3个候选词（索引2），等等
+                " 注意：第1个候选词没有标签（索引0），所以标签键对应的索引需要减1
+                let labelPosition = (suffixKey ==# 'a') ? 2 : (suffixKey ==# 'e') ? 3 : (suffixKey ==# 'u') ? 4 : (suffixKey ==# 'i') ? 5 : (suffixKey ==# 'o') ? 6 : -1
+                let labelIndex = labelPosition - 1  " 转换为0-based索引
+                let candidateExists = (labelIndex >= 0 && labelIndex < len(prefixCandidates))
+                
+                " 只有当标签键对应的候选词存在时，才不触发断词自动拼
+                if candidateExists
+                    " 不触发断词自动拼，让标签键用于选择候选词
+                    " 这里不设置 s:fullResultList，让它保持为空
+                else
+                    " 标签键对应的候选词不存在，触发断词自动拼
+                    let prefixList = ZFVimIM_complete(prefixKey, {
+                                \ 'match': -1,
+                                \ 'sentence': 0,
+                                \ 'crossDb': 0,
+                                \ 'predict': 0,
+                                \ })
+                    let suffixList = ZFVimIM_complete(suffixKey, {
+                                \ 'match': 0 - limit,
+                                \ 'sentence': 0,
+                                \ 'crossDb': 0,
+                                \ 'predict': 0,
+                                \ })
+                    if !empty(prefixList) && !empty(suffixList)
+                        let prefixItem = prefixList[0]
+                        let suffixItem = suffixList[0]
+                        let combined = copy(prefixItem)
+                        let combined['word'] = prefixItem['word'] . suffixItem['word']
+                        let combined['displayWord'] = combined['word']
+                        let combined['len'] = len(s:keyboard)
+                        let s:fullResultList = [combined]
+                    endif
+                endif
             else
                 " 其他情况触发断词自动拼
                 let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
