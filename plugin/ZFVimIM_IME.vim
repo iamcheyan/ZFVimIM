@@ -1890,12 +1890,9 @@ function! s:updateCandidates()
         doautocmd User ZFVimIM_event_OnUpdateOmni
         return
     endif
-    " Use full match_list for floatRender instead of curPage() which limits by pumheight
-    if get(g:, 'ZFVimIM_freeScroll', 0)
-        call s:floatRender(s:match_list)
-    else
+    " Use curPage() for rendering to support pagination
+    " freeScroll mode still uses pagination, but allows scrolling through all candidates
     call s:floatRender(s:curPage())
-    endif
     doautocmd User ZFVimIM_event_OnUpdateOmni
 endfunction
 
@@ -1905,41 +1902,59 @@ function! s:updateCandidates_sbzr()
         execute 'set pumheight=' . defaultPumheight
     endif
     let limit = &pumheight
-    let s:fullResultList = ZFVimIM_complete(s:keyboard, {
-                \ 'match': 0 - limit,
-                \ 'sentence': 0,
-                \ 'crossDb': 0,
-                \ 'predict': 0,
-                \ })
-    if empty(s:fullResultList) && len(s:keyboard) > 1
-        let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
-        let suffixKey = strpart(s:keyboard, len(s:keyboard) - 1, 1)
-        let prefixList = ZFVimIM_complete(prefixKey, {
-                    \ 'match': -1,
+    let pageSize = limit
+    let keyboardChanged = (s:keyboard !=# s:lastKeyboard)
+    let needRefresh = keyboardChanged || empty(s:match_list)
+    if needRefresh
+        let matchLimit = get(g:, 'ZFVimIM_matchLimit', 0)
+        if matchLimit == 0
+            let matchLimit = -2000
+        endif
+        let s:fullResultList = ZFVimIM_complete(s:keyboard, {
+                    \ 'match': matchLimit,
                     \ 'sentence': 0,
                     \ 'crossDb': 0,
                     \ 'predict': 0,
                     \ })
-        let suffixList = ZFVimIM_complete(suffixKey, {
-                    \ 'match': 0 - limit,
-                    \ 'sentence': 0,
-                    \ 'crossDb': 0,
-                    \ 'predict': 0,
-                    \ })
-        if !empty(prefixList) && !empty(suffixList)
-            let prefixItem = prefixList[0]
-            let suffixItem = suffixList[0]
-            let combined = copy(prefixItem)
-            let combined['word'] = prefixItem['word'] . suffixItem['word']
-            let combined['displayWord'] = combined['word']
-            let combined['len'] = len(s:keyboard)
-            let s:fullResultList = [combined]
+        if empty(s:fullResultList) && len(s:keyboard) > 1
+            let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
+            let suffixKey = strpart(s:keyboard, len(s:keyboard) - 1, 1)
+            let prefixList = ZFVimIM_complete(prefixKey, {
+                        \ 'match': -1,
+                        \ 'sentence': 0,
+                        \ 'crossDb': 0,
+                        \ 'predict': 0,
+                        \ })
+            let suffixList = ZFVimIM_complete(suffixKey, {
+                        \ 'match': 0 - limit,
+                        \ 'sentence': 0,
+                        \ 'crossDb': 0,
+                        \ 'predict': 0,
+                        \ })
+            if !empty(prefixList) && !empty(suffixList)
+                let prefixItem = prefixList[0]
+                let suffixItem = suffixList[0]
+                let combined = copy(prefixItem)
+                let combined['word'] = prefixItem['word'] . suffixItem['word']
+                let combined['displayWord'] = combined['word']
+                let combined['len'] = len(s:keyboard)
+                let s:fullResultList = [combined]
+            endif
+        endif
+        let s:fullResultList = s:applyCandidateLimit(s:fullResultList)
+        let s:match_list = s:fullResultList
+        let s:loadedResultCount = len(s:fullResultList)
+        let s:page = 0
+    elseif s:pageup_pagedown != 0 && !empty(s:match_list) && pageSize > 0
+        let s:page += s:pageup_pagedown
+        let maxPage = (len(s:match_list) - 1) / pageSize
+        if s:page > maxPage
+            let s:page = maxPage
+        endif
+        if s:page < 0
+            let s:page = 0
         endif
     endif
-    let s:fullResultList = s:applyCandidateLimit(s:fullResultList)
-    let s:match_list = s:fullResultList
-    let s:loadedResultCount = len(s:fullResultList)
-    let s:page = 0
     let s:pageup_pagedown = 0
     let s:hasFullResults = 1
     let s:lastKeyboard = s:keyboard
@@ -1950,7 +1965,7 @@ function! s:updateCandidates_sbzr()
         doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
         return
     endif
-    call s:floatRender(s:match_list)
+    call s:floatRender(s:curPage())
     doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
 endfunction
 

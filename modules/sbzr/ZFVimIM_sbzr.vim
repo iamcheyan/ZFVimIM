@@ -80,8 +80,14 @@ function! s:apply_sbzr_settings()
         endif
         let g:ZFVimIM_labelList = copy(s:sbzr_labels)
         let g:ZFVimIM_pumheight = len(s:sbzr_labels)
-        let g:ZFVimIM_candidateLimit = len(s:sbzr_labels)
+        " 不限制候选词总数，允许翻页（pumheight 限制显示数量为6）
+        " candidateLimit 设为 0 表示不限制，这样翻页功能才能正常工作
+        let g:ZFVimIM_candidateLimit = 0
+        " matchLimit 设为负数表示精确匹配的数量限制，设为 -2000 允许匹配更多候选词
+        " 这样翻页时才能获取所有候选词
         let g:ZFVimIM_matchLimit = 0 - abs(s:sbzr_prev_matchLimit)
+        " 设置 freeScroll 模式，允许自由滚动和翻页
+        let g:ZFVimIM_freeScroll = 1
         let g:ZFVimIM_sbzr_mode = 1
         let s:sbzr_active = 1
     else
@@ -111,6 +117,10 @@ function! s:apply_sbzr_settings()
             elseif exists('g:ZFVimIM_sbzr_mode')
                 unlet g:ZFVimIM_sbzr_mode
             endif
+            " 恢复 freeScroll 设置（如果之前存在）
+            if exists('g:ZFVimIM_freeScroll')
+                unlet g:ZFVimIM_freeScroll
+            endif
             let s:sbzr_active = 0
         endif
     endif
@@ -131,13 +141,38 @@ function! ZFVimIM_sbzr_key(key)
     return ZFVimIME_input(a:key)
 endfunction
 
+" SBZR 翻页处理函数
+" 翻页函数内部已经检查了是否有候选词窗口，如果没有会正常输入字符
+function! ZFVimIM_sbzr_pageUp(key)
+    if !s:sbzr_enabled()
+        return ZFVimIME_pageUp(a:key)
+    endif
+    " 直接调用翻页函数，让它自己处理是否有候选词窗口的情况
+    return ZFVimIME_pageUp(a:key)
+endfunction
+
+function! ZFVimIM_sbzr_pageDown(key)
+    if !s:sbzr_enabled()
+        return ZFVimIME_pageDown(a:key)
+    endif
+    " 直接调用翻页函数，让它自己处理是否有候选词窗口的情况
+    return ZFVimIME_pageDown(a:key)
+endfunction
+
 function! s:apply_sbzr_keymaps()
     if !s:sbzr_enabled()
         return
     endif
+    " 映射字母键
     for key in split('abcdefghijklmnopqrstuvwxyz', '\zs')
         execute 'lnoremap <buffer><expr><silent> ' . key . ' ZFVimIM_sbzr_key("' . key . '")'
     endfor
+    " 映射翻页键：, 和 .
+    execute 'lnoremap <buffer><expr><silent> , ZFVimIM_sbzr_pageUp(",")'
+    execute 'lnoremap <buffer><expr><silent> . ZFVimIM_sbzr_pageDown(".")'
+    " 映射左右箭头键
+    execute 'lnoremap <buffer><expr><silent> <Left> ZFVimIM_sbzr_pageUp("<Left>")'
+    execute 'lnoremap <buffer><expr><silent> <Right> ZFVimIM_sbzr_pageDown("<Right>")'
 endfunction
 
 function! s:autoCommitSingleCandidate()
