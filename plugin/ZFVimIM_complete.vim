@@ -576,23 +576,41 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     " Extract common first character from multi-chars - DISABLED in intermediate stages
     " Only extract in mergeResult to avoid duplicate extraction
     
-    " Sort multi-chars by length first (shortest first), then by frequency
-    if len(multiChars) > 1
-        call sort(multiChars, function('s:sortByLengthAndFrequency'))
-    endif
-    
-    " Add all single characters first (no limit)
-    call extend(a:ret, singleChars)
-    
-    " Then add multi-character words up to limit (already sorted by length)
-    let remainingLimit = matchLimit - len(singleChars)
-    if remainingLimit > 0
+    " In SBZR mode, sort all candidates by frequency only (no length priority)
+    " Otherwise, sort multi-chars by length first, then by frequency
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        " SBZR mode: merge single chars and multi-chars, sort all by frequency
+        let allCandidates = singleChars + multiChars
+        if len(allCandidates) > 1
+            call sort(allCandidates, function('s:sortByFrequency'))
+        endif
+        " Add all candidates (already sorted by frequency)
+        let remainingLimit = matchLimit
         let wordIndex = 0
-        while wordIndex < len(multiChars) && remainingLimit > 0
-            call add(a:ret, multiChars[wordIndex])
+        while wordIndex < len(allCandidates) && remainingLimit > 0
+            call add(a:ret, allCandidates[wordIndex])
             let wordIndex += 1
             let remainingLimit -= 1
         endwhile
+    else
+        " Normal mode: sort multi-chars by length first (shortest first), then by frequency
+        if len(multiChars) > 1
+            call sort(multiChars, function('s:sortByLengthAndFrequency'))
+        endif
+        
+        " Add all single characters first (no limit)
+        call extend(a:ret, singleChars)
+        
+        " Then add multi-character words up to limit (already sorted by length)
+        let remainingLimit = matchLimit - len(singleChars)
+        if remainingLimit > 0
+            let wordIndex = 0
+            while wordIndex < len(multiChars) && remainingLimit > 0
+                call add(a:ret, multiChars[wordIndex])
+                let wordIndex += 1
+                let remainingLimit -= 1
+            endwhile
+        endif
     endif
     
     " Also try alias match for 4-character keys
@@ -677,23 +695,41 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
         " Extract common first character - DISABLED in intermediate stages
         " Only extract in mergeResult to avoid duplicate extraction
         
-        " Sort multi-chars by length first (shortest first), then by frequency
-        if len(multiChars) > 1
-            call sort(multiChars, function('s:sortByLengthAndFrequency'))
-        endif
-        
-        " Add all single characters first (no limit)
-        call extend(ret, singleChars)
-        
-        " Then add multi-character words up to remaining limit (already sorted by length)
-        let remainingLimit = matchLimit - len(singleChars)
-        if remainingLimit > 0
+        " In SBZR mode, sort all candidates by frequency only (no length priority)
+        " Otherwise, sort multi-chars by length first, then by frequency
+        if get(g:, 'ZFVimIM_sbzr_mode', 0)
+            " SBZR mode: merge single chars and multi-chars, sort all by frequency
+            let allCandidates = singleChars + multiChars
+            if len(allCandidates) > 1
+                call sort(allCandidates, function('s:sortByFrequency'))
+            endif
+            " Add all candidates (already sorted by frequency)
+            let remainingLimit = matchLimit
             let wordIndex = 0
-            while wordIndex < len(multiChars) && remainingLimit > 0
-                call add(ret, multiChars[wordIndex])
+            while wordIndex < len(allCandidates) && remainingLimit > 0
+                call add(ret, allCandidates[wordIndex])
                 let wordIndex += 1
                 let remainingLimit -= 1
             endwhile
+        else
+            " Normal mode: sort multi-chars by length first (shortest first), then by frequency
+            if len(multiChars) > 1
+                call sort(multiChars, function('s:sortByLengthAndFrequency'))
+            endif
+            
+            " Add all single characters first (no limit)
+            call extend(ret, singleChars)
+            
+            " Then add multi-character words up to remaining limit (already sorted by length)
+            let remainingLimit = matchLimit - len(singleChars)
+            if remainingLimit > 0
+                let wordIndex = 0
+                while wordIndex < len(multiChars) && remainingLimit > 0
+                    call add(ret, multiChars[wordIndex])
+                    let wordIndex += 1
+                    let remainingLimit -= 1
+                endwhile
+            endif
         endif
         
         " Update matchLimit (only count multi-chars towards limit)
@@ -856,12 +892,19 @@ endfunction
 
 " Sort list by frequency (used words first) within single char priority groups
 " Multi-chars are sorted by length first (shortest first), then by frequency
+" In SBZR mode, sort all by frequency only (no length priority)
 function! s:sortByFrequencyPriority(ret)
     if len(a:ret) <= 1
         return
     endif
     
-    " First separate single chars and multi-chars
+    " In SBZR mode, sort all candidates by frequency only
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        call sort(a:ret, function('s:sortByFrequency'))
+        return
+    endif
+    
+    " Normal mode: separate single chars and multi-chars
     let singleChars = []
     let multiChars = []
     for item in a:ret
