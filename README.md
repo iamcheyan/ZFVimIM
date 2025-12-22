@@ -27,17 +27,32 @@ return {
 
 ### 2. 配置词库
 
-> 💡 **最简单方式**：复制 [`assast/config/zfvimim.lua`](assast/config/zfvimim.lua) 到 `~/.config/nvim/lua/plugins/zfvimim.lua`，修改词库名称即可。
+> 💡 **最简单方式**：复制配置文件到 `~/.config/nvim/lua/plugins/zfvimim.lua`，修改词库名称即可。
 
-```bash
-cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua/plugins/zfvimim.lua
-```
+**配置文件选择**：
+
+- **标准模式**：复制 [`assast/config/zfvimim.lua`](assast/config/zfvimim.lua)
+  ```bash
+  cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua/plugins/zfvimim.lua
+  ```
+
+- **SBZR 模式**（声笔自然，4码后可用 a/e/u/i/o 快速选择）：启用 SBZR 模块
+  ```lua
+  -- 在主配置文件中启用 SBZR 模块
+  vim.g.ZFVimIM_settings = { 'sbzr' }
+  vim.g.zfvimim_default_dict_name = "sbzr"
+  ```
+  
+  或者直接加载模块配置文件：
+  ```lua
+  dofile(vim.fn.stdpath('data') .. '/lazy/ZFVimIM/modules/sbzr/config.lua')
+  ```
 
 **配置选项**：
 
 | 配置方式 | 变量 | 说明 |
 |---------|------|------|
-| 插件目录词库（推荐） | `vim.g.zfvimim_default_dict_name = "sbxlm.sbzr"` | 指定 `dict/` 目录下的文件名（不含扩展名） |
+| 插件目录词库（推荐） | `vim.g.zfvimim_default_dict_name = "default"` | 指定 `dict/` 目录下的文件名（不含扩展名） |
 | 自定义路径 | `vim.g.zfvimim_dict_path = "/path/to/dict.yaml"` | 指定完整路径 |
 
 **优先级**：`zfvimim_dict_path` > `zfvimim_default_dict_name` > `default_pinyin.yaml`
@@ -69,10 +84,9 @@ cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua
 
 | 命令 | 功能 | 说明 |
 |------|------|------|
-| `:IMImport [路径]` | 导入词库 | 完全以 YAML 为准，清空 DB 后重新导入。如指定路径则导入该 YAML 文件，否则使用默认词库 |
-| `:IMSync` | 同步词库 | 只增加 YAML 里有但 DB 没有的，不删除 |
-| `:IMInit` | 初始化 YAML | 用 DB 覆盖 YAML（从数据库初始化 YAML 文件） |
-| `:IMBackup [路径]` | 备份词库 | 备份 YAML 和 DB 文件（带时间戳）。如指定路径则备份到该路径，否则备份到 `dict/` 目录 |
+| `:IMInit` | 初始化数据库 | 从 YAML 导入到 DB（强制覆盖 DB） |
+| `:IMBackup` | 备份词库 | 从 DB 导出到 YAML（覆盖 YAML 文件） |
+| `:IMSync` | 同步词库 | 从 YAML 新增到 DB（只增加，不删除） |
 | `:IMInfo` | 显示词库信息 | 显示词库详细信息 |
 | `:IMClear` | 清理缓存 | 清理缓存并重新加载词库 |
 
@@ -95,15 +109,15 @@ cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua
 
 | 功能 | 命令 | 数据源 | 目标 | 删除行为 |
 |------|------|--------|------|----------|
-| **导入** | `:IMImport` | YAML | DB | YAML 中删除的，DB 中也会删除 |
-| **同步** | `:IMSync` | YAML | DB | YAML 中删除的，DB 中**不删除** |
-| **初始化** | `:IMInit` | DB | YAML | DB 中没有的，YAML 中会被删除 |
+| **初始化** | `:IMInit` | YAML | DB | YAML 中删除的，DB 中也会删除（强制覆盖） |
+| **备份** | `:IMBackup` | DB | YAML | DB 中删除的，YAML 中也会删除（强制覆盖） |
+| **同步** | `:IMSync` | YAML | DB | YAML 中删除的，DB 中**不删除**（只增加） |
 
 **使用建议**：
 - **日常添加新词**：编辑 YAML → `:IMSync`（推荐）
 - **批量添加新词**：`:IMAdd` → 自动保存到 YAML → 自动同步到 DB
-- **完全重置**：修改 YAML → `:IMImport`
-- **以数据库为准**：使用输入法自动添加的词 → `:IMInit` 初始化 YAML
+- **初始化数据库**：修改 YAML → `:IMInit`（用 YAML 强制覆盖 DB）
+- **备份词库**：使用输入法自动添加的词 → `:IMBackup`（用 DB 覆盖 YAML）
 
 
 ## 配置
@@ -112,10 +126,14 @@ cp ~/.local/share/nvim/lazy/ZFVimIM/assast/config/zfvimim.lua ~/.config/nvim/lua
 
 ```lua
 -- 方法1：使用插件目录下的词库（推荐）
-vim.g.zfvimim_default_dict_name = "sbxlm.sbzr"
+vim.g.zfvimim_default_dict_name = "default"
 
 -- 方法2：使用自定义路径
 vim.g.zfvimim_dict_path = vim.fn.stdpath("config") .. "/zfvimim_db/dict.yaml"
+
+-- 方法3：使用模块词库（如 SBZR 模块）
+vim.g.ZFVimIM_settings = { 'sbzr' }
+vim.g.zfvimim_default_dict_name = "sbzr"
 ```
 
 ### 高级配置
@@ -216,13 +234,15 @@ ceshi	测试	测时
 **删除词**：
 - 使用 `:IMRemove <词1> [词2] ...` 批量删除
 
-**词库同步**：
-- 编辑 YAML → `:IMSync`（只增加，不删除）
-- 完全重置 → `:IMImport`（完全以 YAML 为准）
-- 以数据库为准 → `:IMExport`（用 DB 覆盖 YAML）
+**词库管理**：
+- **初始化**：`:IMInit` - 从 YAML 导入到 DB（强制覆盖）
+- **备份**：`:IMBackup` - 从 DB 导出到 YAML（覆盖 YAML）
+- **同步**：`:IMSync` - 从 YAML 新增到 DB（只增加，不删除）
 
 ## 相关链接
 
 - 原项目：[ZSaberLv0/ZFVimIM](https://github.com/ZSaberLv0/ZFVimIM)
 - 适配版本：[iamcheyan/ZFVimIM](https://github.com/iamcheyan/ZFVimIM)
-- 配置文件：[`assast/config/zfvimim.lua`](assast/config/zfvimim.lua)
+- 配置文件：
+  - 标准模式：[`assast/config/zfvimim.lua`](assast/config/zfvimim.lua)
+  - SBZR 模块：[`modules/sbzr/config.lua`](modules/sbzr/config.lua)

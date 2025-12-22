@@ -139,10 +139,24 @@ function! s:ZFVimIM_autoLoadDict()
         if defaultDictName !~ '\.yaml$'
             let defaultDictName = defaultDictName . '.yaml'
         endif
-        let defaultDict = dictDir . '/' . defaultDictName
+        
+        " First, try to find in module directory
+        if exists('*ZFVimIM_getModuleDictPath')
+            let dictNameNoExt = substitute(defaultDictName, '\.yaml$', '', '')
+            let moduleDictPath = ZFVimIM_getModuleDictPath(dictNameNoExt, dictNameNoExt)
+            if !empty(moduleDictPath) && filereadable(moduleDictPath)
+                let defaultDict = moduleDictPath
+            else
+                " Fallback to regular dict directory
+                let defaultDict = dictDir . '/' . defaultDictName
+            endif
+        else
+            " Fallback to regular dict directory
+            let defaultDict = dictDir . '/' . defaultDictName
+        endif
     else
         " Default dictionary: default.yaml
-            let defaultDict = dictDir . '/default.yaml'
+        let defaultDict = dictDir . '/default.yaml'
     endif
     
     " Check if zfvimim_dict_path is set
@@ -641,6 +655,84 @@ function! ZFVimIME_label(n, ...)
     return ''
 endfunction
 
+function! ZFVimIME_chooseFirst()
+    if mode() != 'i' || empty(s:match_list)
+        return ''
+    endif
+    call s:chooseItem(s:match_list[0])
+    return ''
+endfunction
+
+function! ZFVimIME_chooseIndex(index)
+    if mode() != 'i' || empty(s:match_list)
+        return ''
+    endif
+    let idx = a:index
+    if idx < 0
+        let idx = len(s:match_list) - 1
+    endif
+    if idx < 0 || idx >= len(s:match_list)
+        return ''
+    endif
+    call s:chooseItem(s:match_list[idx])
+    return ''
+endfunction
+
+function! ZFVimIME_labelWithTail(n, tail)
+    if mode() != 'i' || !s:floatVisible()
+        return ZFVimIME_input(a:tail)
+    endif
+    let curPage = s:curPage()
+    let n = a:n < 1 ? 9 : a:n - 1
+    if n >= len(curPage)
+        return ZFVimIME_input(a:tail)
+    endif
+    let s:labelWithTailPending = {
+                \ 'item' : curPage[n],
+                \ 'tail' : a:tail,
+                \ 'pos' : getpos('.'),
+                \ 'start' : s:start_column,
+                \ }
+    if has('timers')
+        call timer_start(0, function('s:labelWithTailApply'))
+    else
+        call s:labelWithTailApply(0)
+    endif
+    return ''
+endfunction
+
+function! s:labelWithTailApply(...)
+    if !exists('s:labelWithTailPending')
+        return
+    endif
+    let pending = s:labelWithTailPending
+    unlet s:labelWithTailPending
+    let item = pending['item']
+    let tail = pending['tail']
+    let cursor_positions = pending['pos']
+    let line = getline(cursor_positions[1])
+    let startCol = pending['start']
+    let endCol = cursor_positions[2] - 1
+    if startCol < 1
+        let startCol = 1
+    endif
+    if endCol < startCol - 1
+        let endCol = startCol - 1
+    endif
+    let prefix = strpart(line, 0, startCol - 1)
+    let suffix = strpart(line, endCol)
+    let insertText = item['word'] . tail
+    let s:confirmFlag = 1
+    call s:didChoose(item)
+    call setline(cursor_positions[1], prefix . insertText . suffix)
+    let newCol = startCol + strlen(insertText)
+    call setpos('.', [cursor_positions[0], cursor_positions[1], newCol, cursor_positions[3]])
+    let s:pending_left_len = 0
+    call s:resetAfterInsert()
+    let s:seamless_positions = [cursor_positions[0], cursor_positions[1], startCol + strlen(item['word']), cursor_positions[3]]
+    call s:updateCandidates()
+endfunction
+
 function! ZFVimIME_pageUp(key, ...)
     if mode() != 'i' || !s:floatVisible()
         call s:symbolForward(get(a:, 1, a:key))
@@ -669,11 +761,21 @@ function! ZFVimIME_updatePage()
     return ''
 endfunction
 
+function! ZFVimIME_updateCandidatesNow()
+    if mode() == 'i'
+        call s:updateCandidates()
+    endif
+    return ''
+endfunction
+
 function! ZFVimIME_tabNext(...)
     if mode() != 'i' || !s:floatVisible()
         " If popup is not visible, insert tab normally
         call s:symbolForward(get(a:, 1, "\<tab>"))
         return ''
+    endif
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        return ZFVimIME_chooseIndex(1)
     endif
     call s:floatMove(1)
     return ''
@@ -683,6 +785,9 @@ function! ZFVimIME_tabPrev(...)
     if mode() != 'i' || !s:floatVisible()
         " If popup is not visible, do nothing (Shift+Tab in terminal may not work)
         return ''
+    endif
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        return ZFVimIME_chooseIndex(-1)
     endif
     call s:floatMove(-1)
     return ''
@@ -1034,6 +1139,41 @@ function! s:vimrcSave()
     let s:saved_pumwidth    = &pumwidth
 endfunction
 
+function! s:getLabelList()
+    let labelList = get(g:, 'ZFVimIM_labelList', [])
+    if type(labelList) == type([])
+        return labelList
+    elseif type(labelList) == type('')
+        if empty(labelList)
+            return []
+        endif
+        return split(labelList, '\zs')
+    endif
+    return []
+endfunction
+
+function! s:defaultPumheight()
+    if exists('g:ZFVimIM_pumheight')
+        return g:ZFVimIM_pumheight
+    endif
+    let labelList = s:getLabelList()
+    if !empty(labelList)
+        return len(labelList)
+    endif
+    return 10
+endfunction
+
+function! s:applyCandidateLimit(list)
+    let candidateLimit = get(g:, 'ZFVimIM_candidateLimit', 0)
+    if candidateLimit <= 0
+        return a:list
+    endif
+    if len(a:list) > candidateLimit
+        return a:list[0 : candidateLimit - 1]
+    endif
+    return a:list
+endfunction
+
 function! s:vimrcSetup()
     set omnifunc=ZFVimIME_omnifunc
     set completeopt=menuone
@@ -1041,7 +1181,7 @@ function! s:vimrcSetup()
         " some old vim does not have `c`
         silent! set shortmess+=c
     endtry
-    set pumheight=10
+    execute 'set pumheight=' . s:defaultPumheight()
     set pumwidth=0
 endfunction
 
@@ -1355,12 +1495,15 @@ function! s:floatRender(list)
         call s:floatClose()
         return
     endif
+    let labelList = s:getLabelList()
     let label = 1
     let lines = []
     let labelWidths = []
     let origRanges = []
     for item in a:list
-        if get(g:, 'ZFVimIM_freeScroll', 0)
+        if !empty(labelList)
+            let labelstring = get(labelList, label - 1, '?')
+        elseif get(g:, 'ZFVimIM_freeScroll', 0)
             let labelstring = printf('%2d', label == 10 ? 0 : label)
         else
             if label >= 1 && label <= 9
@@ -1372,9 +1515,24 @@ function! s:floatRender(list)
             endif
         endif
         let left = strpart(s:keyboard, item['len'])
-        let labelcell = ' ' . labelstring . ' '
-        let wordPart = ' ' . item['word'] . left . ' '
-        let content = wordPart
+        let hasDisplay = get(g:, 'ZFVimIM_sbzr_mode', 0) && has_key(item, 'displayWord')
+        if !empty(labelList)
+            let labelcell = ' '
+            if hasDisplay
+                let wordPart = ' ' . item['displayWord']
+            else
+                let wordPart = ' ' . item['word'] . left
+            endif
+            let content = wordPart
+            if labelstring != ''
+                let content .= labelstring
+            endif
+            let content .= ' '
+        else
+            let labelcell = ' ' . labelstring . ' '
+            let wordPart = ' ' . item['word'] . left . ' '
+            let content = wordPart
+        endif
         let origRange = [-1, -1, -1]
         let origKey = get(item, 'key', '')
         if !empty(origKey)
@@ -1582,6 +1740,10 @@ function! s:updateCandidates()
         let s:fullResultList = []
         return
     endif
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        call s:updateCandidates_sbzr()
+        return
+    endif
     
     " Check if keyboard actually changed (not just cached lookup)
     " This is critical: if keyboard changed, we MUST do a new search
@@ -1592,8 +1754,9 @@ function! s:updateCandidates()
     let s:lastKeyboard = s:keyboard
     
     " Ensure pumheight is set correctly
-    if &pumheight <= 0 || &pumheight < 10
-        set pumheight=10
+    let defaultPumheight = s:defaultPumheight()
+    if &pumheight <= 0 || &pumheight < defaultPumheight
+        execute 'set pumheight=' . defaultPumheight
     endif
     let pageSize = &pumheight
     
@@ -1617,9 +1780,13 @@ function! s:updateCandidates()
         let s:fullResultList = ZFVimIM_complete(s:keyboard, {'match': initialLimit})
         let s:fullResultList = s:filterMatchListByPrefix(s:fullResultList, s:keyboard)
         let s:fullResultList = s:deduplicateCandidates(s:fullResultList)
+        let s:fullResultList = s:applyCandidateLimit(s:fullResultList)
         
         " Mark as partial; load more lazily when needed
         let s:hasFullResults = 0
+        if get(g:, 'ZFVimIM_candidateLimit', 0) > 0
+            let s:hasFullResults = 1
+        endif
         
         " Cache full result list (but don't load all at once)
         " Also cache the hasFullResults flag
@@ -1685,6 +1852,7 @@ function! s:updateCandidates()
             let s:fullResultList = ZFVimIM_complete(s:keyboard)
             let s:fullResultList = s:filterMatchListByPrefix(s:fullResultList, s:keyboard)
             let s:fullResultList = s:deduplicateCandidates(s:fullResultList)
+            let s:fullResultList = s:applyCandidateLimit(s:fullResultList)
             " Update cache with full results
             let s:completeCache[s:keyboard] = s:fullResultList
             if !exists('s:completeCacheFull')
@@ -1712,8 +1880,15 @@ function! s:updateCandidates()
     endif
     let s:pageup_pagedown = 0
     " Debug: check if pumheight is limiting candidates
-    if &pumheight <= 0 || &pumheight < 10
-        set pumheight=10
+    let defaultPumheight = s:defaultPumheight()
+    if &pumheight <= 0 || &pumheight < defaultPumheight
+        execute 'set pumheight=' . defaultPumheight
+    endif
+    let skipFew = get(g:, 'ZFVimIM_skipFloatWhenFew', 0)
+    if skipFew > 0 && len(s:match_list) <= skipFew
+        call s:floatClose()
+        doautocmd User ZFVimIM_event_OnUpdateOmni
+        return
     endif
     " Use full match_list for floatRender instead of curPage() which limits by pumheight
     if get(g:, 'ZFVimIM_freeScroll', 0)
@@ -1724,8 +1899,67 @@ function! s:updateCandidates()
     doautocmd User ZFVimIM_event_OnUpdateOmni
 endfunction
 
+function! s:updateCandidates_sbzr()
+    let defaultPumheight = s:defaultPumheight()
+    if &pumheight <= 0 || &pumheight < defaultPumheight
+        execute 'set pumheight=' . defaultPumheight
+    endif
+    let limit = &pumheight
+    let s:fullResultList = ZFVimIM_complete(s:keyboard, {
+                \ 'match': 0 - limit,
+                \ 'sentence': 0,
+                \ 'crossDb': 0,
+                \ 'predict': 0,
+                \ })
+    if empty(s:fullResultList) && len(s:keyboard) > 1
+        let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
+        let suffixKey = strpart(s:keyboard, len(s:keyboard) - 1, 1)
+        let prefixList = ZFVimIM_complete(prefixKey, {
+                    \ 'match': -1,
+                    \ 'sentence': 0,
+                    \ 'crossDb': 0,
+                    \ 'predict': 0,
+                    \ })
+        let suffixList = ZFVimIM_complete(suffixKey, {
+                    \ 'match': 0 - limit,
+                    \ 'sentence': 0,
+                    \ 'crossDb': 0,
+                    \ 'predict': 0,
+                    \ })
+        if !empty(prefixList) && !empty(suffixList)
+            let prefixItem = prefixList[0]
+            let suffixItem = suffixList[0]
+            let combined = copy(prefixItem)
+            let combined['word'] = prefixItem['word'] . suffixItem['word']
+            let combined['displayWord'] = combined['word']
+            let combined['len'] = len(s:keyboard)
+            let s:fullResultList = [combined]
+        endif
+    endif
+    let s:fullResultList = s:applyCandidateLimit(s:fullResultList)
+    let s:match_list = s:fullResultList
+    let s:loadedResultCount = len(s:fullResultList)
+    let s:page = 0
+    let s:pageup_pagedown = 0
+    let s:hasFullResults = 1
+    let s:lastKeyboard = s:keyboard
+
+    let skipFew = get(g:, 'ZFVimIM_skipFloatWhenFew', 0)
+    if skipFew > 0 && len(s:match_list) <= skipFew
+        call s:floatClose()
+        doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
+        return
+    endif
+    call s:floatRender(s:match_list)
+    doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
+endfunction
+
 " Debounced version of updateCandidates
 function! s:updateCandidatesDebounced()
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        call s:updateCandidates()
+        return
+    endif
     " First, try to get current keyboard state (peek without updating)
     " Use updateKeyboardFromCursor logic but don't update s:keyboard yet
     let cursor_positions = getpos('.')
@@ -1798,12 +2032,15 @@ function! s:popupMenuList(complete)
     if empty(a:complete) || type(a:complete) != type([])
         return []
     endif
+    let labelList = s:getLabelList()
     let label = 1
     let popup_list = []
     for item in a:complete
         " :h complete-items
         let complete_items = {}
-        if get(g:, 'ZFVimIM_freeScroll', 0)
+        if !empty(labelList)
+            let labelstring = get(labelList, label - 1, '?')
+        elseif get(g:, 'ZFVimIM_freeScroll', 0)
             let labelstring = printf('%2d', label == 10 ? 0 : label)
         else
             if label >= 1 && label <= 9
@@ -1815,11 +2052,27 @@ function! s:popupMenuList(complete)
             endif
         endif
         let left = strpart(s:keyboard, item['len'])
-        let complete_items['abbr'] = item['word']
-        let complete_items['word'] = item['word']
+        let hasDisplay = get(g:, 'ZFVimIM_sbzr_mode', 0) && has_key(item, 'displayWord')
+        if !empty(labelList)
+            if hasDisplay
+                let wordText = item['displayWord']
+            else
+                let wordText = item['word'] . left
+            endif
+            if labelstring != ''
+                let wordText .= labelstring
+            endif
+            let complete_items['abbr'] = wordText
+            let complete_items['word'] = wordText
+        else
+            let complete_items['abbr'] = item['word']
+            let complete_items['word'] = item['word']
+        endif
 
         let complete_items['dup'] = 1
-        let complete_items['word'] .= left
+        if empty(labelList)
+            let complete_items['word'] .= left
+        endif
         if s:completeItemAvailable
             let complete_items['info'] = ZFVimIM_json_encode(item)
         endif
@@ -1828,7 +2081,7 @@ function! s:popupMenuList(complete)
     endfor
 
     let &completeopt = 'menuone'
-    let &pumheight = 10
+    let &pumheight = s:defaultPumheight()
     return popup_list
 endfunction
 
@@ -2976,18 +3229,14 @@ command! -nargs=0 IMInfo call ZFVimIM_showInfo()
 " Sync YAML file to database (only add new entries, don't delete)
 command! -nargs=0 IMSync call ZFVimIM_syncTxtToDb()
 
-" Initialize YAML file from database (force overwrite YAML with DB content)
-command! -nargs=0 IMInit call ZFVimIM_exportDbToTxt()
-command! -nargs=0 IMExport call ZFVimIM_exportDbToTxt()  " Deprecated: use IMInit
+" Initialize database from YAML file (force overwrite DB with YAML content)
+command! -nargs=0 IMInit call ZFVimIM_importTxtToDb('')
 
-" Import YAML file to database (clear DB and reimport from YAML)
-command! -nargs=? -complete=file IMImport call ZFVimIM_importTxtToDb(<q-args>)
+" Backup: export DB to YAML (overwrite YAML with DB content)
+command! -nargs=0 IMBackup call ZFVimIM_exportDbToTxt()
 
 " Edit dictionary (open in new tab, edit and save to import)
 command! -nargs=0 IMEdit call ZFVimIM_editDict()
-
-" Backup dictionary (export YAML and DB to specified directory or dict/ directory)
-command! -nargs=? -complete=dir IMBackup call ZFVimIM_backupDict(<q-args>)
 
 " ============================================================
 " Legacy commands removed - use IM* commands instead
@@ -3103,7 +3352,7 @@ endfunction
 function! ZFVimIM_exportDbToTxt()
     " Check if Python is available
     if !executable('python') && !executable('python3')
-        echom '[ZFVimIM] Error: Python not found, cannot initialize YAML from database'
+        echom '[ZFVimIM] Error: Python not found, cannot backup dictionary'
         return
     endif
     
@@ -3153,7 +3402,7 @@ function! ZFVimIM_exportDbToTxt()
     " Get script path
     let scriptPath = pluginDir . '/misc/db_export_to_txt.py'
     if !filereadable(scriptPath)
-        echom '[ZFVimIM] Error: 初始化脚本未找到: ' . scriptPath
+        echom '[ZFVimIM] Error: 备份脚本未找到: ' . scriptPath
         return
     endif
     
@@ -3166,9 +3415,9 @@ function! ZFVimIM_exportDbToTxt()
         let dbPathAbs = CygpathFix_absPath(dbPath)
         let yamlPathAbs = CygpathFix_absPath(yamlPath)
         
-        echom '[ZFVimIM] 开始初始化 YAML 文件（从数据库）...'
+        echom '[ZFVimIM] 开始备份（从数据库导出到 YAML）...'
         echom '[ZFVimIM] 数据库: ' . dbPathAbs
-        echom '[ZFVimIM] 输出文件: ' . yamlPathAbs
+        echom '[ZFVimIM] YAML 文件: ' . yamlPathAbs
         
         let cmdList = [pythonCmd, scriptPathAbs, dbPathAbs, yamlPathAbs]
         let result = system(join(cmdList, ' '))
@@ -3182,12 +3431,12 @@ function! ZFVimIM_exportDbToTxt()
         endfor
         
         if v:shell_error == 0
-            echom '[ZFVimIM] ✅ YAML 文件初始化完成！'
+            echom '[ZFVimIM] ✅ 备份完成！'
         else
-            echom '[ZFVimIM] ❌ YAML 文件初始化失败，请检查错误信息'
+            echom '[ZFVimIM] ❌ 备份失败，请检查错误信息'
         endif
     catch /.*/
-        echom '[ZFVimIM] Error: 初始化过程出错: ' . v:exception
+        echom '[ZFVimIM] Error: 备份过程出错: ' . v:exception
     endtry
 endfunction
 
@@ -3468,6 +3717,118 @@ function! ZFVimIM_showInfo()
     endif
     
     echo "=========================================="
+    
+    " 整理词库：去重、格式化、去掉不规范条目
+    echo ""
+    echo "=========================================="
+    echo "正在整理词库..."
+    echo "=========================================="
+    
+    " Check if Python is available
+    if !executable('python') && !executable('python3')
+        echo "❌ Python 未找到，无法整理词库"
+        return
+    endif
+    
+    " Get current dictionary YAML path
+    let yamlPath = ''
+    if exists('g:ZFVimIM_db') && len(g:ZFVimIM_db) > 0
+        let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
+        if has_key(db, 'implData') && has_key(db['implData'], 'yamlPath')
+            let yamlPath = db['implData']['yamlPath']
+        endif
+    endif
+    
+    " Fallback: try to get from default dict name
+    if empty(yamlPath)
+        let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+        let sfileDir = expand('<sfile>:p:h:h')
+        if isdirectory(sfileDir . '/dict')
+            let pluginDir = sfileDir
+        endif
+        let dictDir = pluginDir . '/dict'
+        
+        if exists('g:zfvimim_default_dict_name') && !empty(g:zfvimim_default_dict_name)
+            let defaultDictName = g:zfvimim_default_dict_name
+            if defaultDictName !~ '\.yaml$'
+                let defaultDictName = defaultDictName . '.yaml'
+            endif
+            
+            " First, try to find in module directory
+            if exists('*ZFVimIM_getModuleDictPath')
+                let dictNameNoExt = substitute(defaultDictName, '\.yaml$', '', '')
+                let moduleDictPath = ZFVimIM_getModuleDictPath(dictNameNoExt, dictNameNoExt)
+                if !empty(moduleDictPath) && filereadable(moduleDictPath)
+                    let yamlPath = moduleDictPath
+                else
+                    " Fallback to regular dict directory
+                    let yamlPath = dictDir . '/' . defaultDictName
+                endif
+            else
+                " Fallback to regular dict directory
+                let yamlPath = dictDir . '/' . defaultDictName
+            endif
+        elseif exists('g:zfvimim_dict_path') && !empty(g:zfvimim_dict_path)
+            let yamlPath = expand(g:zfvimim_dict_path)
+        else
+            let yamlPath = dictDir . '/default.yaml'
+        endif
+    endif
+    
+    if empty(yamlPath) || !filereadable(yamlPath)
+        echo "❌ 未找到词库 YAML 文件: " . yamlPath
+        return
+    endif
+    
+    " Get script path
+    let pluginDir = stdpath('data') . '/lazy/ZFVimIM'
+    let sfileDir = expand('<sfile>:p:h:h')
+    if isdirectory(sfileDir . '/misc')
+        let pluginDir = sfileDir
+    endif
+    let scriptPath = pluginDir . '/misc/clean_dict.py'
+    
+    if !filereadable(scriptPath)
+        echo "❌ 整理脚本未找到: " . scriptPath
+        return
+    endif
+    
+    " Determine Python command
+    let pythonCmd = executable('python3') ? 'python3' : 'python'
+    
+    " Run clean script
+    try
+        let scriptPathAbs = CygpathFix_absPath(scriptPath)
+        let yamlPathAbs = CygpathFix_absPath(yamlPath)
+        
+        echo "YAML 文件: " . yamlPathAbs
+        echo "正在执行整理..."
+        
+        let cmdList = [pythonCmd, scriptPathAbs, yamlPathAbs]
+        let result = system(join(cmdList, ' '))
+        
+        " Display result
+        let lines = split(result, '\n')
+        for line in lines
+            if !empty(line)
+                echo line
+            endif
+        endfor
+        
+        if v:shell_error == 0
+            echo ""
+            echo "✅ 词库整理完成！"
+            echo ""
+            echo "提示: 整理后的词库已保存到 YAML 文件"
+            echo "      如需更新数据库，请运行: :IMInit"
+        else
+            echo ""
+            echo "❌ 词库整理失败，请检查错误信息"
+        endif
+    catch /.*/
+        echo "❌ 整理过程出错: " . v:exception
+    endtry
+    
 endfunction
 
 " ============================================================
@@ -3799,7 +4160,7 @@ function! ZFVimIM_editDict()
     let dbPath = s:ZFVimIM_getDbPath(dictPath)
     if !filereadable(dbPath)
         echom '[ZFVimIM] 错误: 数据库文件不存在: ' . dbPath
-        echom '[ZFVimIM] 请先运行 :IMImport 导入词库'
+        echom '[ZFVimIM] 请先运行 :IMInit 初始化词库'
         return
     endif
     
@@ -4146,7 +4507,7 @@ function! ZFVimIM_backupDict(...)
     " Check if database file exists
     if empty(dbPath) || !filereadable(dbPath)
         echom '[ZFVimIM] 错误: 数据库文件不存在: ' . dbPath
-        echom '[ZFVimIM] 请先运行 :IMImport 导入词库'
+        echom '[ZFVimIM] 请先运行 :IMInit 初始化词库'
         return
     endif
     
