@@ -131,26 +131,23 @@ function! ZFVimIM_sbzr_key(key)
         return ZFVimIME_input(a:key)
     endif
     let state = ZFVimIME_state()
-    let keyLen = len(get(state, 'key', ''))
-    let hasCandidates = !empty(get(state, 'list', []))
-    
-    " 如果有候选词显示，且按键是标签键（a/e/u/i/o），则选择对应的候选词
-    " 特别处理：两个编码的单字时，标签键用于选择候选词
-    if hasCandidates && has_key(s:sbzr_label_map, a:key)
-        " 两个编码的单字时，标签键直接选择候选词
-        if keyLen == 2
-            return ZFVimIME_label(s:sbzr_label_map[a:key])
+    let candidates = get(state, 'list', [])
+    if has_key(s:sbzr_label_map, a:key)
+        if !empty(candidates)
+            let pageSize = len(get(g:, 'ZFVimIM_labelList', s:sbzr_labels))
+            if pageSize <= 0
+                let pageSize = len(s:sbzr_labels)
+            endif
+            let pageIndex = max([0, get(state, 'page', 0)])
+            let startIdx = pageIndex * pageSize
+            let labelPos = s:sbzr_label_map[a:key]
+            let candidateIdx = startIdx + (labelPos - 1)
+            if startIdx < len(candidates) && candidateIdx < len(candidates) && (labelPos - 1) < pageSize
+                return ZFVimIME_label(labelPos)
+            endif
         endif
-        " 其他情况（如4码）也使用标签键选择候选词
-        return ZFVimIME_label(s:sbzr_label_map[a:key])
+        return ZFVimIME_input(a:key)
     endif
-    
-    " 如果输入了4码且有候选词，其他按键用于继续输入
-    if keyLen == 4 && hasCandidates
-        return ZFVimIME_labelWithTail(1, a:key)
-    endif
-    
-    " 其他情况正常输入
     return ZFVimIME_input(a:key)
 endfunction
 
