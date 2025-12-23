@@ -3106,35 +3106,133 @@ endfunction
 function! ZFVimIM_recentComboCandidate(key)
     let keyLen = len(a:key)
     
-    " 处理四个字组合（4个编码：每个字的声母各1个）
-    " 例如：Jthj = J(今) + t(天) + h(回) + j(家)
-    " 条件：prev_commit 和 last_commit 都是两个字（编码长度 >= 4）
+    " 调试：函数入口
+    if get(g:, 'ZFVimIM_debug', 0)
+        echom '[DEBUG] ZFVimIM_recentComboCandidate called: key=' . a:key . ', keyLen=' . keyLen
+        echom '[DEBUG]   prev_commit exists: ' . (!empty(s:prev_commit))
+        echom '[DEBUG]   last_commit exists: ' . (!empty(s:last_commit))
+        if !empty(s:prev_commit)
+            echom '[DEBUG]   prev_commit: key=' . get(s:prev_commit, 'key', '') . ', word=' . get(s:prev_commit, 'word', '')
+        endif
+        if !empty(s:last_commit)
+            echom '[DEBUG]   last_commit: key=' . get(s:last_commit, 'key', '') . ', word=' . get(s:last_commit, 'word', '')
+        endif
+    endif
+    
+    " 处理多字组合（4个编码：前三个字的声母 + 最后一个字的声母）
+    " 规则：前三个字的声母 + 最后一个字的声母
+    " 例如：
+    "   - wgxn = w(我) + g(共) + x(享) + n(你) = 我共享给你 (wgxd + gzni)
+    "   - wswt = w(我) + s(是) + w(王) + t(天) = 我是王浩天 (wosi + whtm)
+    "   - xngj = x(性) + n(能) + g(更) + j(机) = 性能更好新手机 (xngh + xsji)
+    " 条件：prev_commit 和 last_commit 都存在
     if keyLen == 4 && !empty(s:prev_commit) && !empty(s:last_commit)
         let prevKey = get(s:prev_commit, 'key', '')
         let lastKey = get(s:last_commit, 'key', '')
+        let prevWord = get(s:prev_commit, 'word', '')
+        let lastWord = get(s:last_commit, 'word', '')
         
-        " 检查是否都是两个字（编码长度 >= 4）
-        if len(prevKey) >= 4 && len(lastKey) >= 4
-            " 从 prev_commit 提取两个字的声母
-            " 例如：Jntm -> J(今) + t(天)
-            let firstInitial = strpart(prevKey, 0, 1)   " 第一个字的声母
-            let secondInitial = strpart(prevKey, 2, 1)  " 第二个字的声母
+        " 计算总字数
+        let totalWordLen = len(prevWord) + len(lastWord)
+        
+        " 如果总字数 >= 3，使用规则：前三个字的声母 + 最后一个字的声母
+        if totalWordLen >= 3
+            let firstInitial = ''
+            let secondInitial = ''
+            let thirdInitial = ''
+            let lastInitial = ''
             
-            " 从 last_commit 提取两个字的声母
-            " 例如：hvjw -> h(回) + j(家)
-            let thirdInitial = strpart(lastKey, 0, 1)   " 第三个字的声母
-            let fourthInitial = strpart(lastKey, 2, 1)  " 第四个字的声母
+            " 计算每个字的编码长度（用于定位声母）
+            " 假设：编码长度 = 字数（每个字1个编码）或 编码长度 = 字数 * 2（每个字2个编码）
+            let prevKeyLen = len(prevKey)
+            let lastKeyLen = len(lastKey)
+            " 使用 strchars() 计算中文字符数（而不是字节数）
+            let prevWordLen = strchars(prevWord)
+            let lastWordLen = strchars(lastWord)
             
-            " 组合编码：四个字的声母
-            " 例如：J + t + h + j = Jthj
-            let comboKey = firstInitial . secondInitial . thirdInitial . fourthInitial
+            " 判断编码模式：如果编码长度等于字数，则每个字1个编码；否则每个字2个编码
+            let prevCharsPerWord = (prevKeyLen == prevWordLen) ? 1 : 2
+            let lastCharsPerWord = (lastKeyLen == lastWordLen) ? 1 : 2
             
-            " 调试：检查四字组合
+            " 调试：编码模式
             if get(g:, 'ZFVimIM_debug', 0)
-                echom '[DEBUG] Four-word combo:'
-                echom '[DEBUG]   prev_commit: ' . prevKey . ' (' . get(s:prev_commit, 'word', '') . ')'
-                echom '[DEBUG]   last_commit: ' . lastKey . ' (' . get(s:last_commit, 'word', '') . ')'
-                echom '[DEBUG]   initials: ' . firstInitial . ' + ' . secondInitial . ' + ' . thirdInitial . ' + ' . fourthInitial
+                echom '[DEBUG] Encoding mode:'
+                echom '[DEBUG]   prevCharsPerWord=' . prevCharsPerWord . ' (keyLen=' . prevKeyLen . ', wordLen=' . prevWordLen . ')'
+                echom '[DEBUG]   lastCharsPerWord=' . lastCharsPerWord . ' (keyLen=' . lastKeyLen . ', wordLen=' . lastWordLen . ')'
+            endif
+            
+            " 提取前三个字的声母
+            let charIndex = 0
+            " 第一个字（在 prev_commit）
+            if prevWordLen >= 1
+                let firstInitial = strpart(prevKey, charIndex, 1)
+                let charIndex += prevCharsPerWord
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG]   firstInitial=' . firstInitial . ' (charIndex=' . (charIndex - prevCharsPerWord) . ')'
+                endif
+            endif
+            
+            " 第二个字
+            if prevWordLen >= 2
+                " 第二个字也在 prev_commit
+                let secondInitial = strpart(prevKey, charIndex, 1)
+                let charIndex += prevCharsPerWord
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG]   secondInitial=' . secondInitial . ' (charIndex=' . (charIndex - prevCharsPerWord) . ')'
+                endif
+            elseif prevWordLen == 1 && lastWordLen >= 1
+                " 第二个字在 last_commit
+                let secondInitial = strpart(lastKey, 0, 1)
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG]   secondInitial=' . secondInitial . ' (from last_commit[0])'
+                endif
+            endif
+            
+            " 第三个字
+            if prevWordLen >= 3
+                " 第三个字也在 prev_commit
+                let thirdInitial = strpart(prevKey, charIndex, 1)
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG]   thirdInitial=' . thirdInitial . ' (charIndex=' . charIndex . ')'
+                endif
+            elseif prevWordLen == 2 && lastWordLen >= 1
+                " 第三个字在 last_commit
+                let thirdInitial = strpart(lastKey, 0, 1)
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG]   thirdInitial=' . thirdInitial . ' (from last_commit[0])'
+                endif
+            elseif prevWordLen == 1 && lastWordLen >= 2
+                " 第三个字在 last_commit
+                let thirdInitial = strpart(lastKey, lastCharsPerWord, 1)
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG]   thirdInitial=' . thirdInitial . ' (from last_commit[' . lastCharsPerWord . '])'
+                endif
+            endif
+            
+            " 提取最后一个字的声母
+            " 最后一个字在 last_commit 的最后一个字
+            if lastWordLen >= 1
+                " 计算最后一个字在 lastKey 中的位置
+                if lastCharsPerWord == 1
+                    " 每个字1个编码，最后一个字的位置是 len(lastKey) - 1
+                    let lastCharPos = lastKeyLen - 1
+                else
+                    " 每个字2个编码，最后一个字的位置是 len(lastKey) - 2
+                    let lastCharPos = lastKeyLen - 2
+                endif
+                let lastInitial = strpart(lastKey, lastCharPos, 1)
+            endif
+            
+            " 组合编码：前三个字的声母 + 最后一个字的声母
+            let comboKey = firstInitial . secondInitial . thirdInitial . lastInitial
+            
+            " 调试：检查多字组合
+            if get(g:, 'ZFVimIM_debug', 0)
+                echom '[DEBUG] Multi-word combo:'
+                echom '[DEBUG]   prev_commit: ' . prevKey . ' (' . prevWord . ', len=' . len(prevWord) . ')'
+                echom '[DEBUG]   last_commit: ' . lastKey . ' (' . lastWord . ', len=' . len(lastWord) . ')'
+                echom '[DEBUG]   totalWordLen: ' . totalWordLen
+                echom '[DEBUG]   initials: ' . firstInitial . ' + ' . secondInitial . ' + ' . thirdInitial . ' + ' . lastInitial
                 echom '[DEBUG]   comboKey: ' . comboKey . ', input key: ' . a:key
             endif
             
@@ -3142,13 +3240,19 @@ function! ZFVimIM_recentComboCandidate(key)
             if comboKey ==# a:key
                 " 检查数据库是否已加载
                 if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db) || g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
+                    if get(g:, 'ZFVimIM_debug', 0)
+                        echom '[DEBUG] Database not loaded'
+                    endif
                     return {}
                 endif
                 
                 let dbId = get(g:ZFVimIM_db[g:ZFVimIM_dbIndex], 'dbId', 0)
                 " 组合词：prev_commit['word'] + last_commit['word']
-                " 例如：今天 + 回家 = 今天回家
-                let word = get(s:prev_commit, 'word', '') . get(s:last_commit, 'word', '')
+                let word = prevWord . lastWord
+                
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG] ✅ Match! Returning combo candidate: ' . word . ' (' . comboKey . ')'
+                endif
                 
                 return {
                     \ 'dbId': dbId,
@@ -3160,7 +3264,19 @@ function! ZFVimIM_recentComboCandidate(key)
                     \ 'len': 4,
                     \ 'freq': 0,
                     \ }
+            else
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG] ❌ No match: comboKey=' . comboKey . ' != input=' . a:key
+                endif
             endif
+        else
+            if get(g:, 'ZFVimIM_debug', 0)
+                echom '[DEBUG] Total word length < 3: ' . totalWordLen
+            endif
+        endif
+    else
+        if get(g:, 'ZFVimIM_debug', 0)
+            echom '[DEBUG] Conditions not met: keyLen=' . keyLen . ', prev_empty=' . empty(s:prev_commit) . ', last_empty=' . empty(s:last_commit)
         endif
     endif
     
