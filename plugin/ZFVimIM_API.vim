@@ -1,5 +1,53 @@
 
 " ============================================================
+if !exists('g:ZFVimIM_module_hooks')
+    let g:ZFVimIM_module_hooks = {}
+endif
+
+function! ZFVimIM_registerHook(name, FuncRef) abort
+    if type(a:FuncRef) != type(function('tr'))
+        return
+    endif
+    if !has_key(g:ZFVimIM_module_hooks, a:name)
+        let g:ZFVimIM_module_hooks[a:name] = []
+    endif
+    call add(g:ZFVimIM_module_hooks[a:name], a:FuncRef)
+endfunction
+
+function! ZFVimIM_callHookBool(name, args) abort
+    if !has_key(g:ZFVimIM_module_hooks, a:name)
+        return 0
+    endif
+    for Func in g:ZFVimIM_module_hooks[a:name]
+        if call(Func, a:args)
+            return 1
+        endif
+    endfor
+    return 0
+endfunction
+
+function! ZFVimIM_callHookResult(name, args) abort
+    if !has_key(g:ZFVimIM_module_hooks, a:name)
+        return v:null
+    endif
+    for Func in g:ZFVimIM_module_hooks[a:name]
+        let result = call(Func, a:args)
+        if result isnot# v:null
+            return result
+        endif
+    endfor
+    return v:null
+endfunction
+
+function! ZFVimIM_notifyHook(name, args) abort
+    if !has_key(g:ZFVimIM_module_hooks, a:name)
+        return
+    endif
+    for Func in g:ZFVimIM_module_hooks[a:name]
+        call call(Func, a:args)
+    endfor
+endfunction
+
 if !exists('g:ZFVimIM_matchLimit')
     let g:ZFVimIM_matchLimit = 2000
 endif

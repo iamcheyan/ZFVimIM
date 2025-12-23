@@ -780,8 +780,8 @@ function! ZFVimIME_tabNext(...)
         call s:symbolForward(get(a:, 1, "\<tab>"))
         return ''
     endif
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        return ZFVimIME_chooseIndex(1)
+    if ZFVimIM_callHookBool('tab_move', [1])
+        return ''
     endif
     call s:floatMove(1)
     return ''
@@ -792,8 +792,8 @@ function! ZFVimIME_tabPrev(...)
         " If popup is not visible, do nothing (Shift+Tab in terminal may not work)
         return ''
     endif
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        return ZFVimIME_chooseIndex(-1)
+    if ZFVimIM_callHookBool('tab_move', [-1])
+        return ''
     endif
     call s:floatMove(-1)
     return ''
@@ -1001,11 +1001,64 @@ function! s:init()
     let s:start_column = 1
     let s:all_keys = '^[0-9a-z]$'
     let s:input_keys = '^[a-z]$'
-    let s:sbzr_seen_freq = {}
-    let s:sbzr_seen_counter = 0
     let s:last_commit = {}
     let s:prev_commit = {}
     let s:prev_prev_commit = {}  " 记录倒数第三个词，用于三字组合
+endfunction
+
+function! ZFVimIM_core_api(action, ...) abort
+    if a:action ==# 'get_keyboard'
+        return s:keyboard
+    elseif a:action ==# 'get_last_keyboard'
+        return s:lastKeyboard
+    elseif a:action ==# 'set_last_keyboard'
+        let s:lastKeyboard = a:1
+        return s:lastKeyboard
+    elseif a:action ==# 'get_match_list'
+        return s:match_list
+    elseif a:action ==# 'set_match_list'
+        let s:match_list = a:1
+        return s:match_list
+    elseif a:action ==# 'get_full_result_list'
+        return s:fullResultList
+    elseif a:action ==# 'set_full_result_list'
+        let s:fullResultList = a:1
+        return s:fullResultList
+    elseif a:action ==# 'get_loaded_result_count'
+        return s:loadedResultCount
+    elseif a:action ==# 'set_loaded_result_count'
+        let s:loadedResultCount = a:1
+        return s:loadedResultCount
+    elseif a:action ==# 'get_page'
+        return s:page
+    elseif a:action ==# 'set_page'
+        let s:page = a:1
+        return s:page
+    elseif a:action ==# 'get_pageup_pagedown'
+        return s:pageup_pagedown
+    elseif a:action ==# 'set_pageup_pagedown'
+        let s:pageup_pagedown = a:1
+        return s:pageup_pagedown
+    elseif a:action ==# 'set_has_full_results'
+        let s:hasFullResults = a:1
+        return s:hasFullResults
+    elseif a:action ==# 'get_has_full_results'
+        return s:hasFullResults
+    elseif a:action ==# 'default_pumheight'
+        return s:defaultPumheight()
+    elseif a:action ==# 'apply_candidate_limit'
+        return s:applyCandidateLimit(a:1)
+    elseif a:action ==# 'float_render'
+        return call(function('s:floatRender'), a:000)
+    elseif a:action ==# 'float_close'
+        call s:floatClose()
+        return
+    elseif a:action ==# 'cur_page'
+        return s:curPage()
+    elseif a:action ==# 'call_update_candidates'
+        return s:updateCandidates()
+    endif
+    return v:null
 endfunction
 
 function! ZFVimIME_IMEName()
@@ -1523,7 +1576,7 @@ function! s:floatRender(list)
             endif
         endif
         let left = strpart(s:keyboard, item['len'])
-        let hasDisplay = get(g:, 'ZFVimIM_sbzr_mode', 0) && has_key(item, 'displayWord')
+        let hasDisplay = has_key(item, 'displayWord')
         if !empty(labelList)
             let labelcell = ' '
             if hasDisplay
@@ -1748,8 +1801,7 @@ function! s:updateCandidates()
         let s:fullResultList = []
         return
     endif
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        call s:updateCandidates_sbzr()
+    if ZFVimIM_callHookBool('update_candidates', [])
         return
     endif
     
@@ -1904,181 +1956,9 @@ function! s:updateCandidates()
     doautocmd User ZFVimIM_event_OnUpdateOmni
 endfunction
 
-function! s:updateCandidates_sbzr()
-    " 确保 SBZR 模式的标签列表正确设置
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        if !exists('g:ZFVimIM_labelList') || empty(g:ZFVimIM_labelList)
-            let g:ZFVimIM_labelList = ['', 'a', 'e', 'u', 'i', 'o']
-        endif
-    endif
-    let defaultPumheight = s:defaultPumheight()
-    if &pumheight <= 0 || &pumheight < defaultPumheight
-        execute 'set pumheight=' . defaultPumheight
-    endif
-    let limit = &pumheight
-    let pageSize = limit
-    let keyboardChanged = (s:keyboard !=# s:lastKeyboard)
-    let needRefresh = keyboardChanged || empty(s:match_list)
-    if needRefresh
-        let matchLimit = get(g:, 'ZFVimIM_matchLimit', 0)
-        if matchLimit == 0
-            let matchLimit = -2000
-        endif
-        let s:fullResultList = ZFVimIM_complete(s:keyboard, {
-                    \ 'match': matchLimit,
-                    \ 'sentence': 0,
-                    \ 'crossDb': 0,
-                    \ 'predict': 0,
-                    \ })
-        let s:fullResultList = s:applyCandidateLimit(s:fullResultList)
-        let s:match_list = s:fullResultList
-        let s:loadedResultCount = len(s:fullResultList)
-        let s:page = 0
-    elseif s:pageup_pagedown != 0 && !empty(s:match_list) && pageSize > 0
-        let s:page += s:pageup_pagedown
-        let maxPage = (len(s:match_list) - 1) / pageSize
-        if s:page > maxPage
-            let s:page = maxPage
-        endif
-        if s:page < 0
-            let s:page = 0
-        endif
-    endif
-    let s:pageup_pagedown = 0
-    let s:hasFullResults = 1
-    let s:lastKeyboard = s:keyboard
-
-    let skipFew = get(g:, 'ZFVimIM_skipFloatWhenFew', 0)
-    if skipFew > 0 && len(s:match_list) <= skipFew
-        call s:floatClose()
-        doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
-        return
-    endif
-    " ============================================================
-    " SBZR 自造词功能：当没有匹配的候选词时，显示断词自动拼的候选词
-    " 这些候选词会显示为 "词~" 的形式，表示这是临时组合的词
-    " 用户选择后会自动添加到词库中
-    " ============================================================
-    if empty(s:match_list)
-        " 调用 s:sbzrHintItems 生成断词自动拼的候选词
-        " 这些候选词会标记为 hint: 1，显示时会加上 ~ 标记
-        let hintItems = s:sbzrHintItems(s:keyboard, &pumheight)
-        if !empty(hintItems)
-            " 显示带 ~ 标记的候选词
-            call s:floatRender(hintItems)
-            doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
-            return
-        endif
-    endif
-    call s:floatRender(s:curPage())
-    doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
-endfunction
-
-" ============================================================
-" SBZR 自造词功能：生成断词自动拼的候选词
-" 
-" 功能说明：
-"   当用户输入编码但没有匹配的候选词时，此函数会查找以当前编码为前缀的
-"   更长编码对应的词，作为"断词自动拼"的候选词显示给用户。
-"   
-"   例如：用户输入 "gk"，没有匹配，但词库中有 "gka" 对应 "高"，
-"   则显示 "高~" 作为候选词。用户选择后，会将 "gk" -> "高" 添加到词库。
-"
-" 参数：
-"   key: 当前输入的编码（例如 "gk"）
-"   limit: 最多返回的候选词数量（默认6个）
-"
-" 返回值：
-"   候选词列表，每个候选词包含：
-"     - dbId: 数据库ID
-"     - len: 编码长度（使用当前输入的编码长度）
-"     - word: 词本身（例如 "高"）
-"     - displayWord: 显示用的词（与 word 相同）
-"     - key: 实际匹配的编码（例如 "gka"）
-"     - type: 类型（'match'）
-"     - hint: 1（标记为自造词，显示时会加上 ~）
-"
-" 工作流程：
-"   1. 在当前数据库中查找以 key 为前缀的编码
-"   2. 找到第一个匹配的更长编码（例如 "gk" -> "gka"）
-"   3. 返回该编码对应的第一个词，标记为 hint: 1
-"   4. 用户选择后，会调用 s:didChoose，然后调用 s:addWord 添加到词库
-" ============================================================
-function! s:sbzrHintItems(key, limit)
-    if empty(a:key)
-        return []
-    endif
-    " 检查数据库是否已加载
-    if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
-        return []
-    endif
-    if g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
-        return []
-    endif
-    let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
-    if empty(db) || !has_key(db, 'dbMap')
-        return []
-    endif
-    
-    " 获取编码的第一个字符，用于查找对应的 bucket
-    let c = a:key[0]
-    if !has_key(db['dbMap'], c)
-        return []
-    endif
-    let bucket = db['dbMap'][c]
-    let limit = a:limit > 0 ? a:limit : 6
-    let ret = []
-    
-    " 在当前 bucket 中查找以 key 为前缀的编码
-    let idx = ZFVimIM_dbSearch(db, c, '^' . a:key, 0)
-    if idx < 0
-        return []
-    endif
-    
-    " 遍历 bucket，找到第一个匹配的更长编码
-    while idx < len(bucket) && len(ret) < limit
-        let item = ZFVimIM_dbItemDecode(bucket[idx])
-        let k = get(item, 'key', '')
-        
-        " 如果编码不再以 key 为前缀，停止搜索
-        if k !~# '^' . a:key
-            break
-        endif
-        
-        " 只返回比当前编码更长的编码（例如 "gk" -> "gka"）
-        " 这样用户输入 "gk" 时，会显示 "gka" 对应的词作为候选
-        if k !=# a:key
-            let wordList = get(item, 'wordList', [])
-            if !empty(wordList)
-                let word = wordList[0]
-                " 创建候选词项，标记为 hint: 1
-                " 这样在显示时会加上 ~ 标记，用户选择后会添加到词库
-                " len: 使用当前输入的编码长度
-                " word: 实际要上屏的词
-                " displayWord: 显示用的词（与 word 相同）
-                " key: 实际匹配的编码（例如 "gka"）
-                " hint: 1 标记为自造词，显示时会加上 ~
-                call add(ret, {
-                            \ 'dbId' : get(db, 'dbId', 0),
-                            \ 'len' : len(a:key),
-                            \ 'word' : word,
-                            \ 'displayWord' : word,
-                            \ 'key' : k,
-                            \ 'type' : 'match',
-                            \ 'hint' : 1,
-                            \ })
-                break  " 只返回第一个匹配的词
-            endif
-        endif
-        let idx += 1
-    endwhile
-    return ret
-endfunction
-
 " Debounced version of updateCandidates
 function! s:updateCandidatesDebounced()
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        call s:updateCandidates()
+    if ZFVimIM_callHookBool('update_candidates_debounced', [])
         return
     endif
     " First, try to get current keyboard state (peek without updating)
@@ -2183,9 +2063,8 @@ function! s:popupMenuList(complete)
         let left = strpart(s:keyboard, item['len'])
         
         " 检查是否有自定义显示词（displayWord）
-        " 在 SBZR 模式下，如果候选词有 displayWord（例如 "高兴~"），
-        " 会使用 displayWord 而不是 word + left
-        let hasDisplay = get(g:, 'ZFVimIM_sbzr_mode', 0) && has_key(item, 'displayWord')
+        " 如果候选词带 displayWord（例如 "高兴~"），优先展示该字段
+        let hasDisplay = has_key(item, 'displayWord')
         
         if !empty(labelList)
             if hasDisplay
@@ -2921,10 +2800,7 @@ function! s:recordWordUsage(key, word)
         let s:word_frequency[key] = 0
     endif
     let s:word_frequency[key] += 1
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        let s:sbzr_seen_counter += 1
-        let s:sbzr_seen_freq[key] = s:sbzr_seen_counter
-    endif
+    call ZFVimIM_notifyHook('record_word_usage', [a:key, a:word])
     
     " Save to file (limit frequency to prevent overflow)
     if s:word_frequency[key] > 1000
@@ -3048,14 +2924,12 @@ endfunction
 
 " Global function to get word frequency (for use in other files)
 function! ZFVimIM_getWordFrequency(key, word)
-    let key = a:key . "\t" . a:word
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        let seen = get(s:sbzr_seen_freq, key, 0)
-        if seen > 0
-            return 1000000 + seen
-        endif
+    let override = ZFVimIM_callHookResult('word_frequency_override', [a:key, a:word])
+    if override isnot# v:null
+        return override
     endif
-    return get(s:word_frequency, key, 0)
+    let keyWord = a:key . "\t" . a:word
+    return get(s:word_frequency, keyWord, 0)
 endfunction
 
 " ============================================================

@@ -576,43 +576,8 @@ function! s:complete_match_exact(ret, key, option, db, matchLimit)
     " Extract common first character from multi-chars - DISABLED in intermediate stages
     " Only extract in mergeResult to avoid duplicate extraction
     
-    " In SBZR mode, sort all candidates by frequency only (no length priority)
-    " Otherwise, sort multi-chars by length first, then by frequency
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        " SBZR mode: merge single chars and multi-chars, sort all by frequency
-        let allCandidates = singleChars + multiChars
-        if len(allCandidates) > 1
-            call sort(allCandidates, function('s:sortByFrequency'))
-        endif
-        " Add all candidates (already sorted by frequency)
-        let remainingLimit = matchLimit
-        let wordIndex = 0
-        while wordIndex < len(allCandidates) && remainingLimit > 0
-            call add(a:ret, allCandidates[wordIndex])
-            let wordIndex += 1
-            let remainingLimit -= 1
-        endwhile
-    else
-        " Normal mode: sort multi-chars by length first (shortest first), then by frequency
-    if len(multiChars) > 1
-        call sort(multiChars, function('s:sortByLengthAndFrequency'))
-    endif
-    
-    " Add all single characters first (no limit)
-    call extend(a:ret, singleChars)
-    
-    " Then add multi-character words up to limit (already sorted by length)
-    let remainingLimit = matchLimit - len(singleChars)
-    if remainingLimit > 0
-        let wordIndex = 0
-        while wordIndex < len(multiChars) && remainingLimit > 0
-            call add(a:ret, multiChars[wordIndex])
-            let wordIndex += 1
-            let remainingLimit -= 1
-        endwhile
-        endif
-    endif
-    
+    let remainingLimit = s:addCandidates(a:ret, singleChars, multiChars, matchLimit)
+
     " Also try alias match for 4-character keys
     " This allows abbreviations like:
     " - "srfa" to match "surufa" (输入法, 3-word: 首+二+尾)
@@ -695,42 +660,7 @@ function! s:complete_match_allowSubMatch(matchRet, subMatchLongestRet, subMatchR
         " Extract common first character - DISABLED in intermediate stages
         " Only extract in mergeResult to avoid duplicate extraction
         
-        " In SBZR mode, sort all candidates by frequency only (no length priority)
-        " Otherwise, sort multi-chars by length first, then by frequency
-        if get(g:, 'ZFVimIM_sbzr_mode', 0)
-            " SBZR mode: merge single chars and multi-chars, sort all by frequency
-            let allCandidates = singleChars + multiChars
-            if len(allCandidates) > 1
-                call sort(allCandidates, function('s:sortByFrequency'))
-            endif
-            " Add all candidates (already sorted by frequency)
-            let remainingLimit = matchLimit
-            let wordIndex = 0
-            while wordIndex < len(allCandidates) && remainingLimit > 0
-                call add(ret, allCandidates[wordIndex])
-                let wordIndex += 1
-                let remainingLimit -= 1
-            endwhile
-        else
-            " Normal mode: sort multi-chars by length first (shortest first), then by frequency
-        if len(multiChars) > 1
-            call sort(multiChars, function('s:sortByLengthAndFrequency'))
-        endif
-        
-        " Add all single characters first (no limit)
-        call extend(ret, singleChars)
-        
-        " Then add multi-character words up to remaining limit (already sorted by length)
-        let remainingLimit = matchLimit - len(singleChars)
-        if remainingLimit > 0
-            let wordIndex = 0
-            while wordIndex < len(multiChars) && remainingLimit > 0
-                call add(ret, multiChars[wordIndex])
-                let wordIndex += 1
-                let remainingLimit -= 1
-            endwhile
-            endif
-        endif
+        call s:addCandidates(ret, singleChars, multiChars, matchLimit)
         
         " Update matchLimit (only count multi-chars towards limit)
         let matchLimit -= len(multiChars)
@@ -890,17 +820,42 @@ function! s:sortByLengthAndFrequency(item1, item2)
     return s:sortByFrequency(a:item1, a:item2)
 endfunction
 
+function! s:addCandidates(ret, singleChars, multiChars, matchLimit)
+    let handled = ZFVimIM_callHookResult('complete_add_candidates', [a:ret, a:singleChars, a:multiChars, a:matchLimit])
+    if handled isnot# v:null
+        return handled
+    endif
+    return s:addCandidatesDefault(a:ret, a:singleChars, a:multiChars, a:matchLimit)
+endfunction
+
+function! s:addCandidatesDefault(ret, singleChars, multiChars, matchLimit)
+    if len(a:multiChars) > 1
+        call sort(a:multiChars, function('s:sortByLengthAndFrequency'))
+    endif
+
+    call extend(a:ret, a:singleChars)
+
+    let remainingLimit = a:matchLimit - len(a:singleChars)
+    if remainingLimit > 0
+        let wordIndex = 0
+        while wordIndex < len(a:multiChars) && remainingLimit > 0
+            call add(a:ret, a:multiChars[wordIndex])
+            let wordIndex += 1
+            let remainingLimit -= 1
+        endwhile
+    endif
+    return remainingLimit
+endfunction
+
 " Sort list by frequency (used words first) within single char priority groups
 " Multi-chars are sorted by length first (shortest first), then by frequency
-" In SBZR mode, sort all by frequency only (no length priority)
+" Modules can override the default behavior and sort purely by frequency
 function! s:sortByFrequencyPriority(ret)
     if len(a:ret) <= 1
         return
     endif
     
-    " In SBZR mode, sort all candidates by frequency only
-    if get(g:, 'ZFVimIM_sbzr_mode', 0)
-        call sort(a:ret, function('s:sortByFrequency'))
+    if ZFVimIM_callHookBool('complete_sort_frequency_priority', [a:ret])
         return
     endif
     
@@ -1103,29 +1058,27 @@ function! s:mergeResult(data, key, option, db)
         endwhile
     endif
 
-    " SBZR 自造词功能：检查组合候选词
+    " 组合候选词：
     " 1. 如果没有匹配结果，检查组合候选词（原有逻辑）
-    " 2. 在 SBZR 模式下，如果输入是 6 个编码，即使有匹配结果也要检查三字组合
+    " 2. 模块可通过 complete_force_combo 钩子请求在已有结果时也检查
     if exists('*ZFVimIM_recentComboCandidate')
         let tempItem = {}
-        let sbzrMode = get(g:, 'ZFVimIM_sbzr_mode', 0)
         let keyLen = len(a:key)
-        let isEmpty = empty(ret)
-        
+        let comboNeeded = empty(ret)
+        if !comboNeeded
+            let comboNeeded = ZFVimIM_callHookBool('complete_force_combo', [a:key, ret])
+        endif
+
         " 调试：检查调用条件（三字组合是4个编码）
         if get(g:, 'ZFVimIM_debug', 0) && keyLen == 4
             echom '[DEBUG] Checking combo candidate:'
             echom '[DEBUG]   key=' . a:key . ', keyLen=' . keyLen
-            echom '[DEBUG]   empty(ret)=' . isEmpty . ', sbzr_mode=' . sbzrMode
+            echom '[DEBUG]   comboNeeded=' . comboNeeded
             echom '[DEBUG]   ret count=' . len(ret)
         endif
         
-        if isEmpty
-            " 没有匹配结果时，检查组合候选词（支持两字和三字组合）
-            let tempItem = ZFVimIM_recentComboCandidate(a:key)
-        elseif sbzrMode && keyLen == 4
-            " SBZR 模式下，输入 4 个编码时，检查三字组合候选词
-            " 即使已有匹配结果，也要添加组合候选词（优先级最高）
+        if comboNeeded
+            " 检查组合候选词（支持两字和三字组合）
             let tempItem = ZFVimIM_recentComboCandidate(a:key)
         endif
         if !empty(tempItem)
