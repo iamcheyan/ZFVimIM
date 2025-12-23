@@ -651,6 +651,9 @@ function! ZFVimIME_label(n, ...)
     if n >= len(curPage)
         return ''
     endif
+    if get(curPage[n], 'hint', 0)
+        return ''
+    endif
     call s:chooseItem(curPage[n])
     return ''
 endfunction
@@ -685,6 +688,9 @@ function! ZFVimIME_labelWithTail(n, tail)
     let curPage = s:curPage()
     let n = a:n < 1 ? 9 : a:n - 1
     if n >= len(curPage)
+        return ZFVimIME_input(a:tail)
+    endif
+    if get(curPage[n], 'hint', 0)
         return ZFVimIME_input(a:tail)
     endif
     let s:labelWithTailPending = {
@@ -995,6 +1001,10 @@ function! s:init()
     let s:start_column = 1
     let s:all_keys = '^[0-9a-z]$'
     let s:input_keys = '^[a-z]$'
+    let s:sbzr_seen_freq = {}
+    let s:sbzr_seen_counter = 0
+    let s:last_commit = {}
+    let s:prev_commit = {}
 endfunction
 
 function! ZFVimIME_IMEName()
@@ -1497,6 +1507,7 @@ function! s:floatRender(list)
     let labelWidths = []
     let origRanges = []
     for item in a:list
+        let isHint = get(item, 'hint', 0)
         if !empty(labelList)
             let labelstring = get(labelList, label - 1, '?')
         elseif get(g:, 'ZFVimIM_freeScroll', 0)
@@ -1520,7 +1531,7 @@ function! s:floatRender(list)
                 let wordPart = ' ' . item['word'] . left
             endif
             let content = wordPart
-            if labelstring != ''
+            if !isHint && labelstring != ''
                 let content .= labelstring
             endif
             let content .= ' '
@@ -1893,6 +1904,12 @@ function! s:updateCandidates()
 endfunction
 
 function! s:updateCandidates_sbzr()
+    " 确保 SBZR 模式的标签列表正确设置
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        if !exists('g:ZFVimIM_labelList') || empty(g:ZFVimIM_labelList)
+            let g:ZFVimIM_labelList = ['', 'a', 'e', 'u', 'i', 'o']
+        endif
+    endif
     let defaultPumheight = s:defaultPumheight()
     if &pumheight <= 0 || &pumheight < defaultPumheight
         execute 'set pumheight=' . defaultPumheight
@@ -1912,87 +1929,6 @@ function! s:updateCandidates_sbzr()
                     \ 'crossDb': 0,
                     \ 'predict': 0,
                     \ })
-        " 断词自动拼功能：当没有匹配时，尝试将最后一个字符拆分
-        " 但在 SBZR 模式下，如果输入两个编码的单字，且最后一个字符是标签键（a/e/u/i/o），
-        " 并且该标签键对应的候选词存在，则不触发断词自动拼，让标签键用于选择候选词
-        if empty(s:fullResultList) && len(s:keyboard) > 1
-            let suffixKey = strpart(s:keyboard, len(s:keyboard) - 1, 1)
-            " 检查是否是两个编码的单字，且最后一个字符是标签键
-            let isTwoCharSingleWord = (len(s:keyboard) == 2)
-            let isLabelKey = (suffixKey ==# 'a' || suffixKey ==# 'e' || suffixKey ==# 'u' || suffixKey ==# 'i' || suffixKey ==# 'o')
-            
-            " 如果是两个编码的单字且最后一个字符是标签键，检查该标签键对应的候选词是否存在
-            if isTwoCharSingleWord && isLabelKey
-                " 获取前缀的候选词列表（去掉最后一个标签键字符）
-                let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
-                let prefixCandidates = ZFVimIM_complete(prefixKey, {
-                            \ 'match': -2000,
-                            \ 'sentence': 0,
-                            \ 'crossDb': 0,
-                            \ 'predict': 0,
-                            \ })
-                " 检查标签键对应的候选词是否存在
-                " sbzr_label_map: {'a': 2, 'e': 3, 'u': 4, 'i': 5, 'o': 6}
-                " 表示 a 对应第2个候选词（索引1），e 对应第3个候选词（索引2），等等
-                " 注意：第1个候选词没有标签（索引0），所以标签键对应的索引需要减1
-                let labelPosition = (suffixKey ==# 'a') ? 2 : (suffixKey ==# 'e') ? 3 : (suffixKey ==# 'u') ? 4 : (suffixKey ==# 'i') ? 5 : (suffixKey ==# 'o') ? 6 : -1
-                let labelIndex = labelPosition - 1  " 转换为0-based索引
-                let candidateExists = (labelIndex >= 0 && labelIndex < len(prefixCandidates))
-                
-                " 只有当标签键对应的候选词存在时，才不触发断词自动拼
-                if candidateExists
-                    " 不触发断词自动拼，让标签键用于选择候选词
-                    " 这里不设置 s:fullResultList，让它保持为空
-                else
-                    " 标签键对应的候选词不存在，触发断词自动拼
-                    let prefixList = ZFVimIM_complete(prefixKey, {
-                                \ 'match': -1,
-                                \ 'sentence': 0,
-                                \ 'crossDb': 0,
-                                \ 'predict': 0,
-                                \ })
-                    let suffixList = ZFVimIM_complete(suffixKey, {
-                                \ 'match': 0 - limit,
-                                \ 'sentence': 0,
-                                \ 'crossDb': 0,
-                                \ 'predict': 0,
-                                \ })
-                    if !empty(prefixList) && !empty(suffixList)
-                        let prefixItem = prefixList[0]
-                        let suffixItem = suffixList[0]
-                        let combined = copy(prefixItem)
-                        let combined['word'] = prefixItem['word'] . suffixItem['word']
-                        let combined['displayWord'] = combined['word']
-                        let combined['len'] = len(s:keyboard)
-                        let s:fullResultList = [combined]
-                    endif
-                endif
-            else
-                " 其他情况触发断词自动拼
-                let prefixKey = strpart(s:keyboard, 0, len(s:keyboard) - 1)
-                let prefixList = ZFVimIM_complete(prefixKey, {
-                            \ 'match': -1,
-                            \ 'sentence': 0,
-                            \ 'crossDb': 0,
-                            \ 'predict': 0,
-                            \ })
-                let suffixList = ZFVimIM_complete(suffixKey, {
-                            \ 'match': 0 - limit,
-                            \ 'sentence': 0,
-                            \ 'crossDb': 0,
-                            \ 'predict': 0,
-                            \ })
-                if !empty(prefixList) && !empty(suffixList)
-                    let prefixItem = prefixList[0]
-                    let suffixItem = suffixList[0]
-                    let combined = copy(prefixItem)
-                    let combined['word'] = prefixItem['word'] . suffixItem['word']
-                    let combined['displayWord'] = combined['word']
-                    let combined['len'] = len(s:keyboard)
-                    let s:fullResultList = [combined]
-                endif
-            endif
-        endif
         let s:fullResultList = s:applyCandidateLimit(s:fullResultList)
         let s:match_list = s:fullResultList
         let s:loadedResultCount = len(s:fullResultList)
@@ -2017,8 +1953,68 @@ function! s:updateCandidates_sbzr()
         doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
         return
     endif
+    if empty(s:match_list)
+        let hintItems = s:sbzrHintItems(s:keyboard, &pumheight)
+        if !empty(hintItems)
+            call s:floatRender(hintItems)
+            doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
+            return
+        endif
+    endif
     call s:floatRender(s:curPage())
     doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
+endfunction
+
+function! s:sbzrHintItems(key, limit)
+    if empty(a:key)
+        return []
+    endif
+    if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
+        return []
+    endif
+    if g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
+        return []
+    endif
+    let db = g:ZFVimIM_db[g:ZFVimIM_dbIndex]
+    if empty(db) || !has_key(db, 'dbMap')
+        return []
+    endif
+    let c = a:key[0]
+    if !has_key(db['dbMap'], c)
+        return []
+    endif
+    let bucket = db['dbMap'][c]
+    let limit = a:limit > 0 ? a:limit : 6
+    let ret = []
+    let idx = ZFVimIM_dbSearch(db, c, '^' . a:key, 0)
+    if idx < 0
+        return []
+    endif
+    while idx < len(bucket) && len(ret) < limit
+        let item = ZFVimIM_dbItemDecode(bucket[idx])
+        let k = get(item, 'key', '')
+        if k !~# '^' . a:key
+            break
+        endif
+        if k !=# a:key
+            let wordList = get(item, 'wordList', [])
+            if !empty(wordList)
+                let word = wordList[0]
+                call add(ret, {
+                            \ 'dbId' : get(db, 'dbId', 0),
+                            \ 'len' : len(a:key),
+                            \ 'word' : word,
+                            \ 'displayWord' : word,
+                            \ 'key' : k,
+                            \ 'type' : 'match',
+                            \ 'hint' : 1,
+                            \ })
+                break
+            endif
+        endif
+        let idx += 1
+    endwhile
+    return ret
 endfunction
 
 " Debounced version of updateCandidates
@@ -2105,6 +2101,7 @@ function! s:popupMenuList(complete)
     for item in a:complete
         " :h complete-items
         let complete_items = {}
+        let isHint = get(item, 'hint', 0)
         if !empty(labelList)
             let labelstring = get(labelList, label - 1, '?')
         elseif get(g:, 'ZFVimIM_freeScroll', 0)
@@ -2126,7 +2123,7 @@ function! s:popupMenuList(complete)
             else
                 let wordText = item['word'] . left
             endif
-            if labelstring != ''
+            if !isHint && labelstring != ''
                 let wordText .= labelstring
             endif
             let complete_items['abbr'] = wordText
@@ -2644,6 +2641,10 @@ function! s:didChoose(item)
 
     " Record word usage for frequency-based sorting
     call s:recordWordUsage(a:item['key'], a:item['word'])
+    call s:updateRecentCommit(a:item)
+    if get(a:item, 'temp', 0)
+        call s:addWord(a:item['dbId'], a:item['key'], a:item['word'])
+    endif
 
     if a:item['type'] == 'sentence'
         for word in get(a:item, 'sentenceList', [])
@@ -2661,6 +2662,20 @@ function! s:didChoose(item)
         call s:addWordFromUserWord()
         let s:userWord = []
     endif
+endfunction
+
+function! s:updateRecentCommit(item)
+    if empty(a:item) || !has_key(a:item, 'key') || !has_key(a:item, 'word')
+        return
+    endif
+    let key = get(a:item, 'key', '')
+    let word = get(a:item, 'word', '')
+    if len(key) < 2 || empty(word)
+        return
+    endif
+    let key2 = strpart(key, 0, 2)
+    let s:prev_commit = s:last_commit
+    let s:last_commit = {'key2': key2, 'word': word}
 endfunction
 function! s:addWordFromUserWord()
     if !empty(s:userWord)
@@ -2742,6 +2757,10 @@ function! s:recordWordUsage(key, word)
         let s:word_frequency[key] = 0
     endif
     let s:word_frequency[key] += 1
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        let s:sbzr_seen_counter += 1
+        let s:sbzr_seen_freq[key] = s:sbzr_seen_counter
+    endif
     
     " Save to file (limit frequency to prevent overflow)
     if s:word_frequency[key] > 1000
@@ -2866,7 +2885,40 @@ endfunction
 " Global function to get word frequency (for use in other files)
 function! ZFVimIM_getWordFrequency(key, word)
     let key = a:key . "\t" . a:word
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        let seen = get(s:sbzr_seen_freq, key, 0)
+        if seen > 0
+            return 1000000 + seen
+        endif
+    endif
     return get(s:word_frequency, key, 0)
+endfunction
+
+function! ZFVimIM_recentComboCandidate(key)
+    if len(a:key) != 4
+        return {}
+    endif
+    if empty(s:prev_commit) || empty(s:last_commit)
+        return {}
+    endif
+    let comboKey = s:prev_commit['key2'] . s:last_commit['key2']
+    if comboKey !=# a:key
+        return {}
+    endif
+    if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db) || g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
+        return {}
+    endif
+    let dbId = get(g:ZFVimIM_db[g:ZFVimIM_dbIndex], 'dbId', 0)
+    let word = s:prev_commit['word'] . s:last_commit['word']
+    return {
+                \ 'dbId' : dbId,
+                \ 'len' : len(a:key),
+                \ 'key' : a:key,
+                \ 'word' : word,
+                \ 'displayWord' : word . '~',
+                \ 'type' : 'match',
+                \ 'temp' : 1,
+                \ }
 endfunction
 
 " Initialize word frequency on plugin load (after init)

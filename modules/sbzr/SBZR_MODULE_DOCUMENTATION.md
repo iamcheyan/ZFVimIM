@@ -1,3 +1,101 @@
+# ZFVimIM SBZR 模块完整文档
+
+本文档包含 SBZR（声笔自然）输入模式模块的所有文件内容。
+
+---
+
+## 目录
+
+1. [README.md](#readmemd)
+2. [config.lua](#configlua)
+3. [ZFVimIM_sbzr.vim](#zfvimim_sbzrvim)
+
+---
+
+## README.md
+
+```markdown
+# SBZR 模块
+
+声笔自然（SBZR）输入模式模块。
+
+## 功能特性
+
+- 输入4码后，可以使用 `a/e/u/i/o` 快速选择第2-6个候选词
+- 候选词标签：`['', 'a', 'e', 'u', 'i', 'o']`（第1个无标签，第2-6个对应 a/e/u/i/o）
+- 每页显示6个候选词，提高选择效率
+- 翻页功能：
+  - `,` 键：向上翻页
+  - `.` 键：向下翻页
+  - `←` 键：向上翻页
+  - `→` 键：向下翻页
+  - 支持浏览所有候选词，不受6个显示限制
+
+## 启用方式
+
+在配置文件中设置：
+
+```lua
+vim.g.ZFVimIM_settings = { 'sbzr' }
+vim.g.zfvimim_default_dict_name = "sbzr"
+```
+
+或者使用模块自带的配置文件：
+
+```lua
+-- 加载模块配置
+dofile(vim.fn.stdpath('data') .. '/lazy/ZFVimIM/modules/sbzr/config.lua')
+```
+
+## 文件说明
+
+- `ZFVimIM_sbzr.vim` - SBZR 模块核心代码
+- `config.lua` - 模块配置文件
+- 词库文件：`dict/sbzr.yaml`（统一存放在 dict/ 目录）
+
+## 禁用模块
+
+删除或重命名 `modules/sbzr/` 目录，或从配置中移除 `'sbzr'` 设置即可禁用。
+```
+
+---
+
+## config.lua
+
+```lua
+--- ZFVimIM SBZR 模块配置文件
+---
+--- 此文件位于 modules 目录中，用于配置 SBZR（声笔自然）模块
+---
+--- SBZR 模式特性：
+--- - 输入4码后，可以使用 a/e/u/i/o 快速选择第2-6个候选词
+--- - 候选词标签：['', 'a', 'e', 'u', 'i', 'o']（第1个无标签，第2-6个对应 a/e/u/i/o）
+--- - 自动限制候选词数量为6个，提高选择效率
+---
+--- 使用方法：
+--- 1. 在主配置文件中启用 SBZR 模块：
+---    vim.g.ZFVimIM_settings = { 'sbzr' }
+---    vim.g.zfvimim_default_dict_name = "sbzr"
+---
+--- 2. 或者直接加载此配置文件：
+---    dofile(vim.fn.stdpath('data') .. '/lazy/ZFVimIM/modules/sbzr/config.lua')
+
+-- ============================================================
+-- SBZR 模块配置
+-- ============================================================
+
+-- 启用 SBZR 模式
+vim.g.ZFVimIM_settings = { 'sbzr' }
+
+-- 设置词库名称（统一从 dict/ 目录查找）
+vim.g.zfvimim_default_dict_name = "sbzr"
+```
+
+---
+
+## ZFVimIM_sbzr.vim
+
+```vim
 if exists('g:loaded_ZFVimIM_sbzr')
     finish
 endif
@@ -138,36 +236,11 @@ function! ZFVimIM_sbzr_key(key)
     let current_line = getline(cursor_positions[1])
     let start_column = cursor_positions[2]
     let seamless_column = 1
-    let use_state = 0
-    let state = ZFVimIME_state()
-    let seamless_pos = get(state, 'seamlessPos', [])
-    if len(seamless_pos) >= 4
-                \&& seamless_pos[0] == cursor_positions[0]
-                \&& seamless_pos[1] == cursor_positions[1]
-                \&& seamless_pos[3] == cursor_positions[3]
-        let candidate_column = seamless_pos[2]
-        let len_to_cursor = cursor_positions[2] - candidate_column
-        if len_to_cursor >= 0
-            let snip = strpart(current_line, candidate_column - 1, len_to_cursor)
-            if empty(snip)
-                let seamless_column = candidate_column
-                let use_state = 1
-            else
-                let valid = 1
-                for c in split(snip, '\zs')
-                    if c !~# '^[a-z]$'
-                        let valid = 0
-                        break
-                    endif
-                endfor
-                if valid
-                    let seamless_column = candidate_column
-                    let use_state = 1
-                endif
-            endif
-        endif
+    " 尝试获取 seamless_column
+    if exists('*s:getSeamless')
+        let seamless_column = s:getSeamless(cursor_positions)
     endif
-    if seamless_column <= 0 || !use_state
+    if seamless_column <= 0
         " 如果无法获取，尝试从当前行计算
         let seamless_column = start_column
         while seamless_column > 1 && current_line[(seamless_column-1) - 1] =~# '^[a-z]$'
@@ -176,34 +249,10 @@ function! ZFVimIM_sbzr_key(key)
     endif
     let keyboard_len = start_column - seamless_column
     
-    " 如果 3 码唯一匹配，继续输入时自动上屏并追加新字符
-    if keyboard_len == 3
-        let curKey = get(state, 'key', '')
-        if len(curKey) == keyboard_len && len(candidates) == 1 && !get(candidates[0], 'hint', 0)
-            return ZFVimIME_labelWithTail(1, a:key)
-        endif
-    endif
-
     " 如果输入第5个字符，且前4个字符有候选词，需要特殊处理
     if keyboard_len == 4
         " 获取前4个字符的编码
         let prefixKey = strpart(current_line, seamless_column - 1, 4)
-        " 先检查完整的5个字符是否有匹配
-        let fullKey = prefixKey . a:key
-        let fullCandidates = ZFVimIM_complete(fullKey, {
-                    \ 'match': -2000,
-                    \ 'sentence': 0,
-                    \ 'crossDb': 0,
-                    \ 'predict': 0,
-                    \ })
-        
-        " 如果完整的5个字符有匹配，正常输入，不自动上屏
-        if !empty(fullCandidates)
-            " 正常输入第5个字符，让系统处理完整的5个字符匹配
-            return ZFVimIME_input(a:key)
-        endif
-        
-        " 如果完整的5个字符没有匹配，才考虑自动上屏
         let prefixCandidates = ZFVimIM_complete(prefixKey, {
                     \ 'match': -2000,
                     \ 'sentence': 0,
@@ -222,14 +271,17 @@ function! ZFVimIM_sbzr_key(key)
             let candidateIdx = labelPos - 1  " 转换为0-based索引
             if candidateIdx < len(prefixCandidates)
                 " 选择对应的候选词
-                return ZFVimIME_label(labelPos)
+                let selectedCandidate = prefixCandidates[candidateIdx]
+                " 删除前4个字符，插入选中的候选词
+                return repeat("\<bs>", 4) . selectedCandidate['word'] . "\<c-r>=ZFVimIME_callOmni()\<cr>"
             endif
         endif
         
-        " 如果第5个字符不是标签键，且前4个字符有候选词，自动上屏第一个候选词，然后继续输入第5个字符
+        " 如果第5个字符不是标签键，且前4个字符有候选词，自动上屏第一个候选词
         if !has_key(s:sbzr_label_map, a:key) && !empty(prefixCandidates)
-            " 选择第一个候选词并追加第5个字符
-            return ZFVimIME_labelWithTail(1, a:key)
+            let firstCandidate = prefixCandidates[0]
+            " 删除前4个字符，插入候选词，然后输入第5个字符
+            return repeat("\<bs>", 4) . firstCandidate['word'] . a:key . "\<c-r>=ZFVimIME_callOmni()\<cr>"
         endif
     endif
     
@@ -297,3 +349,23 @@ augroup ZFVimIM_sbzr_augroup
     autocmd User ZFVimIM_event_OnStart call s:apply_sbzr_settings()
     autocmd User ZFVimIM_event_OnEnable call s:apply_sbzr_settings() | call s:apply_sbzr_keymaps()
 augroup END
+```
+
+---
+
+## 模块说明
+
+### 核心功能
+
+1. **标签键选择**：使用 `a/e/u/i/o` 选择第2-6个候选词
+2. **4码自动上屏**：输入4个编码后，输入第5个字符时自动上屏第一个候选词
+3. **标签键优先**：当第5个字符是标签键时，用于选择前4个编码的候选词
+4. **翻页功能**：支持使用 `,`、`.`、`←`、`→` 翻页
+
+### 断词自动拼规则
+
+- **4个编码**：不触发断词自动拼，等待第5个编码
+- **1-2个编码 + 标签键**：如果标签键对应的候选词存在，不触发断词自动拼
+- **其他情况**：当没有匹配时，触发断词自动拼（前缀首选 + 后缀首选）
+
+---

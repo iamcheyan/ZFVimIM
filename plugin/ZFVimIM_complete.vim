@@ -1103,6 +1103,13 @@ function! s:mergeResult(data, key, option, db)
         endwhile
     endif
 
+    if empty(ret) && exists('*ZFVimIM_recentComboCandidate')
+        let tempItem = ZFVimIM_recentComboCandidate(a:key)
+        if !empty(tempItem)
+            call add(ret, tempItem)
+        endif
+    endif
+
     " Extract common first character from multi-chars - DISABLED
     " This feature has been disabled as requested
     " if len(a:key) == 2
