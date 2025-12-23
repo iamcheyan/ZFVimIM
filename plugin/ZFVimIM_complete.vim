@@ -1103,10 +1103,40 @@ function! s:mergeResult(data, key, option, db)
         endwhile
     endif
 
-    if empty(ret) && exists('*ZFVimIM_recentComboCandidate')
-        let tempItem = ZFVimIM_recentComboCandidate(a:key)
+    " SBZR 自造词功能：检查组合候选词
+    " 1. 如果没有匹配结果，检查组合候选词（原有逻辑）
+    " 2. 在 SBZR 模式下，如果输入是 6 个编码，即使有匹配结果也要检查三字组合
+    if exists('*ZFVimIM_recentComboCandidate')
+        let tempItem = {}
+        let sbzrMode = get(g:, 'ZFVimIM_sbzr_mode', 0)
+        let keyLen = len(a:key)
+        let isEmpty = empty(ret)
+        
+        " 调试：检查调用条件（三字组合是4个编码）
+        if get(g:, 'ZFVimIM_debug', 0) && keyLen == 4
+            echom '[DEBUG] Checking combo candidate:'
+            echom '[DEBUG]   key=' . a:key . ', keyLen=' . keyLen
+            echom '[DEBUG]   empty(ret)=' . isEmpty . ', sbzr_mode=' . sbzrMode
+            echom '[DEBUG]   ret count=' . len(ret)
+        endif
+        
+        if isEmpty
+            " 没有匹配结果时，检查组合候选词（支持两字和三字组合）
+            let tempItem = ZFVimIM_recentComboCandidate(a:key)
+        elseif sbzrMode && keyLen == 4
+            " SBZR 模式下，输入 4 个编码时，检查三字组合候选词
+            " 即使已有匹配结果，也要添加组合候选词（优先级最高）
+            let tempItem = ZFVimIM_recentComboCandidate(a:key)
+        endif
         if !empty(tempItem)
-            call add(ret, tempItem)
+            " 将组合候选词添加到结果列表的最前面（最高优先级）
+            call insert(ret, tempItem, 0)
+            " 调试：显示组合候选词
+            if get(g:, 'ZFVimIM_debug', 0)
+                echom '[DEBUG] Added combo candidate: ' . tempItem['word'] . ' (' . tempItem['key'] . ')'
+            endif
+        elseif get(g:, 'ZFVimIM_debug', 0) && keyLen == 4
+            echom '[DEBUG] No combo candidate returned'
         endif
     endif
 

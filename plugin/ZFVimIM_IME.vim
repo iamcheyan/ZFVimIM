@@ -1005,6 +1005,7 @@ function! s:init()
     let s:sbzr_seen_counter = 0
     let s:last_commit = {}
     let s:prev_commit = {}
+    let s:prev_prev_commit = {}  " 记录倒数第三个词，用于三字组合
 endfunction
 
 function! ZFVimIME_IMEName()
@@ -1953,9 +1954,17 @@ function! s:updateCandidates_sbzr()
         doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
         return
     endif
+    " ============================================================
+    " SBZR 自造词功能：当没有匹配的候选词时，显示断词自动拼的候选词
+    " 这些候选词会显示为 "词~" 的形式，表示这是临时组合的词
+    " 用户选择后会自动添加到词库中
+    " ============================================================
     if empty(s:match_list)
+        " 调用 s:sbzrHintItems 生成断词自动拼的候选词
+        " 这些候选词会标记为 hint: 1，显示时会加上 ~ 标记
         let hintItems = s:sbzrHintItems(s:keyboard, &pumheight)
         if !empty(hintItems)
+            " 显示带 ~ 标记的候选词
             call s:floatRender(hintItems)
             doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
             return
@@ -1965,10 +1974,41 @@ function! s:updateCandidates_sbzr()
     doautocmd User ZFVimIM_event_OnUpdateOmni_sbzr
 endfunction
 
+" ============================================================
+" SBZR 自造词功能：生成断词自动拼的候选词
+" 
+" 功能说明：
+"   当用户输入编码但没有匹配的候选词时，此函数会查找以当前编码为前缀的
+"   更长编码对应的词，作为"断词自动拼"的候选词显示给用户。
+"   
+"   例如：用户输入 "gk"，没有匹配，但词库中有 "gka" 对应 "高"，
+"   则显示 "高~" 作为候选词。用户选择后，会将 "gk" -> "高" 添加到词库。
+"
+" 参数：
+"   key: 当前输入的编码（例如 "gk"）
+"   limit: 最多返回的候选词数量（默认6个）
+"
+" 返回值：
+"   候选词列表，每个候选词包含：
+"     - dbId: 数据库ID
+"     - len: 编码长度（使用当前输入的编码长度）
+"     - word: 词本身（例如 "高"）
+"     - displayWord: 显示用的词（与 word 相同）
+"     - key: 实际匹配的编码（例如 "gka"）
+"     - type: 类型（'match'）
+"     - hint: 1（标记为自造词，显示时会加上 ~）
+"
+" 工作流程：
+"   1. 在当前数据库中查找以 key 为前缀的编码
+"   2. 找到第一个匹配的更长编码（例如 "gk" -> "gka"）
+"   3. 返回该编码对应的第一个词，标记为 hint: 1
+"   4. 用户选择后，会调用 s:didChoose，然后调用 s:addWord 添加到词库
+" ============================================================
 function! s:sbzrHintItems(key, limit)
     if empty(a:key)
         return []
     endif
+    " 检查数据库是否已加载
     if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db)
         return []
     endif
@@ -1979,6 +2019,8 @@ function! s:sbzrHintItems(key, limit)
     if empty(db) || !has_key(db, 'dbMap')
         return []
     endif
+    
+    " 获取编码的第一个字符，用于查找对应的 bucket
     let c = a:key[0]
     if !has_key(db['dbMap'], c)
         return []
@@ -1986,20 +2028,36 @@ function! s:sbzrHintItems(key, limit)
     let bucket = db['dbMap'][c]
     let limit = a:limit > 0 ? a:limit : 6
     let ret = []
+    
+    " 在当前 bucket 中查找以 key 为前缀的编码
     let idx = ZFVimIM_dbSearch(db, c, '^' . a:key, 0)
     if idx < 0
         return []
     endif
+    
+    " 遍历 bucket，找到第一个匹配的更长编码
     while idx < len(bucket) && len(ret) < limit
         let item = ZFVimIM_dbItemDecode(bucket[idx])
         let k = get(item, 'key', '')
+        
+        " 如果编码不再以 key 为前缀，停止搜索
         if k !~# '^' . a:key
             break
         endif
+        
+        " 只返回比当前编码更长的编码（例如 "gk" -> "gka"）
+        " 这样用户输入 "gk" 时，会显示 "gka" 对应的词作为候选
         if k !=# a:key
             let wordList = get(item, 'wordList', [])
             if !empty(wordList)
                 let word = wordList[0]
+                " 创建候选词项，标记为 hint: 1
+                " 这样在显示时会加上 ~ 标记，用户选择后会添加到词库
+                " len: 使用当前输入的编码长度
+                " word: 实际要上屏的词
+                " displayWord: 显示用的词（与 word 相同）
+                " key: 实际匹配的编码（例如 "gka"）
+                " hint: 1 标记为自造词，显示时会加上 ~
                 call add(ret, {
                             \ 'dbId' : get(db, 'dbId', 0),
                             \ 'len' : len(a:key),
@@ -2009,7 +2067,7 @@ function! s:sbzrHintItems(key, limit)
                             \ 'type' : 'match',
                             \ 'hint' : 1,
                             \ })
-                break
+                break  " 只返回第一个匹配的词
             endif
         endif
         let idx += 1
@@ -2101,7 +2159,14 @@ function! s:popupMenuList(complete)
     for item in a:complete
         " :h complete-items
         let complete_items = {}
+        " ============================================================
+        " SBZR 自造词功能：检查是否为自造词（hint: 1）
+        " 
+        " hint: 1 表示这是断词自动拼生成的候选词，显示时不应该显示标签键
+        " （因为用户需要通过标签键选择，而不是通过 hint 词）
+        " ============================================================
         let isHint = get(item, 'hint', 0)
+        
         if !empty(labelList)
             let labelstring = get(labelList, label - 1, '?')
         elseif get(g:, 'ZFVimIM_freeScroll', 0)
@@ -2116,13 +2181,22 @@ function! s:popupMenuList(complete)
             endif
         endif
         let left = strpart(s:keyboard, item['len'])
+        
+        " 检查是否有自定义显示词（displayWord）
+        " 在 SBZR 模式下，如果候选词有 displayWord（例如 "高兴~"），
+        " 会使用 displayWord 而不是 word + left
         let hasDisplay = get(g:, 'ZFVimIM_sbzr_mode', 0) && has_key(item, 'displayWord')
+        
         if !empty(labelList)
             if hasDisplay
+                " 使用 displayWord（例如 "高兴~"）
+                " 注意：displayWord 可能已经包含了 ~ 标记（通过 ZFVimIM_recentComboCandidate）
                 let wordText = item['displayWord']
             else
                 let wordText = item['word'] . left
             endif
+            " 如果是 hint 词（自造词），不显示标签键
+            " 因为 hint 词是通过断词自动拼生成的，用户不应该通过标签键选择
             if !isHint && labelstring != ''
                 let wordText .= labelstring
             endif
@@ -2639,13 +2713,28 @@ function! s:didChoose(item)
 
     let s:seamless_positions[2] = s:start_column + len(a:item['word'])
 
-    " Record word usage for frequency-based sorting
+    " 记录词的使用频率，用于智能排序
     call s:recordWordUsage(a:item['key'], a:item['word'])
+    
+    " 更新最近提交的词记录（用于生成组合候选词）
+    " 这会更新 s:prev_commit 和 s:last_commit
     call s:updateRecentCommit(a:item)
+    
+    " ============================================================
+    " SBZR 自造词功能：处理临时词（标记为 temp: 1 的词）
+    " 
+    " 当用户选择了带 temp: 1 标记的词（例如通过 ZFVimIM_recentComboCandidate
+    " 生成的组合词），会立即添加到词库中。
+    " 
+    " 例如：用户输入 "gkxk" 选择了 "高兴~"（temp: 1），
+    " 这里会将 "gkxk" -> "高兴" 添加到词库。
+    " ============================================================
     if get(a:item, 'temp', 0)
+        " 将临时词添加到词库（会保存到数据库和 YAML 文件）
         call s:addWord(a:item['dbId'], a:item['key'], a:item['word'])
     endif
 
+    " 处理句子类型的词（多个词组合）
     if a:item['type'] == 'sentence'
         for word in get(a:item, 'sentenceList', [])
             call s:addWord(a:item['dbId'], word['key'], word['word'])
@@ -2656,9 +2745,20 @@ function! s:didChoose(item)
         return
     endif
 
+    " ============================================================
+    " SBZR 自造词功能：记录用户选择的词，用于后续组合
+    "
+    " s:userWord 用于记录用户连续选择的词，当选择的词长度等于当前编码长度时，
+    " 会调用 s:addWordFromUserWord 将多个词组合成词组添加到词库。
+    "
+    " 例如：用户输入 "gk" 选择 "高"，然后输入 "xk" 选择 "兴"，
+    " 当输入 "gkxk" 时，s:addWordFromUserWord 会将 "gkxk" -> "高兴" 添加到词库。
+    " ============================================================
     call add(s:userWord, a:item)
 
+    " 当选择的词长度等于当前编码长度时，尝试组合成词组
     if a:item['len'] == len(s:keyboard)
+        " 将多个词组合成词组添加到词库
         call s:addWordFromUserWord()
         let s:userWord = []
     endif
@@ -2674,28 +2774,85 @@ function! s:updateRecentCommit(item)
         return
     endif
     let key2 = strpart(key, 0, 2)
+    " 更新历史记录：prev_prev -> prev -> last
+    " 确保每个记录都包含 key2（前2码）和 key（完整编码），用于两字和三字组合
+    let s:prev_prev_commit = s:prev_commit
     let s:prev_commit = s:last_commit
-    let s:last_commit = {'key2': key2, 'word': word}
+    let s:last_commit = {'key2': key2, 'key': key, 'word': word}
+    
+    " 调试：显示历史记录更新
+    if get(g:, 'ZFVimIM_debug', 0)
+        echom '[DEBUG] Updated commit history:'
+        echom '[DEBUG]   last_commit: key=' . key . ', word=' . word
+        if !empty(s:prev_commit)
+            echom '[DEBUG]   prev_commit: key=' . get(s:prev_commit, 'key', '') . ', word=' . get(s:prev_commit, 'word', '')
+        endif
+        if !empty(s:prev_prev_commit)
+            echom '[DEBUG]   prev_prev_commit: key=' . get(s:prev_prev_commit, 'key', '') . ', word=' . get(s:prev_prev_commit, 'word', '')
+        endif
+    endif
 endfunction
+" ============================================================
+" SBZR 自造词功能：将用户连续选择的多个词组合成词组添加到词库
+"
+" 功能说明：
+"   当用户连续选择多个词（例如先选 "高"，再选 "兴"），
+"   此函数会将它们组合成一个词组（例如 "高兴"）并添加到词库。
+"
+" 工作流程：
+"   1. 遍历 s:userWord（用户连续选择的词列表）
+"   2. 先将每个词单独添加到词库（记录使用频率）
+"   3. 检查是否需要组合成词组：
+"      - 如果有自定义检查器（g:ZFVimIM_autoAddWordChecker），使用检查器判断
+"      - 否则，如果满足以下条件，则组合：
+"        * 所有词来自同一个数据库
+"        * 词的数量大于1
+"        * 组合后的词长度不超过 g:ZFVimIM_autoAddWordLen（默认12个字符）
+"   4. 如果需要组合，将组合词添加到词库
+"
+" 示例：
+"   用户输入 "gk" 选择 "高"，然后输入 "xk" 选择 "兴"
+"   s:userWord = [
+"     {'key': 'gk', 'word': '高', 'dbId': 0},
+"     {'key': 'xk', 'word': '兴', 'dbId': 0}
+"   ]
+"   此函数会：
+"   1. 将 "gk" -> "高" 和 "xk" -> "兴" 添加到词库
+"   2. 检查是否需要组合：满足条件
+"   3. 将 "gkxk" -> "高兴" 添加到词库
+"
+" 相关变量：
+"   s:userWord: 用户连续选择的词列表（在 s:didChoose 中更新）
+"   g:ZFVimIM_autoAddWordLen: 组合词的最大长度（默认12个字符）
+"   g:ZFVimIM_autoAddWordChecker: 自定义检查器函数列表
+" ============================================================
 function! s:addWordFromUserWord()
     if !empty(s:userWord)
-        let sentenceKey = ''
-        let sentenceWord = ''
-        let hasOtherDb = 0
-        let dbIdPrev = ''
+        let sentenceKey = ''      " 组合后的编码（例如 "gkxk"）
+        let sentenceWord = ''      " 组合后的词（例如 "高兴"）
+        let hasOtherDb = 0         " 是否有来自不同数据库的词
+        let dbIdPrev = ''          " 前一个词的数据库ID
+        
+        " 遍历用户选择的词列表
         for word in s:userWord
+            " 先将每个词单独添加到词库（记录使用频率）
             call s:addWord(word['dbId'], word['key'], word['word'])
 
+            " 检查是否有来自不同数据库的词
             if !hasOtherDb
                 let hasOtherDb = (dbIdPrev != '' && dbIdPrev != word['dbId'])
                 let dbIdPrev = word['dbId']
             endif
+            
+            " 组合编码和词
             let sentenceKey .= word['key']
             let sentenceWord .= word['word']
         endfor
 
+        " 判断是否需要将组合词添加到词库
         let needAdd = 0
         if !empty(g:ZFVimIM_autoAddWordChecker)
+            " 如果有自定义检查器，使用检查器判断
             let needAdd = 1
             for Checker in g:ZFVimIM_autoAddWordChecker
                 if ZFVimIM_funcCallable(Checker)
@@ -2706,13 +2863,20 @@ function! s:addWordFromUserWord()
                 endif
             endfor
         else
+            " 默认规则：如果满足以下条件，则组合
+            " 1. 所有词来自同一个数据库
+            " 2. 词的数量大于1（至少2个词）
+            " 3. 组合后的词长度不超过限制（默认12个字符）
             if !hasOtherDb
                         \ && len(s:userWord) > 1
                         \ && len(sentenceWord) <= g:ZFVimIM_autoAddWordLen
                 let needAdd = 1
             endif
         endif
+        
+        " 如果需要组合，将组合词添加到词库
         if needAdd
+            " 使用第一个词的数据库ID，组合编码和词添加到词库
             call s:addWord(s:userWord[0]['dbId'], sentenceKey, sentenceWord)
         endif
     endif
@@ -2894,31 +3058,218 @@ function! ZFVimIM_getWordFrequency(key, word)
     return get(s:word_frequency, key, 0)
 endfunction
 
+" ============================================================
+" SBZR 自造词功能：生成最近两个词或三个词的组合候选词
+"
+" 功能说明：
+"   1. 两个单字组合（4个编码）：
+"      当用户连续输入两个单字（每个单字2个编码，共4个编码）后，
+"      此函数会生成一个组合候选词，将前两个字组合成一个词组。
+"      例如：用户输入 "gk" 选择 "高"，然后输入 "xk" 选择 "兴"，
+"      当输入 "gkxk" 时，会显示 "高兴~" 作为候选词。
+"
+"   2. 三个字组合（6个编码）：
+"      当用户连续输入三个字后，会生成三字组合词。
+"      编码规则：前两个字的声母 + 第三个字的全部编码
+"      例如：
+"        - 倒数第二次上屏：woqu (我去) -> 声母 w, q
+"        - 倒数第一次上屏：wj (玩) -> 全部编码 wj
+"        - 组合编码：wq + wj = wqwj
+"        - 组合词：我去玩
+"
+" 参数：
+"   key: 当前输入的编码（4个编码用于两字组合，6个编码用于三字组合）
+"
+" 返回值：
+"   候选词项，包含：
+"     - dbId: 数据库ID
+"     - len: 编码长度（4或6）
+"     - key: 组合编码
+"     - word: 组合词
+"     - displayWord: 显示用的词（带 ~ 标记）
+"     - type: 类型（'match'）
+"     - temp: 1（标记为临时词，选择后会添加到词库）
+"
+" 工作流程：
+"   1. 检查输入是否为4个或6个编码
+"   2. 对于4个编码：检查是否有前两个词的记录，组合前2码+后2码
+"   3. 对于6个编码：检查是否有前三个词的记录，提取前两个字的声母+第三个字的全部编码
+"   4. 生成组合词候选项，标记为 temp: 1
+"   5. 用户选择后，s:didChoose 会检测到 temp: 1，调用 s:addWord 添加到词库
+"
+" 相关变量：
+"   s:prev_prev_commit: 倒数第三个词（用于三字组合）
+"   s:prev_commit: 前一个提交的词（通过 s:updateRecentCommit 更新）
+"   s:last_commit: 最后一个提交的词（通过 s:updateRecentCommit 更新）
+"   这些变量在 s:didChoose 中通过 s:updateRecentCommit 更新
+" ============================================================
 function! ZFVimIM_recentComboCandidate(key)
-    if len(a:key) != 4
-        return {}
+    let keyLen = len(a:key)
+    
+    " 处理三个字组合（4个编码：前两个字的声母各1个 + 第三个字的全部编码2个）
+    " 例如：wqwj = w(我) + q(去) + wj(顽)
+    if keyLen == 4
+        " 检查是否有前两个词的记录
+        " 根据用户需求：
+        "   - 倒数第二次上屏：woqu (我去) - 这是一个词（两个字）
+        "   - 倒数第一次上屏：wj (玩) - 这是一个单字
+        "   所以：prev_commit 是两个字（如 "woqu"），last_commit 是第三个字（如 "wj"）
+        if empty(s:prev_commit) || empty(s:last_commit)
+            return {}
+        endif
+        
+        let prevKey = get(s:prev_commit, 'key', '')
+        let lastKey = get(s:last_commit, 'key', '')
+        
+        " 调试：检查历史记录
+        if get(g:, 'ZFVimIM_debug', 0)
+            echom '[DEBUG] prev_commit key: ' . prevKey . ', word: ' . get(s:prev_commit, 'word', '')
+            echom '[DEBUG] last_commit key: ' . lastKey . ', word: ' . get(s:last_commit, 'word', '')
+            echom '[DEBUG] input key: ' . a:key
+        endif
+        
+        let firstInitial = ''
+        let secondInitial = ''
+        
+        " 如果 prev_commit 的编码长度 >= 4，可能是两个字，需要拆分
+        " 假设每个字2个编码，前2个字符是第一个字，后2个字符是第二个字
+        if len(prevKey) >= 4
+            " 多字词（如 "woqu"）：拆分提取每个字的声母
+            " 第一个字：前2个字符的第一个字符（声母）
+            " 例如：woqu -> wo (我) -> 声母 w
+            let firstInitial = strpart(prevKey, 0, 1)
+            " 第二个字：第3-4个字符的第一个字符（声母），即索引2
+            " 例如：woqu -> qu (去) -> 声母 q
+            let secondInitial = strpart(prevKey, 2, 1)
+        elseif len(prevKey) >= 2
+            " prev_commit 是单字：第一个字的声母
+            let firstInitial = strpart(prevKey, 0, 1)
+            " 如果 prev_prev_commit 存在，它是第二个字
+            if !empty(s:prev_prev_commit)
+                let prevPrevKey = get(s:prev_prev_commit, 'key', '')
+                if len(prevPrevKey) >= 2
+                    let secondInitial = strpart(prevPrevKey, 0, 1)
+                else
+                    return {}
+                endif
+            else
+                return {}
+            endif
+        else
+            return {}
+        endif
+        
+        " 第三个字的全部编码（last_commit）
+        " 例如：last_commit['key'] = "wj"
+        let thirdFullKey = lastKey
+        
+        " 组合编码：前两个字的声母 + 第三个字的全部编码
+        " 例如：w + q + wj = wqwj
+        let comboKey = firstInitial . secondInitial . thirdFullKey
+        
+        " 调试：检查组合编码
+        if get(g:, 'ZFVimIM_debug', 0)
+            echom '[DEBUG] firstInitial: ' . firstInitial . ', secondInitial: ' . secondInitial . ', thirdFullKey: ' . thirdFullKey
+            echom '[DEBUG] comboKey: ' . comboKey . ', input key: ' . a:key
+        endif
+        
+        " 检查是否匹配当前输入的4码
+        if comboKey !=# a:key
+            if get(g:, 'ZFVimIM_debug', 0)
+                echom '[DEBUG] comboKey mismatch: ' . comboKey . ' != ' . a:key
+            endif
+            return {}
+        endif
+        
+        " 检查数据库是否已加载
+        if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db) || g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
+            return {}
+        endif
+        
+        let dbId = get(g:ZFVimIM_db[g:ZFVimIM_dbIndex], 'dbId', 0)
+        " 组合词的词，生成三字组合词组
+        " 如果 prev_commit 是多字词（如 "woqu"），需要拆分
+        " 例如：prev_commit['word'] = "我去", last_commit['word'] = "玩"
+        " word = "我去玩"
+        let prevWord = get(s:prev_commit, 'word', '')
+        let lastWord = get(s:last_commit, 'word', '')
+        
+        " 如果 prev_commit 是多字词，直接拼接；否则需要从 prev_prev_commit 获取第一个字
+        if len(prevKey) >= 4 && len(prevWord) >= 2
+            " prev_commit 是多字词，直接使用
+            let word = prevWord . lastWord
+        elseif !empty(s:prev_prev_commit)
+            " prev_commit 是单字，需要从 prev_prev_commit 获取第一个字
+            let prevPrevWord = get(s:prev_prev_commit, 'word', '')
+            let word = prevPrevWord . prevWord . lastWord
+        else
+            return {}
+        endif
+        
+        " 返回组合候选词项，标记为 temp: 1
+        " len: 6个编码
+        " key: 组合编码（例如 "wqwj"）
+        " word: 组合词（例如 "我去玩"）
+        " displayWord: 显示用的词，加上 ~ 标记
+        " temp: 1 标记为临时词，选择后会添加到词库
+        return {
+                    \ 'dbId' : dbId,
+                    \ 'len' : len(a:key),
+                    \ 'key' : a:key,
+                    \ 'word' : word,
+                    \ 'displayWord' : word . '~',
+                    \ 'type' : 'match',
+                    \ 'temp' : 1,
+                    \ }
     endif
-    if empty(s:prev_commit) || empty(s:last_commit)
-        return {}
+    
+    " 处理两个单字组合（4个编码）
+    if keyLen == 4
+        " 检查是否有前两个词的记录
+        " s:prev_commit 和 s:last_commit 在 s:updateRecentCommit 中更新
+        if empty(s:prev_commit) || empty(s:last_commit)
+            return {}
+        endif
+        
+        " 组合前两个词的前2码，检查是否匹配当前输入的4码
+        " 例如：prev_commit['key2'] = "gk", last_commit['key2'] = "xk"
+        " comboKey = "gkxk"，应该等于 a:key
+        let comboKey = get(s:prev_commit, 'key2', '') . get(s:last_commit, 'key2', '')
+        if comboKey !=# a:key
+            return {}
+        endif
+        
+        " 检查数据库是否已加载
+        if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db) || g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
+            return {}
+        endif
+        
+        let dbId = get(g:ZFVimIM_db[g:ZFVimIM_dbIndex], 'dbId', 0)
+        " 组合前两个词的词，生成组合词组
+        " 例如：prev_commit['word'] = "高", last_commit['word'] = "兴"
+        " word = "高兴"
+        let word = get(s:prev_commit, 'word', '') . get(s:last_commit, 'word', '')
+        
+        " 返回组合候选词项，标记为 temp: 1
+        " 这样在显示时会加上 ~ 标记（通过 displayWord），用户选择后会添加到词库
+        " len: 4个编码
+        " key: 组合编码（例如 "gkxk"）
+        " word: 组合词（例如 "高兴"）
+        " displayWord: 显示用的词，加上 ~ 标记
+        " temp: 1 标记为临时词，选择后会添加到词库
+        return {
+                    \ 'dbId' : dbId,
+                    \ 'len' : len(a:key),
+                    \ 'key' : a:key,
+                    \ 'word' : word,
+                    \ 'displayWord' : word . '~',
+                    \ 'type' : 'match',
+                    \ 'temp' : 1,
+                    \ }
     endif
-    let comboKey = s:prev_commit['key2'] . s:last_commit['key2']
-    if comboKey !=# a:key
-        return {}
-    endif
-    if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db) || g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
-        return {}
-    endif
-    let dbId = get(g:ZFVimIM_db[g:ZFVimIM_dbIndex], 'dbId', 0)
-    let word = s:prev_commit['word'] . s:last_commit['word']
-    return {
-                \ 'dbId' : dbId,
-                \ 'len' : len(a:key),
-                \ 'key' : a:key,
-                \ 'word' : word,
-                \ 'displayWord' : word . '~',
-                \ 'type' : 'match',
-                \ 'temp' : 1,
-                \ }
+    
+    " 其他长度不支持
+    return {}
 endfunction
 
 " Initialize word frequency on plugin load (after init)
