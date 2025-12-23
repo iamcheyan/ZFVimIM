@@ -3106,8 +3106,67 @@ endfunction
 function! ZFVimIM_recentComboCandidate(key)
     let keyLen = len(a:key)
     
+    " 处理四个字组合（4个编码：每个字的声母各1个）
+    " 例如：Jthj = J(今) + t(天) + h(回) + j(家)
+    " 条件：prev_commit 和 last_commit 都是两个字（编码长度 >= 4）
+    if keyLen == 4 && !empty(s:prev_commit) && !empty(s:last_commit)
+        let prevKey = get(s:prev_commit, 'key', '')
+        let lastKey = get(s:last_commit, 'key', '')
+        
+        " 检查是否都是两个字（编码长度 >= 4）
+        if len(prevKey) >= 4 && len(lastKey) >= 4
+            " 从 prev_commit 提取两个字的声母
+            " 例如：Jntm -> J(今) + t(天)
+            let firstInitial = strpart(prevKey, 0, 1)   " 第一个字的声母
+            let secondInitial = strpart(prevKey, 2, 1)  " 第二个字的声母
+            
+            " 从 last_commit 提取两个字的声母
+            " 例如：hvjw -> h(回) + j(家)
+            let thirdInitial = strpart(lastKey, 0, 1)   " 第三个字的声母
+            let fourthInitial = strpart(lastKey, 2, 1)  " 第四个字的声母
+            
+            " 组合编码：四个字的声母
+            " 例如：J + t + h + j = Jthj
+            let comboKey = firstInitial . secondInitial . thirdInitial . fourthInitial
+            
+            " 调试：检查四字组合
+            if get(g:, 'ZFVimIM_debug', 0)
+                echom '[DEBUG] Four-word combo:'
+                echom '[DEBUG]   prev_commit: ' . prevKey . ' (' . get(s:prev_commit, 'word', '') . ')'
+                echom '[DEBUG]   last_commit: ' . lastKey . ' (' . get(s:last_commit, 'word', '') . ')'
+                echom '[DEBUG]   initials: ' . firstInitial . ' + ' . secondInitial . ' + ' . thirdInitial . ' + ' . fourthInitial
+                echom '[DEBUG]   comboKey: ' . comboKey . ', input key: ' . a:key
+            endif
+            
+            " 检查是否匹配当前输入的4码
+            if comboKey ==# a:key
+                " 检查数据库是否已加载
+                if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db) || g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
+                    return {}
+                endif
+                
+                let dbId = get(g:ZFVimIM_db[g:ZFVimIM_dbIndex], 'dbId', 0)
+                " 组合词：prev_commit['word'] + last_commit['word']
+                " 例如：今天 + 回家 = 今天回家
+                let word = get(s:prev_commit, 'word', '') . get(s:last_commit, 'word', '')
+                
+                return {
+                    \ 'dbId': dbId,
+                    \ 'key': comboKey,
+                    \ 'word': word,
+                    \ 'displayWord': word . '~',
+                    \ 'type': 'match',
+                    \ 'temp': 1,
+                    \ 'len': 4,
+                    \ 'freq': 0,
+                    \ }
+            endif
+        endif
+    endif
+    
     " 处理三个字组合（4个编码：前两个字的声母各1个 + 第三个字的全部编码2个）
     " 例如：wqwj = w(我) + q(去) + wj(顽)
+    " 条件：prev_commit 是两个字（编码长度 >= 4），last_commit 是一个字（编码长度 == 2）
     if keyLen == 4
         " 检查是否有前两个词的记录
         " 根据用户需求：
