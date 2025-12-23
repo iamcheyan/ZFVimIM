@@ -3226,6 +3226,7 @@ function! ZFVimIM_recentComboCandidate(key)
             
             " 组合编码：前三个字的声母 + 最后一个字的声母
             let comboKey = firstInitial . secondInitial . thirdInitial . lastInitial
+            let matchedComboKey = ''
             
             " 调试：检查多字组合
             if get(g:, 'ZFVimIM_debug', 0)
@@ -3239,6 +3240,27 @@ function! ZFVimIM_recentComboCandidate(key)
             
             " 检查是否匹配当前输入的4码
             if comboKey ==# a:key
+                let matchedComboKey = comboKey
+            else
+                if get(g:, 'ZFVimIM_debug', 0)
+                    echom '[DEBUG] ❌ No match: comboKey=' . comboKey . ' != input=' . a:key
+                endif
+
+                " 额外兼容：首字单字、末词双字的场景（如 你 + 去吗 -> nqma）
+                if prevWordLen == 1 && lastWordLen == 2
+                    let lastCharStart = lastKeyLen - lastCharsPerWord
+                    let lastFullKey = strpart(lastKey, lastCharStart, lastCharsPerWord)
+                    let comboKeyAlt = firstInitial . secondInitial . lastFullKey
+                    if get(g:, 'ZFVimIM_debug', 0)
+                        echom '[DEBUG] Alt comboKey (initials + last full key): ' . comboKeyAlt . ', input key: ' . a:key
+                    endif
+                    if comboKeyAlt ==# a:key
+                        let matchedComboKey = comboKeyAlt
+                    endif
+                endif
+            endif
+
+            if !empty(matchedComboKey)
                 " 检查数据库是否已加载
                 if !exists('g:ZFVimIM_db') || empty(g:ZFVimIM_db) || g:ZFVimIM_dbIndex >= len(g:ZFVimIM_db)
                     if get(g:, 'ZFVimIM_debug', 0)
@@ -3246,18 +3268,21 @@ function! ZFVimIM_recentComboCandidate(key)
                     endif
                     return {}
                 endif
-                
+
                 let dbId = get(g:ZFVimIM_db[g:ZFVimIM_dbIndex], 'dbId', 0)
-                " 组合词：prev_commit['word'] + last_commit['word']
                 let word = prevWord . lastWord
-                
+
                 if get(g:, 'ZFVimIM_debug', 0)
-                    echom '[DEBUG] ✅ Match! Returning combo candidate: ' . word . ' (' . comboKey . ')'
+                    if matchedComboKey ==# comboKey
+                        echom '[DEBUG] ✅ Match! Returning combo candidate: ' . word . ' (' . matchedComboKey . ')'
+                    else
+                        echom '[DEBUG] ✅ Alt match! Returning combo candidate: ' . word . ' (' . matchedComboKey . ')'
+                    endif
                 endif
-                
+
                 return {
                     \ 'dbId': dbId,
-                    \ 'key': comboKey,
+                    \ 'key': matchedComboKey,
                     \ 'word': word,
                     \ 'displayWord': word . '~',
                     \ 'type': 'match',
@@ -3265,10 +3290,6 @@ function! ZFVimIM_recentComboCandidate(key)
                     \ 'len': 4,
                     \ 'freq': 0,
                     \ }
-            else
-                if get(g:, 'ZFVimIM_debug', 0)
-                    echom '[DEBUG] ❌ No match: comboKey=' . comboKey . ' != input=' . a:key
-                endif
             endif
         else
             if get(g:, 'ZFVimIM_debug', 0)
