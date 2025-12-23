@@ -3132,10 +3132,11 @@ function! ZFVimIM_recentComboCandidate(key)
         let prevWord = get(s:prev_commit, 'word', '')
         let lastWord = get(s:last_commit, 'word', '')
         
-        " 计算总字数
-        let totalWordLen = len(prevWord) + len(lastWord)
+        " 计算总字数（使用 strchars 计算中文字符数）
+        let totalWordLen = strchars(prevWord) + strchars(lastWord)
         
         " 如果总字数 >= 3，使用规则：前三个字的声母 + 最后一个字的声母
+        " 无论总字数是多少（3字、4字、5字、10字...），都使用这个规则
         if totalWordLen >= 3
             let firstInitial = ''
             let secondInitial = ''
