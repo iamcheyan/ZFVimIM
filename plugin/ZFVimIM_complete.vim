@@ -895,6 +895,9 @@ function! s:sortExactMatches(ret)
 endfunction
 
 function! s:compareExactMatch(item1, item2)
+    if get(g:, 'ZFVimIM_sbzr_mode', 0)
+        return s:sortByFrequency(a:item1, a:item2)
+    endif
     " Use strchars() to count characters correctly (not bytes)
     let len1 = strchars(get(a:item1, 'word', ''))
     let len2 = strchars(get(a:item2, 'word', ''))

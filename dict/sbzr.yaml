@@ -259,7 +259,7 @@ fuxy 复兴 复姓 复性 夫姓 服刑 浮性 父姓 福兴 福星 腐刑 负�
 gsdi 公司的 公地 公敌 功底 合适的 工地 干啥的 恭帝 故事的 格式的 红的 红色的
 gszi 个设置 供职 公制 公子 公知 公职 共治 共知 工字 工致 工质 工资
 gusi 古史 古寺 古式 古时 古诗 固始 故世 故事 故实 股市 鼓室 鼓师
-hk 号 唬 嚎 壕 很快 昊 毫 浩 耗 蚝 豪 郝
+hk 好 号 嚎 壕 很快 昊 毫 浩 耗 蚝 豪 郝
 jide 即得 基德 寄的 急得 挤得 既得 积德 纪德 给的 记得 记的 鸡的
 jidi 几滴 击地 及地 及第 吉地 基地 基底 寄递 极低 极地 给的 迹地
 jifu 几副 几幅 即付 吉服 基辅 季父 机腹 极富 积福 继父 肌肤 鸡脯
@@ -2789,7 +2789,6 @@ xmsb 先手 显瘦 现售 现手 纤瘦 限售
 xmxt 先学 县学 显学 献血 现学 鲜血
 xmxw 仙侠 先下 现下 线下 陷下 鲜虾
 xmzo 先作 先做 先坐 掀桌 现做 闲坐
-xnbu 信不 信步 心部 性能不 新埠 新布
 xndk 信到 信道 心到 新到 新岛 新道
 xnhw 心花 新化 新华 新画 新花 新话
 xnjn 心劲 新晋 新津 新近 新进 薪金
@@ -2811,16 +2810,13 @@ xtsi 学士 学时 学识 血丝 血狮 血食
 xujw 徐家 续假 续加 虚假 许家 需加
 xusi 叙事 蓄势 虚实 虚饰 许是 需时
 xuyb 虚有 许由 需有 需由 须有 须由
-xuzi 虚字 虚职 许之 需知 须子 须知
 xwhw 下划 下化 下滑 夏花 瞎画 瞎话
 xwjc 下交 下焦 下脚 下角 下轿 虾饺
 xwji 下季 下机 下级 下集 夏季 夏集
 xwjx 下届 下截 下接 下界 下节 下街
 xwlc 下了 下料 吓了 希望了 想我了 瞎聊
-xwqi 下妻 下期 下气 下起 侠气 夏启
 xwrf 下人 下任 下忍 吓人 唬人 虾仁
 xwsi 下世 下士 下市 侠士 吓死 新闻时
-xxhe 协合 协和 谐和 谢河 谢赫 鞋盒
 xxle 写了 卸了 斜了 歇了 泄了 谢了
 xycg 兴城 姓程 形成 星城 行成 行程
 xyle 姓了 消音了 行乐 行了 醒了 鲜艳了
@@ -3028,6 +3024,8 @@ zvji 坠机 最忌 罪己 追击 追及 追记
 zvxy 嘴型 嘴形 罪刑 罪行 追星 锥形
 zw 中文 作为 周围 抓 爪 皱纹
 zxsi 再解释 最小是 查询时 糟心事 这心思 这还是
+xuzi 虚字 虚职 许之 需知 须知
+xwqi 下妻 下期 下气 下起 侠气
 aide 挨得 爱得 爱德 爱的 矮的
 aizi 爱之 爱子 爱知 矮子 艾滋
 andi 安地 安帝 安迪 暗地 案底
@@ -4852,6 +4850,8 @@ zwlc 中文了 做完了 再问了 抓了 终于了
 zxlc 再见了 只学了 执行了 撤销了 窒息了
 zxle 再见了 只学了 执行了 撤销了 窒息了
 zzlc 制作了 整齐了 知足了 遮住了 重置了
+xnbu 信不 信步 心部 性能不
+xxhe 协合 协和 谐和 鞋盒
 aiai 哀哀 爱爱 矮矮 艾艾
 aige 哀歌 挨个 矮个 艾格
 aijc 哀叫 爱教 矮脚 碍脚
@@ -18795,7 +18795,7 @@ gvcl 鬼差 鬼才
 gvdi 贵地 跪地
 gvdm 桂电 贵点
 gvdy 规定 贵定
-gvee 瑰 规
+gve 瑰 规
 gvfh 贵方 鬼方
 gvgo 归国 贵国
 gvgr 桂冠 规管
@@ -24613,7 +24613,7 @@ sqdi 上去的 社区的
 sqsd 提前锁定 是干啥的
 sqsi 申请时 说只是
 srde 算得 算的
-srfa 输入法 算法
+srfa 算法 输入法
 srge 涮个 算个
 srgo 涮锅 算过
 srle 收入了 算了
@@ -28632,6 +28632,15 @@ zzyb 自助游 这有
 zzye 找专业 这也
 zzze 在左侧 最左侧
 zzzl 在左侧 最左侧
+va 啊 阿
+vndm 恩典 按钮点
+voo 欧洲 额
+vrjy 而更 耳镜
+vrze 二者 而这
+vui 俄 暗自
+dv 兑 对
+le 乐 了
+sbs 是不是
 a 啊
 aa 阿
 aabk 阿宝
@@ -34049,7 +34058,6 @@ duzh 肚胀
 duzp 独尊
 duzv 堵嘴
 duzy 都转
-dv 兑
 dvaa 对啊
 dvan 对岸
 dvao 对
@@ -34079,7 +34087,7 @@ dvdp 对不
 dvdr 第二段
 dvdu 对赌
 dvdx 堆叠
-dvee 对俄
+dve 对俄
 dvei 堆
 dvfz 堆肥
 dvgb 对钩
@@ -34442,212 +34450,192 @@ dzyj 电子邮件
 dzzb 得走
 dzzg 对照着改
 dzzu 对照着
-e 额
-eai 阿
-eeba 恶霸
-eebk 恶报
-eebm 恶变
-eebu 恶补
-eecb 恶臭
-eecd 恶疮
-eeck 恶炒
-eeda 额达
-eedb 恶斗
-eedk 恶道
-eedx 俄爹
-eedy 额定
-eee 二
-eeee 呃呃
-eefa 恶法
-eefg 恶风
-eefh 俄方
-eefj 饿饭
-eegb 恶狗
-eegj 恶感
-eegk 恶搞
-eegp 恶棍
-eegs 俄共
-eegu 额骨
-eehd 俄皇
-eehg 阿衡
-eehk 阿好
-eeho 饿货
-eehp 饿昏
-eehu 饿虎
-eehw 恶化
-eehy 饿坏
-eei 耳
-eeji 恶疾
-eejp 俄军
-eekb 恶口
-eela 饿啦
-eele 饿了
-eels 恶龙
-eelu 恶露
-eelx 恶劣
-eely 恶灵
-eeme 饿么
-eemg 恶梦
-eemj 额满
-eemn 额敏
-eemo 恶魔
-eemu 厄姆
-eemy 恶名
-eend 额娘
-eenm 恶念
-eenv 恶女
-eeph 阿房
-eepy 恶评
-eeqi 恶气
-eeqm 额前
-eerf 恶人
-eesa 恶煞
-eesb 饿瘦
-eesf 恶神
-eesg 恶声
-eesh 额上
-eesk 恶少
-eesu 恶俗
-eesv 恶水
-eeta 饿他
-eetb 额头
-eets 恶童
-eetu 恶徒
-eewf 俄文
-eewl 额外
-eewu 俄乌
-eexi 恶习
-eexn 恶心
-eeyj 恶言
-eeyn 恶因
-eeze 饿着
-eezg 恶政
-eezh 恶仗
-eezi 俄制
-eezj 恶战
-eezs 俄中
-eezz 恶贼
-eia 呃
-en 唔
-enai 恩爱
-enbo 恩波
-encb 恩仇
-encg 恩城
-enci 恩赐
-encs 恩宠
-ende 恩德
-endm 恩典
-endv 嗯对
-engs 恩公
-enhv 恩惠
-enll 恩来
-enpy 恩平
-enqy 恩情
-enrf 恩人
-enrs 恩荣
-enwz 恩威
-enxy 嗯行
-enya 恩雅
-enyi 恩义
-enyr 恩怨
-enyu 恩遇
-enze 恩泽
-enzo 恩佐
-enzp 恩准
-enzu 恩主
-eoo 额
-er 二
-eraa 儿啊
-erba 而把
-erbx 而别
-erby 耳病
-erca 儿茶
-ercd 而创
-ercf 儿臣
-ercg 而成
-erck 尔曹
-ercu 而出
-ercv 耳垂
-erde 而得
-erdg 尔等
-erdh 而当
-erdk 耳道
-erdo 耳朵
-erdv 而对
-erer 尔尔
-erfa 而发
-erfh 耳房
-erfj 而返
-ergf 耳根
-ergg 而更
-ergu 耳鼓
-ergv 而归
-ergw 耳挂
-erhe 而合
-erhr 耳环
-erhw 儿化
-erjx 而解
-erjy 耳镜
-erkd 而况
-erkh 尔康
-erks 耳孔
-erku 而哭
-erle 而乐
-erlh 儿郎
-erlo 而落
-erls 耳聋
-erly 而令
-ermf 耳门
-ermk 耳毛
-erml 耳麦
-ermo 耳膜
-ermu 耳目
-ermy 耳鸣
-ermz 而没
-erng 而能
-erni 而你
-ernj 儿男
-ernv 儿女
-erph 耳旁
-erpm 耳片
-erpy 耳屏
-erqu 而去
-erqx 而且
-erre 耳热
-errh 而让
-errr 耳软
-erru 而入
-erse 而设
-ersg 而生
-ersh 耳上
-ersl 耳塞
-ersu 耳熟
-ersv 而睡
-ertj 而谈
-ertv 而退
-erty 耳听
-erwf 耳闻
-erwl 而外
-erwu 而无
-erxc 而笑
-erxd 而向
-erxm 而显
-erxn 而新
-erxr 而选
-erxt 耳穴
-erxx 而写
-erxy 而行
-erya 尔雅
-eryk 而要
-erys 而用
-eryy 而应
-erze 而这
-erzf 耳针
-erzj 而战
-erzl 而在
-erzv 耳坠
-eui 俄
-ev 恶
+veba 恶霸
+vebk 恶报
+vebm 恶变
+vebu 恶补
+vecb 恶臭
+vecd 恶疮
+vedk 恶道
+vedx 俄爹
+vedy 额定
+vre 二
+veee 呃呃
+vefa 恶法
+vefg 恶风
+vegb 恶狗
+vegj 恶感
+vegk 恶搞
+vegp 恶棍
+vegs 俄共
+vehd 俄皇
+veho 饿货
+vehp 饿昏
+vehu 饿虎
+vehw 恶化
+vehy 饿坏
+vei 耳
+veji 恶疾
+vejp 俄军
+vela 饿啦
+vels 恶龙
+velx 恶劣
+vely 恶灵
+veme 饿么
+vemg 恶梦
+vemj 额满
+vemn 额敏
+vemo 恶魔
+vemu 厄姆
+vemy 恶名
+vend 额娘
+venm 恶念
+venv 恶女
+veph 阿房
+vepy 恶评
+veqi 恶气
+veqm 额前
+verf 恶人
+vesa 恶煞
+vesb 饿瘦
+vesf 恶神
+vesg 恶声
+vesh 额上
+vesk 恶少
+vesu 恶俗
+vesv 恶水
+veta 饿他
+vetb 额头
+vets 恶童
+vetu 恶徒
+vewf 俄文
+vewl 额外
+vewu 俄乌
+vexi 恶习
+vexn 恶心
+veyj 恶言
+veyn 恶因
+veze 饿着
+vezg 恶政
+vezh 恶仗
+vezi 俄制
+vezj 恶战
+vezs 俄中
+vezz 恶贼
+veia 呃
+vnvl 恩爱
+vnbo 恩波
+vncb 恩仇
+vncg 恩城
+vnci 恩赐
+vncs 恩宠
+vnde 恩德
+vndv 嗯对
+vngs 恩公
+vnhv 恩惠
+vnll 恩来
+vnpy 恩平
+vnqy 恩情
+vnrf 恩人
+vnrs 恩荣
+vnwz 恩威
+vnxy 嗯行
+vnya 恩雅
+vnyi 恩义
+vnyr 恩怨
+vnyu 恩遇
+vnze 恩泽
+vnzo 恩佐
+vnzp 恩准
+vnzu 恩主
+vraa 儿啊
+vrba 而把
+vrbx 而别
+vrby 耳病
+vrca 儿茶
+vrcd 而创
+vrcf 儿臣
+vrcg 而成
+vrck 尔曹
+vrcu 而出
+vrcv 耳垂
+vrde 而得
+vrdg 尔等
+vrdh 而当
+vrdk 耳道
+vrdo 耳朵
+vrdv 而对
+vrer 尔尔
+vrfa 而发
+vrfh 耳房
+vrfj 而返
+vrgf 耳根
+vrgg 而更
+vrgu 耳鼓
+vrgv 而归
+vrgw 耳挂
+vrhe 而合
+vrhr 耳环
+vrhw 儿化
+vrjx 而解
+vrkd 而况
+vrkh 尔康
+vrks 耳孔
+vrku 而哭
+vrle 而乐
+vrlh 儿郎
+vrlo 而落
+vrls 耳聋
+vrly 而令
+vrmf 耳门
+vrmk 耳毛
+vrml 耳麦
+vrmo 耳膜
+vrmu 耳目
+vrmy 耳鸣
+vrmz 而没
+vrng 而能
+vrni 而你
+vrnj 儿男
+vrnv 儿女
+vrph 耳旁
+vrpm 耳片
+vrpy 耳屏
+vrqu 而去
+vrqx 而且
+vrre 耳热
+vrrh 而让
+vrrr 耳软
+vrru 而入
+vrse 而设
+vrsg 而生
+vrsh 耳上
+vrsl 耳塞
+vrsu 耳熟
+vrsv 而睡
+vrtj 而谈
+vrtv 而退
+vrty 耳听
+vrwf 耳闻
+vrwl 而外
+vrwu 而无
+vrxc 而笑
+vrxd 而向
+vrxm 而显
+vrxn 而新
+vrxr 而选
+vrxt 耳穴
+vrxx 而写
+vrxy 而行
+vrya 尔雅
+vryk 而要
+vrys 而用
+vryy 而应
+vrzf 耳针
+vrzj 而战
+vrzl 而在
+vrzv 耳坠
+vv 恶
 f 发
 fa 乏
 faao 法奥
@@ -39079,7 +39067,7 @@ hvco 会错
 hvdb 灰豆
 hvdo 会多
 hvdr 会断
-hvee 慧
+hve 慧
 hver 会儿
 hveu 灰
 hvfb 会否
@@ -42180,7 +42168,7 @@ kvdl 亏待
 kvdm 馈电
 kvdo 亏多
 kvdv 愧对
-kvee 亏
+kve 亏
 kveu 盔
 kvgd 亏光
 kvge 亏格
@@ -42726,18 +42714,13 @@ ldyh 两样
 ldyp 良运
 ldys 两用
 ldza 两扎
-ldzd 梁庄
 ldzf 两针
 ldzo 两座
 ldzr 两转
-le 乐
 lean 乐安
-leby 勒兵
 lebz 了呗
 lecg 乐城
 lech 乐昌
-lecp 乐纯
-lecs 乐从
 ledi 了的
 ledk 乐道
 ledm 了点
@@ -42956,7 +42939,12 @@ lhyu 狼鱼
 lhzi 浪子
 lhzk 朗照
 lhzs 郎中
-li 丽
+li 里
+lie 理
+lia 力
+liu 利
+lio 立
+lii 哩
 liae 隶
 liai 李艾
 liau 力
@@ -51114,7 +51102,7 @@ rvde 瑞德
 rvdm 瑞典
 rvds 瑞东
 rvdu 锐度
-rvee 瑞
+rve 瑞
 rven 瑞恩
 rver 瑞尔
 rvff 瑞芬
@@ -52745,7 +52733,7 @@ svdh 谁当
 svdu 水都
 svdy 谁定
 svdz 说得
-svee 税额
+sve 税额
 sver 水儿
 sveu 碎
 svfj 水饭
@@ -54919,7 +54907,6 @@ u 无
 uh 上
 uo 少
 v 而
-va 啊
 vaia 啊
 vali 阿丽
 vao 恶习
@@ -54953,14 +54940,8 @@ vdvb 按地区
 vdvg 爱不爱国
 ve 俄
 vedu 额度
-veia 呃
-veji 恶疾
 velc 哦了
-vemo 恶魔
-vets 恶童
-vewl 额外
 vewo 哦我
-vexn 恶心
 veyi 恶意
 vf 案犯
 vfa 安防
@@ -55061,7 +55042,6 @@ vnba 按钮吧
 vndi 按你的
 vndj 按钮点击
 vndl 按你的来
-vndm 按钮点
 vnff 按年份
 vnge 按那个
 vni 耳内
@@ -55070,7 +55050,6 @@ vnu 按钮
 vnys 按钮样式
 voa 安心
 volc 哦了
-voo 欧洲
 vou 爱着
 vovo 哦哦
 vpdi 安排的
@@ -55091,20 +55070,16 @@ vqo 爱情
 vqxr 而且还
 vqyi 爱奇艺
 vrbm 耳边
-vrdo 耳朵
 vrdp 而不
 vrdy 而定
 vree 二
 vrfb 而不
-vrjy 而更
 vrli 而立
-vrqx 而且
 vrrf 二人
 vrsb 二手
 vrsi 而是
 vrts 儿童
 vryi 而已
-vrze 二者
 vrzi 儿子
 vshy 广受欢迎
 vsi 爱上
@@ -55116,7 +55091,6 @@ vta 爱她
 vti 呕吐
 vtu 而逃
 vu 饿
-vui 暗自
 vuo 安全
 vvjj 安安静静
 vvky 偶尔会
@@ -58224,7 +58198,7 @@ ydze 用得着
 ydzk 又带着
 ydzl 一袋子
 ydzr 移动端
-ye 业
+ye 也
 yea 运输
 yean 夜暗
 yebc 页表
@@ -61234,7 +61208,7 @@ zvdo 最多
 zvdp 最不
 zvdr 最短
 zvds 最懂
-zvee 罪恶
+zve 罪恶
 zvei 椎
 zver 嘴儿
 zvfa 罪罚

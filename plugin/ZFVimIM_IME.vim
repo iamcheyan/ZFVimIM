@@ -417,17 +417,29 @@ if get(g:, 'ZFVimIM_keymap', 1)
 endif
 
 function! ZFVimIME_keymap_toggle_n()
-    call ZFVimIME_toggle()
+    if !ZFVimIME_started()
+        call ZFVimIME_start()
+    else
+        call ZFVimIME_stop()
+    endif
     call ZFVimIME_redraw()
     return ''
 endfunction
 function! ZFVimIME_keymap_toggle_i()
-    call ZFVimIME_toggle()
+    if !ZFVimIME_started()
+        call ZFVimIME_start()
+    else
+        call ZFVimIME_stop()
+    endif
     call ZFVimIME_redraw()
     return ''
 endfunction
 function! ZFVimIME_keymap_toggle_v()
-    call ZFVimIME_toggle()
+    if !ZFVimIME_started()
+        call ZFVimIME_start()
+    else
+        call ZFVimIME_stop()
+    endif
     call ZFVimIME_redraw()
     return ''
 endfunction
